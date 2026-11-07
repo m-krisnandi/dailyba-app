@@ -436,12 +436,12 @@ export function QuickRecordBoard({
               value={smartText}
               onChange={(e) => setSmartText(e.target.value)}
               placeholder={t.record.smartTextPlaceholder}
-              className="flex-1 bg-[var(--bg-subtle)] border border-[var(--border-subtle)] focus:border-[var(--border-strong)] rounded-2xl px-4 py-3 text-sm text-[var(--text-main)] placeholder-[var(--text-faint)] outline-none transition-all"
+              className="flex-1 min-w-0 bg-[var(--bg-subtle)] border border-[var(--border-subtle)] focus:border-[var(--border-strong)] rounded-2xl px-3.5 sm:px-4 py-2.5 sm:py-3 text-xs sm:text-sm text-[var(--text-main)] placeholder-[var(--text-faint)] outline-none transition-all"
             />
             {/* Executive Monochrome Button */}
             <button
               type="submit"
-              className="bg-[var(--btn-primary-bg)] text-[var(--btn-primary-text)] border border-[var(--btn-primary-border)] shadow-[var(--btn-primary-shadow)] px-4 py-3 rounded-2xl font-bold text-xs sm:text-sm flex items-center space-x-1.5 hover:opacity-90 active:scale-[0.98] transition-all cursor-pointer"
+              className="bg-[var(--btn-primary-bg)] text-[var(--btn-primary-text)] border border-[var(--btn-primary-border)] shadow-[var(--btn-primary-shadow)] px-3.5 sm:px-4 py-2.5 sm:py-3 rounded-2xl font-bold text-xs sm:text-sm flex items-center space-x-1.5 hover:opacity-90 active:scale-[0.98] transition-all cursor-pointer shrink-0 whitespace-nowrap"
             >
               <span>{t.record.recordButton}</span>
               <CornerDownLeft className="w-3.5 h-3.5" />
@@ -454,44 +454,45 @@ export function QuickRecordBoard({
       </div>
 
       {/* Main Fast Input Board */}
-      <div className="rounded-3xl border border-[var(--border-subtle)] bg-[var(--bg-surface)] p-5 sm:p-7 shadow-[var(--card-shadow)] space-y-6 relative">
+      <div className="rounded-3xl border border-[var(--border-subtle)] bg-[var(--bg-surface)] p-4 sm:p-7 shadow-[var(--card-shadow)] space-y-5 sm:space-y-6 relative">
         {/* Type Selector (Expense vs Income vs Savings) */}
-        <div className="grid grid-cols-3 gap-2 p-1.5 bg-[var(--bg-subtle)] rounded-2xl border border-[var(--border-subtle)]">
+        <div className="grid grid-cols-3 gap-1.5 sm:gap-2 p-1.5 bg-[var(--bg-subtle)] rounded-2xl border border-[var(--border-subtle)]">
           <button
             type="button"
             onClick={() => setType('expense')}
-            className={`py-2.5 px-3 rounded-xl text-xs sm:text-sm font-bold flex items-center justify-center space-x-1.5 transition-all cursor-pointer ${
+            className={`py-2 px-1.5 sm:py-2.5 sm:px-3 rounded-xl text-xs sm:text-sm font-bold flex items-center justify-center space-x-1 sm:space-x-1.5 transition-all cursor-pointer min-w-0 whitespace-nowrap ${
               type === 'expense'
                 ? 'bg-[var(--bg-surface-solid)] text-rose-500 border border-rose-500/30 shadow-xs'
                 : 'text-[var(--text-muted)] hover:text-[var(--text-main)]'
             }`}
           >
-            <ArrowDownRight className="w-4 h-4 text-rose-500" />
-            <span>{t.record.typeExpense}</span>
+            <ArrowDownRight className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-rose-500 shrink-0" />
+            <span className="truncate">{t.record.typeExpense}</span>
           </button>
           <button
             type="button"
             onClick={() => setType('income')}
-            className={`py-2.5 px-3 rounded-xl text-xs sm:text-sm font-bold flex items-center justify-center space-x-1.5 transition-all cursor-pointer ${
+            className={`py-2 px-1.5 sm:py-2.5 sm:px-3 rounded-xl text-xs sm:text-sm font-bold flex items-center justify-center space-x-1 sm:space-x-1.5 transition-all cursor-pointer min-w-0 whitespace-nowrap ${
               type === 'income'
                 ? 'bg-[var(--bg-surface-solid)] text-emerald-500 border border-emerald-500/30 shadow-xs'
                 : 'text-[var(--text-muted)] hover:text-[var(--text-main)]'
             }`}
           >
-            <ArrowUpRight className="w-4 h-4 text-emerald-500" />
-            <span>{t.record.typeIncome}</span>
+            <ArrowUpRight className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-emerald-500 shrink-0" />
+            <span className="truncate">{t.record.typeIncome}</span>
           </button>
           <button
             type="button"
             onClick={() => setType('savings')}
-            className={`py-2.5 px-3 rounded-xl text-xs sm:text-sm font-bold flex items-center justify-center space-x-1.5 transition-all cursor-pointer ${
+            className={`py-2 px-1.5 sm:py-2.5 sm:px-3 rounded-xl text-xs sm:text-sm font-bold flex items-center justify-center space-x-1 sm:space-x-1.5 transition-all cursor-pointer min-w-0 whitespace-nowrap ${
               type === 'savings'
                 ? 'bg-[var(--bg-surface-solid)] text-amber-500 border border-amber-500/30 shadow-xs'
                 : 'text-[var(--text-muted)] hover:text-[var(--text-main)]'
             }`}
           >
-            <Vault className="w-4 h-4 text-amber-500" />
-            <span>{t.record.typeSavings}</span>
+            <Vault className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-amber-500 shrink-0" />
+            <span className="truncate sm:hidden">{language === 'en' ? 'Savings' : t.record.typeSavings}</span>
+            <span className="hidden sm:inline truncate">{t.record.typeSavings}</span>
           </button>
         </div>
 
@@ -522,7 +523,7 @@ export function QuickRecordBoard({
                 setAmountStr(formatNumberWithCommas(raw));
               }}
               placeholder="0"
-              className="w-full bg-[var(--bg-subtle)] border border-[var(--border-subtle)] focus:border-[var(--border-strong)] rounded-2xl pl-5 pr-16 py-4 text-3xl sm:text-4xl font-extrabold tracking-tight text-[var(--text-main)] placeholder-[var(--text-faint)] outline-none tabular-numbers transition-all"
+              className="w-full bg-[var(--bg-subtle)] border border-[var(--border-subtle)] focus:border-[var(--border-strong)] rounded-2xl pl-4 sm:pl-5 pr-14 sm:pr-16 py-3.5 sm:py-4 text-2xl sm:text-4xl font-extrabold tracking-tight text-[var(--text-main)] placeholder-[var(--text-faint)] outline-none tabular-numbers transition-all"
             />
             <div className="absolute right-5 top-1/2 -translate-y-1/2 text-sm font-mono font-bold text-[var(--text-muted)] pointer-events-none select-none tracking-wide">
               {currency}
@@ -539,7 +540,7 @@ export function QuickRecordBoard({
                 key={val}
                 type="button"
                 onClick={() => handleAddPreset(val)}
-                className="px-3.5 py-1.5 rounded-xl border border-[var(--border-subtle)] bg-[var(--bg-subtle)] hover:bg-[var(--bg-subtle-hover)] text-xs font-semibold text-[var(--text-main)] tabular-numbers transition-all shadow-xs active:scale-[0.97] cursor-pointer"
+                className="px-2.5 sm:px-3.5 py-1.5 rounded-xl border border-[var(--border-subtle)] bg-[var(--bg-subtle)] hover:bg-[var(--bg-subtle-hover)] text-xs font-semibold text-[var(--text-main)] tabular-numbers transition-all shadow-xs active:scale-[0.97] cursor-pointer shrink-0"
               >
                 +{val.toLocaleString()}
               </button>
@@ -576,7 +577,7 @@ export function QuickRecordBoard({
                     key={catKey}
                     type="button"
                     onClick={() => setSelectedExpenseCat(catKey)}
-                    className={`p-3 rounded-2xl border text-left flex items-center space-x-2.5 transition-all cursor-pointer ${
+                    className={`p-2.5 sm:p-3 rounded-2xl border text-left flex items-center space-x-2 sm:space-x-2.5 min-w-0 transition-all cursor-pointer ${
                       isSelected
                         ? 'border-[var(--text-main)] bg-[var(--bg-surface-solid)] text-[var(--text-main)] font-bold shadow-xs ring-1 ring-[var(--text-main)]'
                         : 'border-[var(--border-subtle)] bg-[var(--bg-subtle)] hover:bg-[var(--bg-subtle-hover)] text-[var(--text-main)]'
@@ -621,7 +622,7 @@ export function QuickRecordBoard({
                     key={catKey}
                     type="button"
                     onClick={() => setSelectedIncomeCat(catKey)}
-                    className={`p-3 rounded-2xl border text-left flex items-center space-x-2.5 transition-all cursor-pointer ${
+                    className={`p-2.5 sm:p-3 rounded-2xl border text-left flex items-center space-x-2 sm:space-x-2.5 min-w-0 transition-all cursor-pointer ${
                       isSelected
                         ? 'border-[var(--text-main)] bg-[var(--bg-surface-solid)] text-[var(--text-main)] font-bold shadow-xs ring-1 ring-[var(--text-main)]'
                         : 'border-[var(--border-subtle)] bg-[var(--bg-subtle)] hover:bg-[var(--bg-subtle-hover)] text-[var(--text-main)]'
@@ -652,7 +653,7 @@ export function QuickRecordBoard({
                   key={src}
                   type="button"
                   onClick={() => setSource(src)}
-                  className={`p-2.5 rounded-xl border text-center flex items-center justify-center space-x-2 transition-all cursor-pointer ${
+                  className={`p-2 sm:p-2.5 rounded-xl border text-center flex items-center justify-center space-x-1.5 min-w-0 transition-all cursor-pointer ${
                     isSelected
                       ? 'border-[var(--border-strong)] bg-[var(--bg-surface-solid)] text-[var(--text-main)] font-bold shadow-xs'
                       : 'border-[var(--border-subtle)] bg-[var(--bg-subtle)] hover:bg-[var(--bg-subtle-hover)] text-[var(--text-muted)]'
@@ -891,9 +892,9 @@ export function QuickRecordBoard({
               return (
                 <div
                   key={tx.id}
-                  className="p-3.5 rounded-2xl bg-[var(--bg-subtle)] border border-[var(--border-subtle)] hover:border-[var(--border-strong)] flex items-center justify-between space-x-3 group transition-all"
+                  className="p-3 sm:p-3.5 rounded-2xl bg-[var(--bg-subtle)] border border-[var(--border-subtle)] hover:border-[var(--border-strong)] flex items-center justify-between space-x-2.5 sm:space-x-3 group transition-all min-w-0"
                 >
-                  <div className="flex items-center space-x-3">
+                  <div className="flex items-center space-x-2.5 sm:space-x-3 min-w-0">
                     <div
                       className={`w-9 h-9 rounded-xl flex items-center justify-center shrink-0 border border-[var(--border-subtle)] ${
                         isExpense
@@ -905,20 +906,20 @@ export function QuickRecordBoard({
                     >
                       <Icon className="w-4 h-4" />
                     </div>
-                    <div>
-                      <p className="text-xs font-semibold text-[var(--text-main)]">
+                    <div className="min-w-0">
+                      <p className="text-xs font-semibold text-[var(--text-main)] truncate">
                         {catLabel}
                       </p>
-                      <p className="text-[11px] text-[var(--text-muted)]">
+                      <p className="text-[11px] text-[var(--text-muted)] truncate">
                         {tx.date} • {t.sources[tx.source]}
                         {tx.note ? ` • ${tx.note}` : ''}
                       </p>
                     </div>
                   </div>
 
-                  <div className="flex items-center space-x-3">
+                  <div className="flex items-center space-x-1.5 sm:space-x-3 shrink-0 ml-2">
                     <span
-                      className={`text-xs sm:text-sm font-bold tabular-numbers font-mono ${
+                      className={`text-xs sm:text-sm font-bold tabular-numbers font-mono whitespace-nowrap ${
                         isExpense
                           ? 'text-rose-600 dark:text-rose-400'
                           : isIncome
@@ -932,7 +933,7 @@ export function QuickRecordBoard({
                     <button
                       type="button"
                       onClick={() => onDeleteTransaction(tx.id)}
-                      className="opacity-0 group-hover:opacity-100 p-1 text-[var(--text-faint)] hover:text-rose-500 transition-all cursor-pointer"
+                      className="opacity-70 sm:opacity-0 sm:group-hover:opacity-100 p-1 text-[var(--text-faint)] hover:text-rose-500 transition-all cursor-pointer shrink-0"
                       title={t.actions.delete}
                     >
                       <Trash2 className="w-3.5 h-3.5" />

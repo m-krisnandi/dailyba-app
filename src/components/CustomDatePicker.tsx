@@ -186,7 +186,7 @@ export function CustomDatePicker({ value, onChange, language }: CustomDatePicker
 
       {/* Custom Modern Dropdown Calendar Popover */}
       {isOpen && (
-        <div className="absolute left-0 bottom-full mb-2 sm:bottom-auto sm:top-full sm:mt-2 z-50 w-72 sm:w-80 p-4 rounded-3xl border border-[var(--border-strong)] bg-[var(--bg-surface-solid)]/98 backdrop-blur-2xl shadow-[var(--card-shadow)] space-y-3 animate-in fade-in zoom-in-95 duration-150">
+        <div className="absolute left-0 bottom-full mb-2 sm:bottom-auto sm:top-full sm:mt-2 z-50 w-[calc(100vw-2.5rem)] max-w-xs sm:w-80 sm:max-w-none p-4 rounded-3xl border border-[var(--border-strong)] bg-[var(--bg-surface-solid)]/98 backdrop-blur-2xl shadow-[var(--card-shadow)] space-y-3 animate-in fade-in zoom-in-95 duration-150">
           {/* Calendar Header with Nav Controls */}
           <div className="flex items-center justify-between pb-2 border-b border-[var(--border-subtle)]">
             <h4 className="text-xs sm:text-sm font-bold text-[var(--text-main)] tabular-numbers font-mono">

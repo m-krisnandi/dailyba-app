@@ -34,8 +34,8 @@ export function TabsNav({ activeTab, onTabChange, language, isMounted = true }: 
   ];
 
   return (
-    <div className="w-full border-b border-[var(--border-subtle)] bg-[var(--bg-surface)] backdrop-blur-2xl py-2.5 px-4 sticky top-16 z-20 shadow-xs transition-colors duration-200">
-      <nav className="max-w-5xl mx-auto flex items-center justify-between sm:justify-start sm:space-x-2 overflow-x-auto no-scrollbar">
+    <div className="w-full border-b border-[var(--border-subtle)] bg-[var(--bg-surface)] backdrop-blur-2xl py-2 sm:py-2.5 px-3 sm:px-4 sticky top-14 sm:top-16 z-20 shadow-xs transition-colors duration-200">
+      <nav className="max-w-5xl mx-auto flex items-center space-x-1.5 sm:space-x-2 overflow-x-auto no-scrollbar scroll-smooth">
         {tabs.map((tab) => {
           const Icon = tab.icon;
           const isActive = isMounted && activeTab === tab.key;
@@ -44,14 +44,14 @@ export function TabsNav({ activeTab, onTabChange, language, isMounted = true }: 
               key={tab.key}
               type="button"
               onClick={() => onTabChange(tab.key)}
-              className={`flex items-center space-x-2 px-3.5 py-2 rounded-xl text-xs sm:text-sm font-medium transition-all whitespace-nowrap cursor-pointer ${
+              className={`flex items-center space-x-1.5 sm:space-x-2 px-3 sm:px-3.5 py-1.5 sm:py-2 rounded-xl text-xs sm:text-sm font-medium transition-all whitespace-nowrap cursor-pointer shrink-0 ${
                 isActive
                   ? 'bg-[var(--bg-surface-solid)] text-[var(--text-main)] font-bold border border-[var(--border-strong)] shadow-sm'
                   : 'text-[var(--text-muted)] hover:text-[var(--text-main)] hover:bg-[var(--bg-subtle)]'
               }`}
             >
               <Icon
-                className={`w-4 h-4 ${
+                className={`w-3.5 h-3.5 sm:w-4 sm:h-4 ${
                   isActive
                     ? 'text-[var(--text-main)] stroke-[2.2]'
                     : 'text-[var(--text-faint)] stroke-[1.8]'

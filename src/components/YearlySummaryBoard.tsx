@@ -169,46 +169,46 @@ export function YearlySummaryBoard({
       {/* 4 Big Annual Metrics Grid */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
         {/* Annual Income */}
-        <div className="p-5 rounded-3xl border border-[var(--border-subtle)] bg-[var(--bg-surface)]  shadow-[var(--card-shadow)] space-y-2">
+        <div className="p-3.5 sm:p-5 rounded-3xl border border-[var(--border-subtle)] bg-[var(--bg-surface)] shadow-[var(--card-shadow)] space-y-2 min-w-0">
           <div className="flex items-center justify-between text-xs font-semibold text-[var(--text-muted)]">
             <span>{t.summary.annualIncome}</span>
             <div className="w-8 h-8 rounded-xl bg-emerald-500/10 border border-emerald-500/20 text-emerald-500 flex items-center justify-center">
               <ArrowUpRight className="w-4 h-4" />
             </div>
           </div>
-          <p className="text-xl sm:text-2xl font-extrabold tracking-tight text-[var(--accent-emerald)] tabular-numbers font-mono">
+          <p className="text-lg sm:text-2xl font-extrabold tracking-tight truncate text-[var(--accent-emerald)] tabular-numbers font-mono">
             {formatCurrency(totalAnnualIncome, currency)}
           </p>
         </div>
 
         {/* Annual Expenses */}
-        <div className="p-5 rounded-3xl border border-[var(--border-subtle)] bg-[var(--bg-surface)]  shadow-[var(--card-shadow)] space-y-2">
+        <div className="p-3.5 sm:p-5 rounded-3xl border border-[var(--border-subtle)] bg-[var(--bg-surface)] shadow-[var(--card-shadow)] space-y-2 min-w-0">
           <div className="flex items-center justify-between text-xs font-semibold text-[var(--text-muted)]">
             <span>{t.summary.annualExpenses}</span>
             <div className="w-8 h-8 rounded-xl bg-rose-500/10 border border-rose-500/20 text-rose-500 flex items-center justify-center">
               <ArrowDownRight className="w-4 h-4" />
             </div>
           </div>
-          <p className="text-xl sm:text-2xl font-extrabold tracking-tight text-[var(--accent-rose)] tabular-numbers font-mono">
+          <p className="text-lg sm:text-2xl font-extrabold tracking-tight truncate text-[var(--accent-rose)] tabular-numbers font-mono">
             {formatCurrency(totalAnnualExpense, currency)}
           </p>
         </div>
 
         {/* Annual Savings */}
-        <div className="p-5 rounded-3xl border border-[var(--border-subtle)] bg-[var(--bg-surface)]  shadow-[var(--card-shadow)] space-y-2">
+        <div className="p-3.5 sm:p-5 rounded-3xl border border-[var(--border-subtle)] bg-[var(--bg-surface)] shadow-[var(--card-shadow)] space-y-2 min-w-0">
           <div className="flex items-center justify-between text-xs font-semibold text-[var(--text-muted)]">
             <span>{t.summary.annualSavings}</span>
             <div className="w-8 h-8 rounded-xl bg-amber-500/10 border border-amber-500/20 text-amber-500 flex items-center justify-center">
               <Vault className="w-4 h-4" />
             </div>
           </div>
-          <p className="text-xl sm:text-2xl font-extrabold tracking-tight text-[var(--accent-amber)] tabular-numbers font-mono">
+          <p className="text-lg sm:text-2xl font-extrabold tracking-tight truncate text-[var(--accent-amber)] tabular-numbers font-mono">
             {formatCurrency(totalAnnualSaved, currency)}
           </p>
         </div>
 
         {/* Annual Net Free Cash */}
-        <div className="p-5 rounded-3xl border border-[var(--border-subtle)] bg-[var(--bg-surface)]  shadow-[var(--card-shadow)] space-y-2">
+        <div className="p-3.5 sm:p-5 rounded-3xl border border-[var(--border-subtle)] bg-[var(--bg-surface)] shadow-[var(--card-shadow)] space-y-2 min-w-0">
           <div className="flex items-center justify-between text-xs font-semibold text-[var(--text-muted)]">
             <span>{t.summary.annualNetCashflow}</span>
             <div className="w-8 h-8 rounded-xl bg-cyan-500/10 border border-cyan-500/20 text-cyan-500 flex items-center justify-center">

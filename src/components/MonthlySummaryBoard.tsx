@@ -197,46 +197,46 @@ export function MonthlySummaryBoard({
       {/* 4 Big Metrics Grid (iOS Liquid Glass Cards) */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
         {/* Income */}
-        <div className="p-5 rounded-3xl border border-[var(--border-subtle)] bg-[var(--bg-surface)]  shadow-[var(--card-shadow)] space-y-2">
+        <div className="p-3.5 sm:p-5 rounded-3xl border border-[var(--border-subtle)] bg-[var(--bg-surface)] shadow-[var(--card-shadow)] space-y-2 min-w-0">
           <div className="flex items-center justify-between text-xs font-semibold text-[var(--text-muted)]">
             <span>{t.summary.totalIncome}</span>
             <div className="w-8 h-8 rounded-xl bg-emerald-500/10 border border-emerald-500/20 text-emerald-500 flex items-center justify-center">
               <ArrowUpRight className="w-4 h-4" />
             </div>
           </div>
-          <p className="text-xl sm:text-2xl font-extrabold tracking-tight text-[var(--accent-emerald)] tabular-numbers font-mono">
+          <p className="text-lg sm:text-2xl font-extrabold tracking-tight truncate text-[var(--accent-emerald)] tabular-numbers font-mono">
             {formatCurrency(totalIncome, currency)}
           </p>
         </div>
 
         {/* Expenses */}
-        <div className="p-5 rounded-3xl border border-[var(--border-subtle)] bg-[var(--bg-surface)]  shadow-[var(--card-shadow)] space-y-2">
+        <div className="p-3.5 sm:p-5 rounded-3xl border border-[var(--border-subtle)] bg-[var(--bg-surface)] shadow-[var(--card-shadow)] space-y-2 min-w-0">
           <div className="flex items-center justify-between text-xs font-semibold text-[var(--text-muted)]">
             <span>{t.summary.totalExpense}</span>
             <div className="w-8 h-8 rounded-xl bg-rose-500/10 border border-rose-500/20 text-rose-500 flex items-center justify-center">
               <ArrowDownRight className="w-4 h-4" />
             </div>
           </div>
-          <p className="text-xl sm:text-2xl font-extrabold tracking-tight text-[var(--accent-rose)] tabular-numbers font-mono">
+          <p className="text-lg sm:text-2xl font-extrabold tracking-tight truncate text-[var(--accent-rose)] tabular-numbers font-mono">
             {formatCurrency(totalExpense, currency)}
           </p>
         </div>
 
         {/* Saved (with Vault Icon) */}
-        <div className="p-5 rounded-3xl border border-[var(--border-subtle)] bg-[var(--bg-surface)]  shadow-[var(--card-shadow)] space-y-2">
+        <div className="p-3.5 sm:p-5 rounded-3xl border border-[var(--border-subtle)] bg-[var(--bg-surface)] shadow-[var(--card-shadow)] space-y-2 min-w-0">
           <div className="flex items-center justify-between text-xs font-semibold text-[var(--text-muted)]">
             <span>{t.summary.netSavings}</span>
             <div className="w-8 h-8 rounded-xl bg-amber-500/10 border border-amber-500/20 text-amber-500 flex items-center justify-center">
               <Vault className="w-4 h-4" />
             </div>
           </div>
-          <p className="text-xl sm:text-2xl font-extrabold tracking-tight text-[var(--accent-amber)] tabular-numbers font-mono">
+          <p className="text-lg sm:text-2xl font-extrabold tracking-tight truncate text-[var(--accent-amber)] tabular-numbers font-mono">
             {formatCurrency(totalSaved, currency)}
           </p>
         </div>
 
         {/* Free Cashflow */}
-        <div className="p-5 rounded-3xl border border-[var(--border-subtle)] bg-[var(--bg-surface)]  shadow-[var(--card-shadow)] space-y-2">
+        <div className="p-3.5 sm:p-5 rounded-3xl border border-[var(--border-subtle)] bg-[var(--bg-surface)] shadow-[var(--card-shadow)] space-y-2 min-w-0">
           <div className="flex items-center justify-between text-xs font-semibold text-[var(--text-muted)]">
             <span>{t.summary.netCashFlow}</span>
             <div className="w-8 h-8 rounded-xl bg-cyan-500/10 border border-cyan-500/20 text-cyan-500 flex items-center justify-center">
