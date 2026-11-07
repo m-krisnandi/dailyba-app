@@ -11,7 +11,9 @@ export const DEFAULT_STATE: FinanceState = {
   language: 'en',
   currency: 'JPY',
   savingsGoalMonthly: 50000,
+  savingsGoalCurrency: 'JPY',
   dailySpendTarget: 3000,
+  dailySpendCurrency: 'JPY',
   hiddenCategories: [],
   recurringBills: [],
   monthlyBudgets: {},
@@ -56,7 +58,9 @@ export function getStoredState(): FinanceState {
         language: parsed.language || 'en',
         currency: parsed.currency || 'JPY',
         savingsGoalMonthly: typeof parsed.savingsGoalMonthly === 'number' ? parsed.savingsGoalMonthly : 50000,
+        savingsGoalCurrency: parsed.savingsGoalCurrency || parsed.currency || 'JPY',
         dailySpendTarget: typeof parsed.dailySpendTarget === 'number' ? parsed.dailySpendTarget : 3000,
+        dailySpendCurrency: parsed.dailySpendCurrency || parsed.currency || 'JPY',
         hiddenCategories: Array.isArray(parsed.hiddenCategories) ? parsed.hiddenCategories : [],
         recurringBills: cleaned.recurringBills || [],
         monthlyBudgets: parsed.monthlyBudgets && typeof parsed.monthlyBudgets === 'object' ? parsed.monthlyBudgets : {},
@@ -69,10 +73,10 @@ export function getStoredState(): FinanceState {
   return DEFAULT_STATE;
 }
 
-export function saveState(state: FinanceState) {
+export function saveState(state: FinanceState): void {
   if (typeof window === 'undefined') return;
   try {
-    const cleaned = filterOutMockData(state) as FinanceState;
+    const cleaned = filterOutMockData(state);
     localStorage.setItem(STORAGE_KEY, JSON.stringify(cleaned));
   } catch (e) {
     console.error('Failed to save storage:', e);
@@ -82,23 +86,15 @@ export function saveState(state: FinanceState) {
 export function useFinanceStore() {
   const [state, setState] = useState<FinanceState>(DEFAULT_STATE);
   const [isHydrated, setIsHydrated] = useState(false);
-  const isInternalUpdateRef = useRef(false);
+  const isHydratedRef = useRef(false);
 
+  // Load from localStorage on mount and sanitize mock data
   useEffect(() => {
-    // Initial sync from localStorage AFTER initial client mount
-    setState(getStoredState());
+    const stored = getStoredState();
+    setState(stored);
+    saveState(stored); // Ensure cleaned state is persisted back immediately
     setIsHydrated(true);
-
-    const handleStorage = (e: StorageEvent) => {
-      if (e.key === STORAGE_KEY && e.newValue) {
-        setState(getStoredState());
-      }
-    };
-
-    window.addEventListener('storage', handleStorage);
-    return () => {
-      window.removeEventListener('storage', handleStorage);
-    };
+    isHydratedRef.current = true;
   }, []);
 
   const updateState = useCallback((updater: (prev: FinanceState) => FinanceState) => {
@@ -138,6 +134,13 @@ export function useFinanceStore() {
     });
   }, [updateState]);
 
+  const updateTransaction = useCallback((updatedTx: Transaction) => {
+    updateState((prev) => ({
+      ...prev,
+      transactions: prev.transactions.map((t) => (t.id === updatedTx.id ? updatedTx : t)),
+    }));
+  }, [updateState]);
+
   const deleteTransaction = useCallback((id: string) => {
     updateState((prev) => ({
       ...prev,
@@ -148,9 +151,12 @@ export function useFinanceStore() {
   const addOrUpdateInvestment = useCallback((asset: InvestmentAsset) => {
     updateState((prev) => {
       const exists = prev.investments.some((inv) => inv.id === asset.id);
-      const nextInvestments = exists
-        ? prev.investments.map((inv) => (inv.id === asset.id ? asset : inv))
-        : [...prev.investments, asset];
+      let nextInvestments: InvestmentAsset[];
+      if (exists) {
+        nextInvestments = prev.investments.map((inv) => (inv.id === asset.id ? asset : inv));
+      } else {
+        nextInvestments = [asset, ...prev.investments];
+      }
       return {
         ...prev,
         investments: nextInvestments,
@@ -165,13 +171,12 @@ export function useFinanceStore() {
     }));
   }, [updateState]);
 
-  const toggleHideCategory = useCallback((catKey: string) => {
+  const toggleHideCategory = useCallback((category: ExpenseCategory | string) => {
     updateState((prev) => {
-      const currentHidden = prev.hiddenCategories || [];
-      const isAlreadyHidden = currentHidden.includes(catKey);
-      const nextHidden = isAlreadyHidden
-        ? currentHidden.filter((k) => k !== catKey)
-        : [...currentHidden, catKey];
+      const isHidden = prev.hiddenCategories.includes(category);
+      const nextHidden = isHidden
+        ? prev.hiddenCategories.filter((c) => c !== category)
+        : [...prev.hiddenCategories, category];
       return {
         ...prev,
         hiddenCategories: nextHidden,
@@ -179,10 +184,10 @@ export function useFinanceStore() {
     });
   }, [updateState]);
 
-  const setHiddenCategories = useCallback((cats: string[]) => {
+  const setHiddenCategories = useCallback((categories: (ExpenseCategory | string)[]) => {
     updateState((prev) => ({
       ...prev,
-      hiddenCategories: cats,
+      hiddenCategories: categories,
     }));
   }, [updateState]);
 
@@ -192,18 +197,16 @@ export function useFinanceStore() {
         ...bill,
         id: `bill_${Date.now()}_${Math.random().toString(36).substring(2, 6)}`,
       };
-      const currentBills = Array.isArray(prev.recurringBills) ? prev.recurringBills : [];
       return {
         ...prev,
-        recurringBills: [...currentBills, newBill],
+        recurringBills: [...prev.recurringBills, newBill],
       };
     });
   }, [updateState]);
 
   const updateRecurringBill = useCallback((bill: RecurringBill) => {
     updateState((prev) => {
-      const currentBills = Array.isArray(prev.recurringBills) ? prev.recurringBills : [];
-      const nextBills = currentBills.map((b) => (b.id === bill.id ? bill : b));
+      const nextBills = prev.recurringBills.map((b) => (b.id === bill.id ? bill : b));
       return {
         ...prev,
         recurringBills: nextBills,
@@ -213,8 +216,7 @@ export function useFinanceStore() {
 
   const deleteRecurringBill = useCallback((id: string) => {
     updateState((prev) => {
-      const currentBills = Array.isArray(prev.recurringBills) ? prev.recurringBills : [];
-      const nextBills = currentBills.filter((b) => b.id !== id);
+      const nextBills = prev.recurringBills.filter((b) => b.id !== id);
       return {
         ...prev,
         recurringBills: nextBills,
@@ -230,12 +232,20 @@ export function useFinanceStore() {
     updateState((prev) => ({ ...prev, currency }));
   }, [updateState]);
 
-  const setSavingsGoal = useCallback((savingsGoalMonthly: number) => {
-    updateState((prev) => ({ ...prev, savingsGoalMonthly }));
+  const setSavingsGoal = useCallback((savingsGoalMonthly: number, goalCurrency?: Currency) => {
+    updateState((prev) => ({
+      ...prev,
+      savingsGoalMonthly,
+      savingsGoalCurrency: goalCurrency || prev.savingsGoalCurrency || prev.currency,
+    }));
   }, [updateState]);
 
-  const setDailySpendTarget = useCallback((dailySpendTarget: number) => {
-    updateState((prev) => ({ ...prev, dailySpendTarget }));
+  const setDailySpendTarget = useCallback((dailySpendTarget: number, targetCurrency?: Currency) => {
+    updateState((prev) => ({
+      ...prev,
+      dailySpendTarget,
+      dailySpendCurrency: targetCurrency || prev.dailySpendCurrency || prev.currency,
+    }));
   }, [updateState]);
 
   const updateMonthlyBudget = useCallback((month: string, plan: MonthlyBudgetPlan) => {
@@ -255,7 +265,9 @@ export function useFinanceStore() {
       language: 'en',
       currency: 'JPY',
       savingsGoalMonthly: 50000,
+      savingsGoalCurrency: 'JPY',
       dailySpendTarget: 3000,
+      dailySpendCurrency: 'JPY',
       hiddenCategories: [],
       recurringBills: [],
       monthlyBudgets: {},
@@ -271,7 +283,9 @@ export function useFinanceStore() {
       language: 'en',
       currency: 'JPY',
       savingsGoalMonthly: 50000,
+      savingsGoalCurrency: 'JPY',
       dailySpendTarget: 3000,
+      dailySpendCurrency: 'JPY',
       hiddenCategories: [],
       recurringBills: [],
       monthlyBudgets: {},
@@ -288,7 +302,9 @@ export function useFinanceStore() {
       language: importedState.language || prev.language,
       currency: importedState.currency || prev.currency,
       savingsGoalMonthly: typeof importedState.savingsGoalMonthly === 'number' ? importedState.savingsGoalMonthly : prev.savingsGoalMonthly,
+      savingsGoalCurrency: importedState.savingsGoalCurrency || prev.savingsGoalCurrency || importedState.currency || prev.currency,
       dailySpendTarget: typeof importedState.dailySpendTarget === 'number' ? importedState.dailySpendTarget : prev.dailySpendTarget,
+      dailySpendCurrency: importedState.dailySpendCurrency || prev.dailySpendCurrency || importedState.currency || prev.currency,
       hiddenCategories: Array.isArray(importedState.hiddenCategories) ? importedState.hiddenCategories : (prev.hiddenCategories || []),
       recurringBills: Array.isArray(cleaned.recurringBills) ? cleaned.recurringBills : (Array.isArray(prev.recurringBills) ? prev.recurringBills : []),
       monthlyBudgets: importedState.monthlyBudgets && typeof importedState.monthlyBudgets === 'object' ? importedState.monthlyBudgets : (prev.monthlyBudgets || {}),
@@ -299,6 +315,7 @@ export function useFinanceStore() {
     state,
     isHydrated,
     addTransaction,
+    updateTransaction,
     deleteTransaction,
     addOrUpdateInvestment,
     deleteInvestment,

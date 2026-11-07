@@ -72,7 +72,9 @@ export interface FinanceState {
   hiddenCategories: (ExpenseCategory | string)[];
   recurringBills: RecurringBill[];
   savingsGoalMonthly: number;
+  savingsGoalCurrency?: Currency;
   dailySpendTarget: number;
+  dailySpendCurrency?: Currency;
   currency: Currency;
   language: Language;
   monthlyBudgets?: Record<string, MonthlyBudgetPlan>; // Keyed by "YYYY-MM"

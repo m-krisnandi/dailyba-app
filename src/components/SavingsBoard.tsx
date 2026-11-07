@@ -3,6 +3,8 @@
 import React, { useMemo, useState, useEffect } from 'react';
 import { Currency, Language, Transaction } from '@/types/finance';
 import { formatCurrency, translations } from '@/lib/i18n';
+import { EditTransactionModal } from '@/components/EditTransactionModal';
+import { Edit3 } from 'lucide-react';
 import { convertCurrency, DEFAULT_RATES, ExchangeRates, formatNumberWithCommas, parseRawNumber } from '@/lib/currency';
 import {
   Vault,
@@ -20,9 +22,11 @@ interface SavingsBoardProps {
   rates?: ExchangeRates;
   transactions: Transaction[];
   savingsGoalMonthly: number;
-  onUpdateGoal: (goal: number) => void;
+  savingsGoalCurrency?: Currency;
+  onUpdateGoal: (goal: number, goalCurrency?: Currency) => void;
   onAddSavings: (amount: number, note?: string) => void;
   onDeleteTransaction?: (id: string) => void;
+  onUpdateTransaction?: (tx: Transaction) => void;
 }
 
 export function SavingsBoard({
@@ -31,10 +35,13 @@ export function SavingsBoard({
   rates = DEFAULT_RATES,
   transactions,
   savingsGoalMonthly,
+  savingsGoalCurrency,
   onUpdateGoal,
   onAddSavings,
   onDeleteTransaction,
+  onUpdateTransaction,
 }: SavingsBoardProps) {
+  const [editingTx, setEditingTx] = useState<Transaction | null>(null);
   const t = translations[language];
 
   const [customAmountStr, setCustomAmountStr] = useState('');
@@ -49,10 +56,14 @@ export function SavingsBoard({
     setCurrentMonthStr(`${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`);
   }, []);
 
-  // Goal converted to current currency
+  // Goal converted to current currency with exact base-currency preservation
   const currentGoalInCurrency = useMemo(() => {
-    return convertCurrency(savingsGoalMonthly, 'JPY', currency, rates);
-  }, [savingsGoalMonthly, currency, rates]);
+    const baseCurr = savingsGoalCurrency || 'JPY';
+    if (baseCurr === currency) {
+      return savingsGoalMonthly;
+    }
+    return Math.round(convertCurrency(savingsGoalMonthly, baseCurr, currency, rates));
+  }, [savingsGoalMonthly, savingsGoalCurrency, currency, rates]);
 
   const [goalInput, setGoalInput] = useState(formatNumberWithCommas(currentGoalInCurrency));
 
@@ -121,8 +132,7 @@ export function SavingsBoard({
     e.preventDefault();
     const val = parseRawNumber(goalInput);
     if (!isNaN(val) && val >= 0) {
-      const valInJPY = convertCurrency(val, currency, 'JPY', rates);
-      onUpdateGoal(valInJPY);
+      onUpdateGoal(val, currency);
       setIsEditingGoal(false);
       setStatusMessage('Monthly savings target updated!');
       setTimeout(() => setStatusMessage(null), 2500);
@@ -131,8 +141,7 @@ export function SavingsBoard({
 
   const handleSelectGoalPreset = (val: number) => {
     setGoalInput(formatNumberWithCommas(val));
-    const valInJPY = convertCurrency(val, currency, 'JPY', rates);
-    onUpdateGoal(valInJPY);
+    onUpdateGoal(val, currency);
     setIsEditingGoal(false);
     setStatusMessage('Monthly savings target updated!');
     setTimeout(() => setStatusMessage(null), 2500);
@@ -480,10 +489,20 @@ export function SavingsBoard({
                       </div>
                     </div>
 
-                    <div className="flex items-center space-x-3">
+                    <div className="flex items-center space-x-2 sm:space-x-3">
                       <span className="font-bold text-[var(--accent-amber)] tabular-numbers font-mono">
                         +{formatCurrency(convertedAmount, currency)}
                       </span>
+                      {onUpdateTransaction && (
+                        <button
+                          type="button"
+                          onClick={() => setEditingTx(tx)}
+                          className="p-1.5 rounded-lg text-[var(--text-muted)] hover:text-[var(--text-main)] hover:bg-[var(--bg-subtle)] transition-all cursor-pointer"
+                          title={t.actions.edit}
+                        >
+                          <Edit3 className="w-3.5 h-3.5" />
+                        </button>
+                      )}
                       {onDeleteTransaction && (
                         <button
                           type="button"
@@ -501,6 +520,17 @@ export function SavingsBoard({
           </div>
         )}
       </div>
+      {/* Edit Transaction Modal */}
+      <EditTransactionModal
+        isOpen={!!editingTx}
+        transaction={editingTx}
+        language={language}
+        currency={currency}
+        onClose={() => setEditingTx(null)}
+        onSave={(updated) => {
+          if (onUpdateTransaction) onUpdateTransaction(updated);
+        }}
+      />
     </div>
   );
 }

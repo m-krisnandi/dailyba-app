@@ -36,6 +36,7 @@ export default function Home() {
     state,
     isHydrated,
     addTransaction,
+    updateTransaction,
     deleteTransaction,
     addOrUpdateInvestment,
     deleteInvestment,
@@ -227,6 +228,7 @@ export default function Home() {
             recurringBills={state.recurringBills}
             onAddTransaction={addTransaction}
             onDeleteTransaction={deleteTransaction}
+            onUpdateTransaction={updateTransaction}
             onToggleHideCategory={toggleHideCategory}
             onAddRecurringBill={addRecurringBill}
             onUpdateRecurringBill={updateRecurringBill}
@@ -241,8 +243,10 @@ export default function Home() {
             rates={rates}
             transactions={state.transactions}
             dailySpendTarget={state.dailySpendTarget}
+            dailySpendCurrency={state.dailySpendCurrency}
             onUpdateDailyTarget={setDailySpendTarget}
             onDeleteTransaction={deleteTransaction}
+            onUpdateTransaction={updateTransaction}
           />
         )}
 
@@ -287,9 +291,11 @@ export default function Home() {
             rates={rates}
             transactions={state.transactions}
             savingsGoalMonthly={state.savingsGoalMonthly}
+            savingsGoalCurrency={state.savingsGoalCurrency}
             onUpdateGoal={setSavingsGoal}
             onAddSavings={handleAddSavings}
             onDeleteTransaction={deleteTransaction}
+            onUpdateTransaction={updateTransaction}
           />
         )}
           </>

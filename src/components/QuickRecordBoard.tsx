@@ -14,6 +14,7 @@ import {
 import { formatCurrency, translations } from '@/lib/i18n';
 import { convertCurrency, DEFAULT_RATES, ExchangeRates, formatNumberWithCommas, parseRawNumber } from '@/lib/currency';
 import { CustomDatePicker } from '@/components/CustomDatePicker';
+import { EditTransactionModal } from '@/components/EditTransactionModal';
 import {
   EXPENSE_CATEGORY_ICONS,
   INCOME_CATEGORY_ICONS,
@@ -31,6 +32,7 @@ import {
   SlidersHorizontal,
   Plus,
   Pencil,
+  Edit3,
   X,
   Clock,
   Search,
@@ -47,6 +49,7 @@ interface QuickRecordBoardProps {
   recurringBills?: RecurringBill[];
   onAddTransaction: (tx: Omit<Transaction, 'id' | 'createdAt'>) => void;
   onDeleteTransaction: (id: string) => void;
+  onUpdateTransaction?: (tx: Transaction) => void;
   onToggleHideCategory?: (catKey: string) => void;
   onAddRecurringBill?: (bill: Omit<RecurringBill, 'id'>) => void;
   onUpdateRecurringBill?: (bill: RecurringBill) => void;
@@ -62,12 +65,14 @@ export function QuickRecordBoard({
   recurringBills = [],
   onAddTransaction,
   onDeleteTransaction,
+  onUpdateTransaction,
   onToggleHideCategory,
   onAddRecurringBill,
   onUpdateRecurringBill,
   onDeleteRecurringBill,
 }: QuickRecordBoardProps) {
   const t = translations[language];
+  const [editingTx, setEditingTx] = useState<Transaction | null>(null);
 
   const allExpenseCategories: ExpenseCategory[] = [
     'food_drinks',
@@ -1134,6 +1139,16 @@ export function QuickRecordBoard({
                       {isExpense ? '-' : '+'}
                       {formatCurrency(convertedAmount, currency)}
                     </span>
+                    {onUpdateTransaction && (
+                      <button
+                        type="button"
+                        onClick={() => setEditingTx(tx)}
+                        className="opacity-70 sm:opacity-0 sm:group-hover:opacity-100 p-1 text-[var(--text-faint)] hover:text-[var(--text-main)] transition-all cursor-pointer shrink-0"
+                        title={t.actions.edit}
+                      >
+                        <Edit3 className="w-3.5 h-3.5" />
+                      </button>
+                    )}
                     <button
                       type="button"
                       onClick={() => onDeleteTransaction(tx.id)}
@@ -1483,6 +1498,17 @@ export function QuickRecordBoard({
           </form>
         </div>
       )}
+      {/* Edit Transaction Modal */}
+      <EditTransactionModal
+        isOpen={!!editingTx}
+        transaction={editingTx}
+        language={language}
+        currency={currency}
+        onClose={() => setEditingTx(null)}
+        onSave={(updated) => {
+          if (onUpdateTransaction) onUpdateTransaction(updated);
+        }}
+      />
     </div>
   );
 }

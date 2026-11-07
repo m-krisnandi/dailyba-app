@@ -3,6 +3,8 @@
 import React, { useMemo, useState } from 'react';
 import { Currency, ExpenseCategory, Language, Transaction } from '@/types/finance';
 import { formatCurrency, translations } from '@/lib/i18n';
+import { EditTransactionModal } from '@/components/EditTransactionModal';
+import { Edit3 } from 'lucide-react';
 import { convertCurrency, DEFAULT_RATES, ExchangeRates, formatNumberWithCommas, parseRawNumber } from '@/lib/currency';
 import { EXPENSE_CATEGORY_ICONS } from '@/lib/constants';
 import {
@@ -36,9 +38,11 @@ interface DailySpendBoardProps {
   currency: Currency;
   rates?: ExchangeRates;
   transactions: Transaction[];
-  dailySpendTarget?: number; // Base in JPY
-  onUpdateDailyTarget: (target: number) => void;
+  dailySpendTarget?: number;
+  dailySpendCurrency?: Currency;
+  onUpdateDailyTarget: (target: number, currency?: Currency) => void;
   onDeleteTransaction?: (id: string) => void;
+  onUpdateTransaction?: (tx: Transaction) => void;
 }
 
 export function DailySpendBoard({
@@ -47,18 +51,25 @@ export function DailySpendBoard({
   rates = DEFAULT_RATES,
   transactions,
   dailySpendTarget = 3000,
+  dailySpendCurrency,
   onUpdateDailyTarget,
   onDeleteTransaction,
+  onUpdateTransaction,
 }: DailySpendBoardProps) {
+  const [editingTx, setEditingTx] = useState<Transaction | null>(null);
   const t = translations[language];
 
   const todayStr = useMemo(() => new Date().toISOString().split('T')[0], []);
   const currentMonthStr = useMemo(() => todayStr.slice(0, 7), [todayStr]);
 
-  // Target converted to active currency
+  // Target converted to active currency with exact base-currency preservation
   const targetInCurrency = useMemo(() => {
-    return convertCurrency(dailySpendTarget, 'JPY', currency, rates);
-  }, [dailySpendTarget, currency, rates]);
+    const baseCurr = dailySpendCurrency || 'JPY';
+    if (baseCurr === currency) {
+      return dailySpendTarget;
+    }
+    return Math.round(convertCurrency(dailySpendTarget, baseCurr, currency, rates));
+  }, [dailySpendTarget, dailySpendCurrency, currency, rates]);
 
   // Target input state
   const [isEditingTarget, setIsEditingTarget] = useState(false);
@@ -206,8 +217,7 @@ export function DailySpendBoard({
     e.preventDefault();
     const val = parseRawNumber(targetInputStr);
     if (!isNaN(val) && val > 0) {
-      const valInJPY = convertCurrency(val, currency, 'JPY', rates);
-      onUpdateDailyTarget(valInJPY);
+      onUpdateDailyTarget(val, currency);
       setIsEditingTarget(false);
       setStatusMessage('Daily target updated successfully!');
       setTimeout(() => setStatusMessage(null), 2500);
@@ -216,10 +226,9 @@ export function DailySpendBoard({
 
   const handleSelectPreset = (val: number) => {
     setTargetInputStr(formatNumberWithCommas(val));
-    const valInJPY = convertCurrency(val, currency, 'JPY', rates);
-    onUpdateDailyTarget(valInJPY);
+    onUpdateDailyTarget(val, currency);
     setIsEditingTarget(false);
-    setStatusMessage('Daily target updated!');
+    setStatusMessage('Daily target updated successfully!');
     setTimeout(() => setStatusMessage(null), 2500);
   };
 
@@ -730,6 +739,16 @@ export function DailySpendBoard({
                                 <span className="text-xs font-bold text-rose-600 dark:text-rose-400 tabular-numbers font-mono">
                                   -{formatCurrency(convertedAmount, currency)}
                                 </span>
+                                {onUpdateTransaction && (
+                                  <button
+                                    type="button"
+                                    onClick={() => setEditingTx(tx)}
+                                    className="p-1 rounded text-[var(--text-faint)] hover:text-[var(--text-main)] transition-all cursor-pointer opacity-70 hover:opacity-100"
+                                    title={t.actions.edit}
+                                  >
+                                    <Edit3 className="w-3.5 h-3.5" />
+                                  </button>
+                                )}
                                 {onDeleteTransaction && (
                                   <button
                                     type="button"
@@ -753,6 +772,17 @@ export function DailySpendBoard({
           </div>
         )}
       </div>
+      {/* Edit Transaction Modal */}
+      <EditTransactionModal
+        isOpen={!!editingTx}
+        transaction={editingTx}
+        language={language}
+        currency={currency}
+        onClose={() => setEditingTx(null)}
+        onSave={(updated) => {
+          if (onUpdateTransaction) onUpdateTransaction(updated);
+        }}
+      />
     </div>
   );
 }

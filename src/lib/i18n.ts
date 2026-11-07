@@ -59,6 +59,7 @@ export interface Translations {
     hideCategory: string;
     addBill: string;
     editBill: string;
+    editTransaction: string;
     billName: string;
     billNamePlaceholder: string;
     billAmount: string;
@@ -255,6 +256,7 @@ export const translations: Record<Language, Translations> = {
       hideCategory: 'Hide',
       addBill: 'Add Recurring Bill',
       editBill: 'Edit Recurring Bill',
+      editTransaction: 'Edit Transaction',
       billName: 'Bill Name / Label',
       billNamePlaceholder: 'e.g. Rent, Netflix, Internet Plan',
       billAmount: 'Monthly Amount',
@@ -472,6 +474,7 @@ export const translations: Record<Language, Translations> = {
       hideCategory: '非表示にする',
       addBill: '固定費を追加',
       editBill: '固定費を編集',
+      editTransaction: '取引を編集',
       billName: '固定費の名称',
       billNamePlaceholder: '例: 家賃、Netflix、光熱費',
       billAmount: '月額',
