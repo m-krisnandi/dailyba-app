@@ -13,6 +13,8 @@ import { YearlySummaryBoard } from '@/components/YearlySummaryBoard';
 import { InvestmentBoard } from '@/components/InvestmentBoard';
 import { SavingsBoard } from '@/components/SavingsBoard';
 import { BackupModal } from '@/components/BackupModal';
+import { AddTransactionModal } from '@/components/AddTransactionModal';
+import { Plus } from 'lucide-react';
 import { ChangelogModal } from '@/components/ChangelogModal';
 import { APP_VERSION } from '@/lib/version';
 import { AuthModal } from '@/components/AuthModal';
@@ -65,6 +67,7 @@ export default function Home() {
   const [activeTab, setActiveTab] = useState<TabKey>('record');
   const [isMounted, setIsMounted] = useState(false);
   const [isBackupModalOpen, setIsBackupModalOpen] = useState(false);
+  const [isUniversalAddModalOpen, setIsUniversalAddModalOpen] = useState(false);
   const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
   const [isChangelogModalOpen, setIsChangelogModalOpen] = useState(false);
 
@@ -250,6 +253,7 @@ export default function Home() {
             onUpdateDailyTarget={setDailySpendTarget}
             onDeleteTransaction={deleteTransaction}
             onUpdateTransaction={updateTransaction}
+            onAddTransaction={addTransaction}
           />
         )}
 
@@ -262,6 +266,7 @@ export default function Home() {
             hiddenCategories={state.hiddenCategories || []}
             monthlyBudgets={state.monthlyBudgets || {}}
             onUpdateMonthlyBudget={updateMonthlyBudget}
+            onAddTransaction={addTransaction}
           />
         )}
 
@@ -344,6 +349,30 @@ export default function Home() {
       <ChangelogModal
         isOpen={isChangelogModalOpen}
         onClose={() => setIsChangelogModalOpen(false)}
+      />
+
+      {/* Universal Floating Action Button (FAB) for 1-Tap Entry from Any Tab */}
+      {isMounted && (
+        <div className="fixed bottom-6 right-5 sm:bottom-8 sm:right-8 z-40 animate-fade-in">
+          <button
+            type="button"
+            onClick={() => setIsUniversalAddModalOpen(true)}
+            className="group flex items-center space-x-2 px-4 py-3 sm:px-5 sm:py-3.5 rounded-full bg-[var(--btn-primary-bg)] text-[var(--btn-primary-text)] border border-[var(--btn-primary-border)] shadow-[0_8px_30px_rgba(0,0,0,0.35)] hover:scale-105 active:scale-95 transition-all cursor-pointer font-bold text-xs sm:text-sm"
+            title="Record New Transaction"
+          >
+            <Plus className="w-4 h-4 sm:w-5 sm:h-5 stroke-[2.5] text-emerald-400 group-hover:rotate-90 transition-transform duration-200" />
+            <span className="font-extrabold tracking-tight">Record</span>
+          </button>
+        </div>
+      )}
+
+      {/* Universal Add Transaction Modal */}
+      <AddTransactionModal
+        isOpen={isUniversalAddModalOpen}
+        onClose={() => setIsUniversalAddModalOpen(false)}
+        onAddTransaction={addTransaction}
+        currency={state.currency}
+        language={state.language}
       />
     </div>
   );

@@ -4,6 +4,7 @@ import React, { useMemo, useState, useEffect, useRef } from 'react';
 import { Currency, ExpenseCategory, Language, MonthlyBudgetPlan, Transaction } from '@/types/finance';
 import { formatCurrency, translations } from '@/lib/i18n';
 import { EXPENSE_CATEGORY_ICONS } from '@/lib/constants';
+import { AddTransactionModal } from '@/components/AddTransactionModal';
 import { convertCurrency, DEFAULT_RATES, ExchangeRates, formatNumberWithCommas, parseRawNumber } from '@/lib/currency';
 import {
   ArrowDownRight,
@@ -43,6 +44,7 @@ interface MonthlySummaryBoardProps {
   hiddenCategories?: string[];
   monthlyBudgets?: Record<string, MonthlyBudgetPlan>;
   onUpdateMonthlyBudget?: (month: string, plan: MonthlyBudgetPlan) => void;
+  onAddTransaction?: (tx: Omit<Transaction, 'id' | 'createdAt'>) => void;
 }
 
 const MONTH_NAMES_EN = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
@@ -56,6 +58,7 @@ export function MonthlySummaryBoard({
   hiddenCategories = [],
   monthlyBudgets = {},
   onUpdateMonthlyBudget,
+  onAddTransaction,
 }: MonthlySummaryBoardProps) {
   const t = translations[language];
 
@@ -67,6 +70,7 @@ export function MonthlySummaryBoard({
 
   // Budget Modal State
   const [isBudgetModalOpen, setIsBudgetModalOpen] = useState(false);
+  const [isAddTxModalOpen, setIsAddTxModalOpen] = useState(false);
   const [modalTotalTarget, setModalTotalTarget] = useState<string>('');
   const [modalCategoryTargets, setModalCategoryTargets] = useState<Record<string, string>>({});
 
@@ -455,14 +459,28 @@ export function MonthlySummaryBoard({
             </div>
           </div>
 
-          <button
-            type="button"
-            onClick={handleOpenBudgetModal}
-            className="self-start sm:self-auto flex items-center space-x-2 px-4 py-2 rounded-2xl bg-[var(--btn-primary-bg)] text-[var(--btn-primary-text)] border border-[var(--btn-primary-border)] shadow-[var(--btn-primary-shadow)] hover:opacity-90 text-xs font-bold transition-all cursor-pointer shrink-0"
-          >
-            <Edit3 className="w-3.5 h-3.5" />
-            <span>{hasBudgetPlan ? t.summary.editBudgetPlan : t.summary.setBudgetPlan}</span>
-          </button>
+          <div className="flex items-center space-x-2 shrink-0 flex-wrap gap-y-2">
+            {onAddTransaction && (
+              <button
+                type="button"
+                onClick={() => setIsAddTxModalOpen(true)}
+                className="flex items-center space-x-1.5 px-3.5 sm:px-4 py-2 rounded-2xl bg-[var(--btn-primary-bg)] text-[var(--btn-primary-text)] border border-[var(--btn-primary-border)] shadow-[var(--btn-primary-shadow)] hover:opacity-90 active:scale-95 text-xs font-bold transition-all cursor-pointer shrink-0"
+                title="Record Transaction for this Month"
+              >
+                <Plus className="w-3.5 h-3.5" />
+                <span>{t.record.addTransaction || "Record Transaction"}</span>
+              </button>
+            )}
+
+            <button
+              type="button"
+              onClick={handleOpenBudgetModal}
+              className="flex items-center space-x-1.5 px-3.5 sm:px-4 py-2 rounded-2xl border border-[var(--border-subtle)] bg-[var(--bg-subtle)] hover:bg-[var(--bg-subtle-hover)] text-xs font-bold text-[var(--text-main)] transition-all cursor-pointer shrink-0"
+            >
+              <Edit3 className="w-3.5 h-3.5" />
+              <span>{hasBudgetPlan ? t.summary.editBudgetPlan : t.summary.setBudgetPlan}</span>
+            </button>
+          </div>
         </div>
 
         {!hasBudgetPlan ? (
@@ -1040,6 +1058,20 @@ export function MonthlySummaryBoard({
             </form>
           </div>
         </div>
+      )}
+
+      {/* Add Transaction Modal */}
+      {onAddTransaction && (
+        <AddTransactionModal
+          isOpen={isAddTxModalOpen}
+          initialType="expense"
+          initialDate={selectedMonth === new Date().toISOString().slice(0, 7) ? new Date().toISOString().split('T')[0] : `${selectedMonth}-01`}
+          currency={currency}
+          language={language}
+          onClose={() => setIsAddTxModalOpen(false)}
+          onAddTransaction={onAddTransaction}
+          title={`Record Transaction (${selectedMonth})`}
+        />
       )}
     </div>
   );

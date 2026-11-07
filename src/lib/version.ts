@@ -1,5 +1,5 @@
-export const APP_VERSION = '1.2.0';
-export const APP_BUILD = '20261107';
+export const APP_VERSION = '1.3.0';
+export const APP_BUILD = '20261108';
 
 export interface ChangelogItem {
   version: string;
@@ -9,6 +9,19 @@ export interface ChangelogItem {
 }
 
 export const APP_CHANGELOG: ChangelogItem[] = [
+  {
+    version: '1.3.0',
+    date: '2026-11-08',
+    title: 'Universal 1-Tap Entry, Contextual Recording & Guided Onboarding',
+    highlights: [
+      'Universal Floating Action Button (FAB "+") mengambang di pojok layar: catat transaksi instan dengan 1 tap dari tab mana pun.',
+      'Tombol Catat Langsung di Tab Daily Spend: catat pengeluaran hari ini secara kontekstual tanpa perlu pindah ke tab lain.',
+      'Tombol Catat Transaksi di Tab Monthly: catat transaksi dan rencanakan target pengeluaran bulanan dalam satu tempat.',
+      'Panduan Cepat Memulai (Onboarding Guide) interaktif 3 langkah ramah pemula untuk akun dengan 0 transaksi.',
+      'Tombol unduh APK cerdas di topbar website (otomatis disembunyikan saat aplikasi dibuka di APK/iOS).',
+      'Penyempurnaan label navigasi tab "Transactions" untuk kejelasan arsitektur informasi.',
+    ],
+  },
   {
     version: '1.2.0',
     date: '2026-11-07',

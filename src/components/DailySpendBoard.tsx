@@ -4,10 +4,12 @@ import React, { useMemo, useState } from 'react';
 import { Currency, ExpenseCategory, Language, Transaction } from '@/types/finance';
 import { formatCurrency, translations } from '@/lib/i18n';
 import { EditTransactionModal } from '@/components/EditTransactionModal';
+import { AddTransactionModal } from '@/components/AddTransactionModal';
 import { Edit3 } from 'lucide-react';
 import { convertCurrency, DEFAULT_RATES, ExchangeRates, formatNumberWithCommas, parseRawNumber } from '@/lib/currency';
 import { EXPENSE_CATEGORY_ICONS } from '@/lib/constants';
 import {
+  Plus,
   CalendarDays,
   SlidersHorizontal,
   Check,
@@ -43,6 +45,7 @@ interface DailySpendBoardProps {
   onUpdateDailyTarget: (target: number, currency?: Currency) => void;
   onDeleteTransaction?: (id: string) => void;
   onUpdateTransaction?: (tx: Transaction) => void;
+  onAddTransaction?: (tx: Omit<Transaction, 'id' | 'createdAt'>) => void;
 }
 
 export function DailySpendBoard({
@@ -55,8 +58,11 @@ export function DailySpendBoard({
   onUpdateDailyTarget,
   onDeleteTransaction,
   onUpdateTransaction,
+  onAddTransaction,
 }: DailySpendBoardProps) {
   const [editingTx, setEditingTx] = useState<Transaction | null>(null);
+  const [isAddExpenseModalOpen, setIsAddExpenseModalOpen] = useState(false);
+  const [addExpenseDate, setAddExpenseDate] = useState<string>('');
   const t = translations[language];
 
   const todayStr = useMemo(() => new Date().toISOString().split('T')[0], []);
@@ -267,28 +273,45 @@ export function DailySpendBoard({
             </p>
           </div>
 
-          {/* Interactive Adjust Daily Target Button */}
-          <button
-            type="button"
-            onClick={() => setIsEditingTarget(!isEditingTarget)}
-            className={`inline-flex items-center space-x-1.5 px-4 py-2.5 rounded-2xl border text-xs sm:text-sm font-bold transition-all shadow-xs cursor-pointer ${
-              isEditingTarget
-                ? 'bg-[var(--bg-surface-solid)] border-[var(--border-strong)] text-[var(--text-main)] ring-1 ring-[var(--border-strong)]'
-                : 'border-[var(--border-subtle)] bg-[var(--bg-subtle)] hover:bg-[var(--bg-subtle-hover)] hover:border-[var(--border-strong)] text-[var(--text-main)]'
-            }`}
-          >
-            {isEditingTarget ? (
-              <>
-                <X className="w-4 h-4" />
-                <span>{t.actions.cancel}</span>
-              </>
-            ) : (
-              <>
-                <SlidersHorizontal className="w-4 h-4" />
-                <span>{t.dailySpend.adjustDailyTarget}</span>
-              </>
+          {/* Action Buttons: Record Today's Spend + Adjust Target */}
+          <div className="flex items-center space-x-2 shrink-0">
+            {onAddTransaction && (
+              <button
+                type="button"
+                onClick={() => {
+                  setAddExpenseDate(todayStr);
+                  setIsAddExpenseModalOpen(true);
+                }}
+                className="inline-flex items-center space-x-1.5 px-3.5 sm:px-4 py-2 sm:py-2.5 rounded-2xl bg-[var(--btn-primary-bg)] text-[var(--btn-primary-text)] border border-[var(--btn-primary-border)] shadow-[var(--btn-primary-shadow)] hover:opacity-90 active:scale-95 text-xs sm:text-sm font-bold transition-all cursor-pointer shrink-0"
+                title="Record Today's Spend"
+              >
+                <Plus className="w-4 h-4" />
+                <span>{t.record.recordTodayExpense || "Record Today's Spend"}</span>
+              </button>
             )}
-          </button>
+
+            <button
+              type="button"
+              onClick={() => setIsEditingTarget(!isEditingTarget)}
+              className={`inline-flex items-center space-x-1.5 px-3.5 sm:px-4 py-2 sm:py-2.5 rounded-2xl border text-xs sm:text-sm font-bold transition-all shadow-xs cursor-pointer ${
+                isEditingTarget
+                  ? 'bg-[var(--bg-surface-solid)] border-[var(--border-strong)] text-[var(--text-main)] ring-1 ring-[var(--border-strong)]'
+                  : 'border-[var(--border-subtle)] bg-[var(--bg-subtle)] hover:bg-[var(--bg-subtle-hover)] hover:border-[var(--border-strong)] text-[var(--text-main)]'
+              }`}
+            >
+              {isEditingTarget ? (
+                <>
+                  <X className="w-4 h-4" />
+                  <span>{t.actions.cancel}</span>
+                </>
+              ) : (
+                <>
+                  <SlidersHorizontal className="w-4 h-4" />
+                  <span>{t.dailySpend.adjustDailyTarget}</span>
+                </>
+              )}
+            </button>
+          </div>
         </div>
 
         {/* Adjust Daily Target Form (Glass Accordion) */}
@@ -699,9 +722,24 @@ export function DailySpendBoard({
                   {isExpanded && (
                     <div className="px-4 pb-4 pt-1 border-t border-[var(--border-subtle)] space-y-2 bg-[var(--bg-subtle)]">
                       {dayTxs.length === 0 ? (
-                        <p className="text-xs text-[var(--text-faint)] py-2 text-center">
-                          {t.dailySpend.noExpenses}
-                        </p>
+                        <div className="py-3 text-center space-y-2">
+                          <p className="text-xs text-[var(--text-faint)]">
+                            {t.dailySpend.noExpenses}
+                          </p>
+                          {onAddTransaction && (
+                            <button
+                              type="button"
+                              onClick={() => {
+                                setAddExpenseDate(dateKey);
+                                setIsAddExpenseModalOpen(true);
+                              }}
+                              className="inline-flex items-center space-x-1.5 px-3 py-1.5 rounded-xl bg-[var(--bg-surface-solid)] border border-[var(--border-strong)] text-xs font-bold text-[var(--text-main)] hover:border-[var(--border-specular)] transition-all cursor-pointer"
+                            >
+                              <Plus className="w-3.5 h-3.5 text-emerald-400" />
+                              <span>{isToday ? (t.record.recordTodayExpense || "Record Today's Spend") : 'Add Expense for this Day'}</span>
+                            </button>
+                          )}
+                        </div>
                       ) : (
                         dayTxs.map((tx) => {
                           const Icon =
@@ -783,6 +821,19 @@ export function DailySpendBoard({
           if (onUpdateTransaction) onUpdateTransaction(updated);
         }}
       />
+      {/* Add Transaction Modal */}
+      {onAddTransaction && (
+        <AddTransactionModal
+          isOpen={isAddExpenseModalOpen}
+          initialType="expense"
+          initialDate={addExpenseDate || todayStr}
+          currency={currency}
+          language={language}
+          onClose={() => setIsAddExpenseModalOpen(false)}
+          onAddTransaction={onAddTransaction}
+          title={addExpenseDate === todayStr ? (t.record.recordTodayExpense || "Record Today's Spend") : `Record Expense (${addExpenseDate})`}
+        />
+      )}
     </div>
   );
 }

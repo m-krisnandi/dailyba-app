@@ -60,6 +60,8 @@ export interface Translations {
     addBill: string;
     editBill: string;
     editTransaction: string;
+    addTransaction: string;
+    recordTodayExpense: string;
     billName: string;
     billNamePlaceholder: string;
     billAmount: string;
@@ -201,7 +203,7 @@ export const translations: Record<Language, Translations> = {
     appTitle: 'Dailyba',
     appSubtitle: 'Daily Balance & Wealth Tracker',
     nav: {
-      record: 'Quick Entry',
+      record: 'Transactions',
       daily: 'Daily Spend',
       monthly: 'Monthly',
       yearly: 'Yearly',
@@ -257,6 +259,8 @@ export const translations: Record<Language, Translations> = {
       addBill: 'Add Recurring Bill',
       editBill: 'Edit Recurring Bill',
       editTransaction: 'Edit Transaction',
+      addTransaction: 'Add Transaction',
+      recordTodayExpense: "Record Today's Spend",
       billName: 'Bill Name / Label',
       billNamePlaceholder: 'e.g. Rent, Netflix, Internet Plan',
       billAmount: 'Monthly Amount',
@@ -419,7 +423,7 @@ export const translations: Record<Language, Translations> = {
     appTitle: 'Dailyba',
     appSubtitle: '日々の収支バランス・資産トラッカー',
     nav: {
-      record: '即時記録',
+      record: '取引・記帳',
       daily: '日次支出',
       monthly: '月次サマリー',
       yearly: '年次推移',
@@ -475,6 +479,8 @@ export const translations: Record<Language, Translations> = {
       addBill: '固定費を追加',
       editBill: '固定費を編集',
       editTransaction: '取引を編集',
+      addTransaction: '取引を記録',
+      recordTodayExpense: '今日の支出を記録',
       billName: '固定費の名称',
       billNamePlaceholder: '例: 家賃、Netflix、光熱費',
       billAmount: '月額',

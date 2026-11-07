@@ -73,6 +73,23 @@ export function QuickRecordBoard({
 }: QuickRecordBoardProps) {
   const t = translations[language];
   const [editingTx, setEditingTx] = useState<Transaction | null>(null);
+  const [showOnboarding, setShowOnboarding] = useState(false);
+
+  useEffect(() => {
+    const dismissed = localStorage.getItem('dailyba_onboarding_dismissed');
+    if (!dismissed) {
+      setShowOnboarding(true);
+    }
+  }, []);
+
+  const handleDismissOnboarding = () => {
+    setShowOnboarding(false);
+    try {
+      localStorage.setItem('dailyba_onboarding_dismissed', 'true');
+    } catch {
+      // ignore
+    }
+  };
 
   const allExpenseCategories: ExpenseCategory[] = [
     'food_drinks',
@@ -505,6 +522,80 @@ export function QuickRecordBoard({
 
   return (
     <div className="space-y-6">
+      {/* First-Time User Quick Start Guide */}
+      {showOnboarding && transactions.length === 0 && (
+        <div className="rounded-3xl border border-emerald-500/30 bg-emerald-500/5 backdrop-blur-xl p-5 sm:p-6 shadow-sm relative space-y-4 animate-fade-in">
+          <div className="flex items-start justify-between">
+            <div className="flex items-center space-x-3">
+              <div className="w-10 h-10 rounded-2xl bg-emerald-500/15 border border-emerald-500/30 flex items-center justify-center text-emerald-400 shrink-0">
+                <Sparkles className="w-5 h-5" />
+              </div>
+              <div>
+                <h3 className="text-sm sm:text-base font-extrabold text-[var(--text-main)]">
+                  {language === 'ja' ? 'Dailyba へようこそ！🌸 クイックスタートガイド' : 'Welcome to Dailyba! 🌸 Quick Start Guide'}
+                </h3>
+                <p className="text-xs text-[var(--text-muted)] mt-0.5">
+                  {language === 'ja'
+                    ? '3つのステップで毎日の収支管理と貯蓄をスタートできます：'
+                    : 'Get started with daily spending awareness & savings in 3 simple steps:'}
+                </p>
+              </div>
+            </div>
+            <button
+              type="button"
+              onClick={handleDismissOnboarding}
+              className="p-1.5 rounded-xl text-[var(--text-muted)] hover:text-[var(--text-main)] hover:bg-[var(--bg-subtle)] transition-all cursor-pointer"
+              title="Dismiss guide"
+            >
+              <X className="w-4 h-4" />
+            </button>
+          </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 pt-1">
+            <div className="p-3.5 rounded-2xl bg-[var(--bg-surface-solid)] border border-[var(--border-subtle)] space-y-1.5">
+              <div className="flex items-center space-x-2">
+                <span className="w-5 h-5 rounded-full bg-emerald-500/20 text-emerald-400 font-mono font-bold text-[11px] flex items-center justify-center">1</span>
+                <span className="text-xs font-bold text-[var(--text-main)]">
+                  {language === 'ja' ? '1. 取引を記録' : '1. Record Transactions'}
+                </span>
+              </div>
+              <p className="text-[11px] text-[var(--text-muted)] leading-relaxed">
+                {language === 'ja'
+                  ? '下の入力フォームまたは右下の [+] ボタンから、支出・収入・貯金振替を即座に記録できます。'
+                  : 'Use the quick form below or the [+] button in the bottom right corner to log your first expense, income, or savings.'}
+              </p>
+            </div>
+
+            <div className="p-3.5 rounded-2xl bg-[var(--bg-surface-solid)] border border-[var(--border-subtle)] space-y-1.5">
+              <div className="flex items-center space-x-2">
+                <span className="w-5 h-5 rounded-full bg-emerald-500/20 text-emerald-400 font-mono font-bold text-[11px] flex items-center justify-center">2</span>
+                <span className="text-xs font-bold text-[var(--text-main)]">
+                  {language === 'ja' ? '2. 日次予算を設定' : '2. Set Daily Limit'}
+                </span>
+              </div>
+              <p className="text-[11px] text-[var(--text-muted)] leading-relaxed">
+                {language === 'ja'
+                  ? '「日次支出」タブで1日の支出目標を設定し、日々の使いすぎをリアルタイムで防止します。'
+                  : 'Visit the Daily Spend tab to set your comfortable daily limit and prevent impulsive overspending.'}
+              </p>
+            </div>
+
+            <div className="p-3.5 rounded-2xl bg-[var(--bg-surface-solid)] border border-[var(--border-subtle)] space-y-1.5">
+              <div className="flex items-center space-x-2">
+                <span className="w-5 h-5 rounded-full bg-emerald-500/20 text-emerald-400 font-mono font-bold text-[11px] flex items-center justify-center">3</span>
+                <span className="text-xs font-bold text-[var(--text-main)]">
+                  {language === 'ja' ? '3. 月次計画 & 貯金' : '3. Budget & Vault'}
+                </span>
+              </div>
+              <p className="text-[11px] text-[var(--text-muted)] leading-relaxed">
+                {language === 'ja'
+                  ? '「月次サマリー」で予算計画を立て、「貯金管理」で生活防衛資金を着実に積み立てます。'
+                  : 'Check the Monthly tab for cashflow overview & budget targets, and grow your emergency reserves in Savings.'}
+              </p>
+            </div>
+          </div>
+        </div>
+      )}
       {/* Smart Quick Entry Card */}
       <div className="rounded-3xl border border-[var(--border-subtle)] bg-[var(--bg-surface)] p-5 sm:p-6 shadow-[var(--card-shadow)] relative transition-all duration-200">
         <form onSubmit={handleSmartTextSubmit} className="space-y-3">
