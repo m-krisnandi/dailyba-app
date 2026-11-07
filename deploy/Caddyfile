@@ -1,0 +1,21 @@
+{
+	email {$ACME_EMAIL}
+}
+
+{$DOMAIN_NAME:dailyba.pdfumi.com} {
+	encode zstd gzip
+
+	# Reverse proxy API requests to backend
+	handle /api/* {
+		reverse_proxy api:4000 {
+			transport http {
+				response_header_timeout 60s
+			}
+		}
+	}
+
+	# Reverse proxy all web frontend requests
+	handle {
+		reverse_proxy web:3000
+	}
+}

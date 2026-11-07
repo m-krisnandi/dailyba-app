@@ -1,0 +1,29 @@
+services:
+  api:
+    build:
+      context: ./server
+      dockerfile: Dockerfile
+    restart: unless-stopped
+    ports:
+      - "4000:4000"
+    environment:
+      PORT: 4000
+      JWT_SECRET: ${JWT_SECRET:-dailyba_dev_jwt_secret_key_2026}
+      DB_PATH: /app/data/dailyba.db
+    volumes:
+      - dailyba_data:/app/data
+
+  web:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      args:
+        NEXT_PUBLIC_API_URL: http://localhost:4000
+    restart: unless-stopped
+    ports:
+      - "3000:3000"
+    depends_on:
+      - api
+
+volumes:
+  dailyba_data:

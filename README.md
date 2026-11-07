@@ -1,36 +1,102 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Dailyba (Daily Balance & Wealth Tracker)
 
-## Getting Started
+A modern, minimalist personal finance and wealth management system designed with **Liquid Glass UI**, high-trust fintech principles, and cross-platform native sync across **Web, Android, and iOS**.
 
-First, run the development server:
+---
+
+## 📚 Dokumentasi
+
+- [Arsitektur Sistem & Database](docs/ARCHITECTURE.md)
+- [Panduan Deployment VPS (Docker Compose + Caddy Subdomain)](docs/DEPLOYMENT.md)
+
+---
+
+## 🛠️ Stack Teknologi
+
+- **Frontend (`src/`)**: Next.js 16 (React 19) + Tailwind CSS v4 (`output: 'export'`)
+- **Native Mobile**: Capacitor 8 (Android Studio + iOS Xcode)
+- **Backend API (`server/`)**: Node.js + Express REST API + Better-SQLite3 (WAL Mode)
+- **Containerization**: Docker Multi-stage + Docker Compose + Caddy / Nginx
+- **Live Currency Engine**: Auto-updating exchange rates via `open.er-api.com` (JPY, IDR, USD, MMK)
+
+---
+
+## 💻 Menjalankan di Lokal (Development)
+
+Jalankan perintah berikut di folder proyek untuk menyalakan frontend dan backend sekaligus:
 
 ```bash
+# 1. Install dependencies
+npm install
+cd server && npm install && cd ..
+
+# 2. Jalankan frontend (port 3001) & REST API server (port 4000) bersamaan
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Buka di browser:
+- **Dailyba Web**: [http://localhost:3001](http://localhost:3001)
+- **Dailyba REST API Health**: [http://localhost:4000/api/health](http://localhost:4000/api/health)
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+---
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+## 🌐 Menjalankan di Produksi (VPS Docker)
 
-## Learn More
+Ikuti panduan lengkap di [`docs/DEPLOYMENT.md`](docs/DEPLOYMENT.md). Ringkasan perintah:
 
-To learn more about Next.js, take a look at the following resources:
+```bash
+# 1. Salin template env
+cp deploy/.env.prod.example .env
+nano .env  # Atur DOMAIN_NAME dan JWT_SECRET
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+# 2. Jalankan via Docker Compose
+docker compose -f docker-compose.prod.yml --env-file .env up -d --build
+```
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+---
 
-## Deploy on Vercel
+## 📱 Build Aplikasi Native (Android & iOS)
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+### Android APK:
+```bash
+# Build aset web statis dan sinkronkan ke proyek Android native
+npm run sync
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+# Buka proyek di Android Studio:
+npm run open:android
+
+# Atau build debug APK langsung via terminal:
+npm run build:apk
+# File APK hasil build berada di:
+# android/app/build/outputs/apk/debug/app-debug.apk
+```
+
+### iOS App:
+```bash
+# Build aset web statis dan sinkronkan ke proyek iOS native
+npm run sync
+
+# Buka proyek di Xcode:
+npm run open:ios
+```
+
+---
+
+## ✨ Fitur Unggulan
+
+1. **Anti-Ngetik Daily Expense Logging (2-Detik Record)**:
+   - Tombol nominal instan (`+1k`, `+3k`, `+5k`, `+10k`, `+50k`).
+   - Smart Quick Text: Ketik `train 220`, `laundry 600`, `vps 1800`, `makan 45k` lalu tekan **Enter**.
+   - Funding Source fleksibel: Cash, Bank Transfer, IC / e-Wallet, Credit Card.
+2. **Tagihan Bulanan Otomatis (Recurring Bills)**:
+   - 1-Click confirm tagihan per siklus bulan.
+   - Sinkronisasi dua arah (menghapus transaksi tagihan otomatis membatalkan status bayar bulan terkait).
+3. **Multi-Mata Uang & Live Rates**:
+   - Mata uang: **¥ JPY** (Default), **Rp IDR**, **$ USD**, dan **K MMK** (Myanmar Kyat).
+   - Kurs diperbarui secara otomatis dan responsif di seluruh ringkasan.
+4. **Cloud Sync Mandiri (Self-Hosted)**:
+   - Login, Sign Up, dan Lupa Password (verifikasi OTP 6 digit).
+   - Data otomatis tersinkronisasi saat Anda ganti HP atau berpindah antara Android, iPhone, dan Web.
+5. **Investasi & Total Kekayaan Bersih (Net Worth)**:
+   - Portofolio Reksa Dana, Saham, Crypto, Emas, dan Deposito.
+   - Perhitungan otomatis laba/rugi mengambang (*Unrealized P&L*).

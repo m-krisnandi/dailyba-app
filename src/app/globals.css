@@ -1,26 +1,173 @@
 @import "tailwindcss";
 
+@variant dark (&:where(.dark, .dark *));
+
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  --font-sans: -apple-system, BlinkMacSystemFont, "SF Pro Display", "SF Pro Text", "Segoe UI", Roboto, sans-serif;
+  --font-mono: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", monospace;
+
+  /* Liquid Glass LIGHT Theme — Soft Frosted Pearlescent Glass */
+  --bg-primary: #edf2f7;
+  --bg-surface: rgba(255, 255, 255, 0.68);
+  --bg-surface-solid: rgba(255, 255, 255, 0.88);
+  --bg-subtle: rgba(15, 23, 42, 0.035);
+  --bg-subtle-hover: rgba(15, 23, 42, 0.065);
+
+  /* Specular Rim Lighting & Borders */
+  --border-subtle: rgba(255, 255, 255, 0.8);
+  --border-strong: rgba(15, 23, 42, 0.12);
+  --border-specular: rgba(255, 255, 255, 0.95);
+
+  /* Muted Grayscale Palette */
+  --text-main: #0f172a;
+  --text-muted: #64748b;
+  --text-faint: #94a3b8;
+
+  /* Executive Soft Glossy Buttons */
+  --btn-primary-bg: #0f172a;
+  --btn-primary-text: #ffffff;
+  --btn-primary-border: rgba(15, 23, 42, 0.12);
+  --btn-primary-hover: #1e293b;
+  --btn-primary-shadow: 0 4px 16px rgba(15, 23, 42, 0.12), inset 0 1px 0 rgba(255, 255, 255, 0.25);
+
+  /* Subtle Refined Accents (Non-neon, refined fintech) */
+  --accent-emerald: #059669;
+  --accent-emerald-soft: rgba(5, 150, 105, 0.08);
+
+  --accent-rose: #e11d48;
+  --accent-rose-soft: rgba(225, 29, 72, 0.08);
+
+  --accent-indigo: #4f46e5;
+  --accent-indigo-soft: rgba(79, 70, 229, 0.08);
+
+  --accent-amber: #d97706;
+  --accent-amber-soft: rgba(217, 119, 6, 0.08);
+
+  --accent-cyan: #0284c7;
+  --accent-cyan-soft: rgba(2, 132, 199, 0.08);
+
+  /* Layered Glass Depth & Specular Glow */
+  --card-shadow: 0 16px 36px -10px rgba(15, 23, 42, 0.07), inset 0 1px 1px 0 rgba(255, 255, 255, 0.95), inset 0 0 0 1px rgba(255, 255, 255, 0.65);
+  --pill-shadow: 0 4px 14px rgba(15, 23, 42, 0.04), inset 0 1px 0 0 rgba(255, 255, 255, 0.9);
+  --modal-shadow: 0 32px 70px -15px rgba(15, 23, 42, 0.2), inset 0 1.5px 1px 0 #ffffff;
 }
 
-@theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
-}
+.dark {
+  /* Liquid Glass DARK Theme — Deep Slate Metallic & Refracted Frosted Panels */
+  /* Inspired by liquidglassdesign.com/gallery/liquid-glass-finance-app-ui */
+  --bg-primary: #0a0e13;
+  --bg-surface: rgba(255, 255, 255, 0.05);
+  --bg-surface-solid: rgba(22, 30, 42, 0.82);
+  --bg-subtle: rgba(255, 255, 255, 0.045);
+  --bg-subtle-hover: rgba(255, 255, 255, 0.08);
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+  /* Specular Rim Reflections */
+  --border-subtle: rgba(255, 255, 255, 0.1);
+  --border-strong: rgba(255, 255, 255, 0.18);
+  --border-specular: rgba(255, 255, 255, 0.25);
+
+  /* High-Contrast Muted Grayscale Palette */
+  --text-main: #f8fafc;
+  --text-muted: #94a3b8;
+  --text-faint: #64748b;
+
+  /* Executive Soft Glossy Buttons */
+  --btn-primary-bg: #ffffff;
+  --btn-primary-text: #0a0e13;
+  --btn-primary-border: rgba(255, 255, 255, 0.3);
+  --btn-primary-hover: #f1f5f9;
+  --btn-primary-shadow: 0 4px 20px rgba(0, 0, 0, 0.5), inset 0 1px 0 rgba(255, 255, 255, 0.9);
+
+  /* Subtle Refined Accents (Muted & Sleek) */
+  --accent-emerald: #10b981;
+  --accent-emerald-soft: rgba(16, 185, 129, 0.12);
+
+  --accent-rose: #f43f5e;
+  --accent-rose-soft: rgba(244, 63, 94, 0.12);
+
+  --accent-indigo: #6366f1;
+  --accent-indigo-soft: rgba(99, 102, 241, 0.12);
+
+  --accent-amber: #f59e0b;
+  --accent-amber-soft: rgba(245, 158, 11, 0.12);
+
+  --accent-cyan: #38bdf8;
+  --accent-cyan-soft: rgba(56, 189, 248, 0.12);
+
+  /* Layered Glass Depth & Specular Inner Glow */
+  --card-shadow: 0 24px 50px -12px rgba(0, 0, 0, 0.7), inset 0 1px 1px 0 rgba(255, 255, 255, 0.22), inset 0 0 0 1px rgba(255, 255, 255, 0.05);
+  --pill-shadow: 0 4px 16px rgba(0, 0, 0, 0.4), inset 0 1px 0 0 rgba(255, 255, 255, 0.18);
+  --modal-shadow: 0 36px 80px -15px rgba(0, 0, 0, 0.8), inset 0 1px 1px 0 rgba(255, 255, 255, 0.28);
 }
 
 body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  background-color: var(--bg-primary);
+  color: var(--text-main);
+  font-family: var(--font-sans);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  padding-bottom: env(safe-area-inset-bottom, 24px);
+  padding-top: env(safe-area-inset-top, 0px);
+  min-height: 100vh;
+  position: relative;
+  overflow-x: hidden;
+  transition: background-color 200ms ease, color 200ms ease;
+}
+
+/* Liquid Glass Card & Modal Component Classes */
+.liquid-glass-card {
+  background: var(--bg-surface);
+  backdrop-filter: blur(36px) saturate(190%);
+  -webkit-backdrop-filter: blur(36px) saturate(190%);
+  border: 1px solid var(--border-subtle);
+  box-shadow: var(--card-shadow);
+}
+
+.liquid-glass-modal {
+  background: var(--bg-surface-solid);
+  backdrop-filter: blur(48px) saturate(200%);
+  -webkit-backdrop-filter: blur(48px) saturate(200%);
+  border: 1px solid var(--border-strong);
+  box-shadow: var(--modal-shadow);
+}
+
+/* Hide HTML5 number input spin buttons / steppers across all browsers */
+input[type="number"]::-webkit-inner-spin-button,
+input[type="number"]::-webkit-outer-spin-button {
+  -webkit-appearance: none !important;
+  margin: 0 !important;
+  display: none !important;
+}
+
+input[type="number"] {
+  -moz-appearance: textfield !important;
+  appearance: textfield !important;
+}
+
+/* Custom Scrollbar */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--border-strong);
+  border-radius: 9999px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: var(--text-muted);
+}
+
+/* Utility to hide scrollbar for horizontal pill docks */
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+.no-scrollbar {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
 }
