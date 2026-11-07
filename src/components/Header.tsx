@@ -6,6 +6,7 @@ import { translations } from '@/lib/i18n';
 import { ExchangeRates, DEFAULT_RATES } from '@/lib/currency';
 import { KakeiboLogo } from '@/components/KakeiboLogo';
 import { useAuth } from '@/lib/authContext';
+import { APP_VERSION } from '@/lib/version';
 import {
   Globe,
   Sun,
@@ -329,6 +330,11 @@ export function Header({
                     <LogOut className="w-3.5 h-3.5" />
                     <span>Log Out</span>
                   </button>
+
+                  <div className="pt-2 border-t border-[var(--border-subtle)] px-2.5 flex items-center justify-between text-[10px] font-mono text-[var(--text-faint)]">
+                    <span>Dailyba App</span>
+                    <span className="font-bold text-[var(--text-muted)]">v{APP_VERSION}</span>
+                  </div>
                 </div>
               </div>
             )}

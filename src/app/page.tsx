@@ -13,6 +13,8 @@ import { YearlySummaryBoard } from '@/components/YearlySummaryBoard';
 import { InvestmentBoard } from '@/components/InvestmentBoard';
 import { SavingsBoard } from '@/components/SavingsBoard';
 import { BackupModal } from '@/components/BackupModal';
+import { ChangelogModal } from '@/components/ChangelogModal';
+import { APP_VERSION } from '@/lib/version';
 import { AuthModal } from '@/components/AuthModal';
 
 const VALID_TABS: TabKey[] = ['record', 'daily', 'monthly', 'yearly', 'investments', 'savings'];
@@ -64,6 +66,7 @@ export default function Home() {
   const [isMounted, setIsMounted] = useState(false);
   const [isBackupModalOpen, setIsBackupModalOpen] = useState(false);
   const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
+  const [isChangelogModalOpen, setIsChangelogModalOpen] = useState(false);
 
   // Cloud Sync Coordination
   const hasInitialSyncedRef = useRef(false);
@@ -302,9 +305,20 @@ export default function Home() {
         )}
       </main>
 
-      {/* Bottom Footer */}
-      <footer className="border-t border-[var(--border-subtle)] py-5 text-center text-xs text-[var(--text-muted)] font-mono transition-colors duration-200">
-        <p>Dailyba • Daily Balance & Wealth Tracker</p>
+      {/* Bottom Footer with Version & Changelog Trigger */}
+      <footer className="border-t border-[var(--border-subtle)] py-6 text-center text-xs text-[var(--text-muted)] font-mono transition-colors duration-200 space-y-1.5">
+        <p className="font-medium">Dailyba • Daily Balance & Wealth Tracker</p>
+        <div className="flex items-center justify-center space-x-2 text-[11px]">
+          <span className="font-bold text-[var(--text-main)]">v{APP_VERSION}</span>
+          <span>•</span>
+          <button
+            type="button"
+            onClick={() => setIsChangelogModalOpen(true)}
+            className="text-[var(--accent-emerald)] hover:underline underline-offset-2 transition-all cursor-pointer font-bold"
+          >
+            What's New (Changelog)
+          </button>
+        </div>
       </footer>
 
       {/* Backup & Import Modal */}
@@ -324,6 +338,12 @@ export default function Home() {
         onSuccess={() => {
           handleManualSync();
         }}
+      />
+
+      {/* Version Changelog Modal */}
+      <ChangelogModal
+        isOpen={isChangelogModalOpen}
+        onClose={() => setIsChangelogModalOpen(false)}
       />
     </div>
   );

@@ -1,6 +1,6 @@
 {
   "name": "dailyba-app",
-  "version": "0.1.0",
+  "version": "1.2.0",
   "private": true,
   "scripts": {
     "dev": "node scripts/dev.js",
@@ -9,7 +9,7 @@
     "build": "next build",
     "start": "next start",
     "lint": "eslint",
-    "sync": "next build && npx cap sync",
+    "sync": "rm -f public/dailyba.apk out/dailyba.apk android/app/src/main/assets/public/dailyba.apk && next build && rm -f out/dailyba.apk && npx cap sync && rm -f android/app/src/main/assets/public/dailyba.apk",
     "open:android": "npx cap open android",
     "open:ios": "npx cap open ios",
     "build:apk": "next build && npx cap sync && cd android && JAVA_HOME=$(/usr/libexec/java_home -v 21 2>/dev/null || echo $JAVA_HOME) ./gradlew assembleDebug && cp app/build/outputs/apk/debug/app-debug.apk ../build-artifacts/dailyba-app.apk && cp app/build/outputs/apk/debug/app-debug.apk ../public/dailyba.apk"
