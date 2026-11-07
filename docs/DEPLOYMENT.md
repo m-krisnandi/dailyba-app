@@ -75,7 +75,7 @@ Login ke VPS via SSH, lalu clone repository:
 
 ```bash
 # Pindah ke direktori aplikasi
-cd /var/www  # atau di home user: cd ~
+cd /opt
 
 # Clone repository
 git clone https://github.com/m-krisnandi/dailyba-app.git
@@ -117,12 +117,12 @@ Simpan dengan `Ctrl + O` lalu keluar dengan `Ctrl + X`.
 Jalankan service `api` dan `web` (tanpa menyalakan caddy internal):
 
 ```bash
-docker compose -f docker-compose.prod.yml --env-file .env up -d --build api web
+docker compose -f docker-compose.prod.yml up -d --build api web
 ```
 
-Lalu buka file `Caddyfile` milik **Pdfumi** di VPS Anda (misalnya di `/var/www/pdfumi/deploy/Caddyfile`):
+Lalu buka file `Caddyfile` milik **Pdfumi** di VPS Anda (misalnya di `/opt/pdfumi/deploy/Caddyfile`):
 ```bash
-nano /var/www/pdfumi/deploy/Caddyfile
+nano /opt/pdfumi/deploy/Caddyfile
 ```
 
 Tambahkan blok berikut di bagian bawah:
@@ -148,7 +148,7 @@ dailyba.pdfumi.com {
 
 Reload Caddy milik Pdfumi agar konfigurasi baru aktif seketika:
 ```bash
-cd /var/www/pdfumi
+cd /opt/pdfumi
 docker compose -f docker-compose.prod.yml exec caddy caddy reload --config /etc/caddy/Caddyfile
 ```
 
@@ -190,7 +190,7 @@ Database Dailyba menggunakan SQLite WAL yang sangat ringan dan tersimpan di Dock
 Untuk mencadangkan database secara otomatis setiap jam 03:00 subuh:
 1. Pastikan script backup memiliki izin eksekusi:
    ```bash
-   chmod +x /var/www/dailyba-app/deploy/backup-db.sh
+   chmod +x /opt/dailyba-app/deploy/backup-db.sh
    ```
 2. Buka crontab:
    ```bash
@@ -198,7 +198,7 @@ Untuk mencadangkan database secara otomatis setiap jam 03:00 subuh:
    ```
 3. Tambahkan baris berikut di baris paling bawah:
    ```cron
-   0 3 * * * /var/www/dailyba-app/deploy/backup-db.sh >> /var/log/dailyba-backup.log 2>&1
+   0 3 * * * /opt/dailyba-app/deploy/backup-db.sh >> /var/log/dailyba-backup.log 2>&1
    ```
 Backup file terkompresi `.sqlite.gz` akan disimpan di `~/dailyba-backups/` dengan retensi otomatis 14 hari.
 
@@ -208,7 +208,7 @@ Backup file terkompresi `.sqlite.gz` akan disimpan di `~/dailyba-backups/` denga
 
 Setiap kali ada pembaruan kode di GitHub:
 ```bash
-cd /var/www/dailyba-app
+cd /opt/dailyba-app
 git pull origin main
 docker compose -f docker-compose.prod.yml --env-file .env up -d --build
 ```

@@ -3,7 +3,7 @@ set -euo pipefail
 
 # ========================================================
 # Dailyba Automated SQLite Daily Backup Script
-# Simpan di crontab VPS: 0 3 * * * /path/to/dailyba-app/deploy/backup-db.sh
+# Simpan di crontab VPS: 0 3 * * * /opt/dailyba-app/deploy/backup-db.sh
 # ========================================================
 
 BACKUP_DIR="${HOME}/dailyba-backups"

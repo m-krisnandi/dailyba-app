@@ -45,12 +45,16 @@ Buka di browser:
 Ikuti panduan lengkap di [`docs/DEPLOYMENT.md`](docs/DEPLOYMENT.md). Ringkasan perintah:
 
 ```bash
-# 1. Salin template env
+# Masuk ke direktori /opt di VPS
+cd /opt/dailyba-app
+
+# 1. Salin template env (pertama kali deploy)
 cp deploy/.env.prod.example .env
 nano .env  # Atur DOMAIN_NAME dan JWT_SECRET
 
-# 2. Jalankan via Docker Compose
-docker compose -f docker-compose.prod.yml --env-file .env up -d --build
+# 2. Jalankan atau update via Docker Compose
+git pull
+docker compose -f docker-compose.prod.yml up -d --build
 ```
 
 ---
