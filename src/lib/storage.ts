@@ -2,7 +2,6 @@
 
 import { useEffect, useState, useCallback, useRef } from 'react';
 import { Currency, ExpenseCategory, FinanceState, InvestmentAsset, Language, RecurringBill, Transaction } from '@/types/finance';
-import { DEFAULT_RECURRING_BILLS, INITIAL_SAMPLE_INVESTMENTS, INITIAL_SAMPLE_TRANSACTIONS } from './constants';
 
 const STORAGE_KEY = 'dailyba_finance_v1';
 
@@ -17,6 +16,29 @@ export const DEFAULT_STATE: FinanceState = {
   recurringBills: [],
 };
 
+// Known mock identifiers to purge permanently
+const MOCK_TX_IDS = new Set([
+  'tx_inc_1', 'tx_sav_1', 'tx_rent_1', 'tx_fam_1', 'tx_vps_1',
+  'tx_mob_1', 'tx_food_1', 'tx_train_1', 'tx_laundry_1', 'tx_shop_1'
+]);
+const MOCK_INV_IDS = new Set(['inv_1', 'inv_2', 'inv_3', 'inv_4']);
+const MOCK_BILL_IDS = new Set(['rec_rent', 'rec_vps', 'rec_mobile', 'rec_family']);
+
+export function filterOutMockData(state: Partial<FinanceState>): Partial<FinanceState> {
+  return {
+    ...state,
+    transactions: Array.isArray(state.transactions)
+      ? state.transactions.filter((tx) => !MOCK_TX_IDS.has(tx.id))
+      : [],
+    investments: Array.isArray(state.investments)
+      ? state.investments.filter((inv) => !MOCK_INV_IDS.has(inv.id))
+      : [],
+    recurringBills: Array.isArray(state.recurringBills)
+      ? state.recurringBills.filter((bill) => !MOCK_BILL_IDS.has(bill.id))
+      : [],
+  };
+}
+
 export function getStoredState(): FinanceState {
   if (typeof window === 'undefined') {
     return DEFAULT_STATE;
@@ -26,15 +48,16 @@ export function getStoredState(): FinanceState {
     const raw = localStorage.getItem(STORAGE_KEY);
     if (raw) {
       const parsed = JSON.parse(raw);
+      const cleaned = filterOutMockData(parsed);
       return {
-        transactions: Array.isArray(parsed.transactions) ? parsed.transactions : [],
-        investments: Array.isArray(parsed.investments) ? parsed.investments : [],
+        transactions: cleaned.transactions || [],
+        investments: cleaned.investments || [],
         language: parsed.language || 'en',
         currency: parsed.currency || 'JPY',
         savingsGoalMonthly: typeof parsed.savingsGoalMonthly === 'number' ? parsed.savingsGoalMonthly : 50000,
         dailySpendTarget: typeof parsed.dailySpendTarget === 'number' ? parsed.dailySpendTarget : 3000,
         hiddenCategories: Array.isArray(parsed.hiddenCategories) ? parsed.hiddenCategories : [],
-        recurringBills: Array.isArray(parsed.recurringBills) ? parsed.recurringBills : [],
+        recurringBills: cleaned.recurringBills || [],
       };
     }
   } catch (e) {
@@ -47,7 +70,8 @@ export function getStoredState(): FinanceState {
 export function saveState(state: FinanceState) {
   if (typeof window === 'undefined') return;
   try {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+    const cleaned = filterOutMockData(state) as FinanceState;
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(cleaned));
   } catch (e) {
     console.error('Failed to save storage:', e);
   }
@@ -214,14 +238,14 @@ export function useFinanceStore() {
 
   const resetToSampleData = useCallback(() => {
     const next: FinanceState = {
-      transactions: INITIAL_SAMPLE_TRANSACTIONS,
-      investments: INITIAL_SAMPLE_INVESTMENTS,
+      transactions: [],
+      investments: [],
       language: 'en',
       currency: 'JPY',
       savingsGoalMonthly: 50000,
       dailySpendTarget: 3000,
       hiddenCategories: [],
-      recurringBills: DEFAULT_RECURRING_BILLS,
+      recurringBills: [],
     };
     saveState(next);
     setState(next);
@@ -243,15 +267,16 @@ export function useFinanceStore() {
   }, []);
 
   const importData = useCallback((importedState: Partial<FinanceState>) => {
+    const cleaned = filterOutMockData(importedState);
     updateState((prev) => ({
-      transactions: Array.isArray(importedState.transactions) ? importedState.transactions : prev.transactions,
-      investments: Array.isArray(importedState.investments) ? importedState.investments : prev.investments,
+      transactions: Array.isArray(cleaned.transactions) ? cleaned.transactions : prev.transactions,
+      investments: Array.isArray(cleaned.investments) ? cleaned.investments : prev.investments,
       language: importedState.language || prev.language,
       currency: importedState.currency || prev.currency,
       savingsGoalMonthly: typeof importedState.savingsGoalMonthly === 'number' ? importedState.savingsGoalMonthly : prev.savingsGoalMonthly,
       dailySpendTarget: typeof importedState.dailySpendTarget === 'number' ? importedState.dailySpendTarget : prev.dailySpendTarget,
       hiddenCategories: Array.isArray(importedState.hiddenCategories) ? importedState.hiddenCategories : (prev.hiddenCategories || []),
-      recurringBills: Array.isArray(importedState.recurringBills) ? importedState.recurringBills : (Array.isArray(prev.recurringBills) ? prev.recurringBills : []),
+      recurringBills: Array.isArray(cleaned.recurringBills) ? cleaned.recurringBills : (Array.isArray(prev.recurringBills) ? prev.recurringBills : []),
     }));
   }, [updateState]);
 
@@ -278,12 +303,14 @@ export function useFinanceStore() {
 }
 
 export function exportDataAsJSON(state: FinanceState): string {
-  return JSON.stringify(state, null, 2);
+  const cleaned = filterOutMockData(state) as FinanceState;
+  return JSON.stringify(cleaned, null, 2);
 }
 
 export function exportTransactionsAsCSV(transactions: Transaction[]): string {
+  const cleanedTx = transactions.filter((t) => !MOCK_TX_IDS.has(t.id));
   const header = ['ID', 'Date', 'Type', 'Category', 'Amount', 'Currency', 'Source', 'Note', 'IsRecurring'];
-  const rows = transactions.map((t) => [
+  const rows = cleanedTx.map((t) => [
     t.id,
     t.date,
     t.type,

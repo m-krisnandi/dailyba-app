@@ -18,7 +18,6 @@ import {
   EXPENSE_CATEGORY_ICONS,
   INCOME_CATEGORY_ICONS,
   FUNDING_SOURCE_ICONS,
-  DEFAULT_RECURRING_BILLS,
 } from '@/lib/constants';
 import {
   Check,

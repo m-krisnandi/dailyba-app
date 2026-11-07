@@ -6,7 +6,6 @@ import { translations } from '@/lib/i18n';
 import {
   Download,
   Upload,
-  RotateCcw,
   Trash2,
   X,
   FileJson,
@@ -21,7 +20,7 @@ interface BackupModalProps {
   language: Language;
   state: FinanceState;
   onImportData: (data: Partial<FinanceState>) => void;
-  onResetSample: () => void;
+  onResetSample?: () => void;
   onClearAll: () => void;
 }
 
@@ -31,7 +30,6 @@ export function BackupModal({
   language,
   state,
   onImportData,
-  onResetSample,
   onClearAll,
 }: BackupModalProps) {
   const t = translations[language];
@@ -191,41 +189,25 @@ export function BackupModal({
             </button>
           </div>
 
-          {/* Reset / Danger Zone */}
+          {/* Danger Zone */}
           <div className="pt-2 border-t border-[var(--border-subtle)] space-y-2">
             <p className="text-xs font-bold text-[var(--text-muted)] uppercase tracking-wider">
               Management
             </p>
-            <div className="flex items-center space-x-2">
-              <button
-                type="button"
-                onClick={() => {
-                  if (confirm('Load demo transactions and sample data?')) {
-                    onResetSample();
-                    setFeedback('Sample data loaded.');
-                    setTimeout(() => setFeedback(null), 2500);
-                  }
-                }}
-                className="flex-1 p-2.5 rounded-xl border border-[var(--border-subtle)] bg-[var(--bg-subtle)] hover:bg-[var(--bg-subtle-hover)] flex items-center justify-center space-x-1.5 text-xs font-semibold text-[var(--text-main)] transition-all cursor-pointer"
-              >
-                <RotateCcw className="w-3.5 h-3.5" />
-                <span>Reset Demo</span>
-              </button>
-              <button
-                type="button"
-                onClick={() => {
-                  if (confirm('Are you sure you want to delete ALL data? This action cannot be undone.')) {
-                    onClearAll();
-                    setFeedback('All local data cleared.');
-                    setTimeout(() => setFeedback(null), 2500);
-                  }
-                }}
-                className="flex-1 p-2.5 rounded-xl border border-rose-500/20 bg-rose-500/10 hover:bg-rose-500/20 text-rose-500 flex items-center justify-center space-x-1.5 text-xs font-semibold transition-all cursor-pointer"
-              >
-                <Trash2 className="w-3.5 h-3.5" />
-                <span>Wipe All</span>
-              </button>
-            </div>
+            <button
+              type="button"
+              onClick={() => {
+                if (confirm('Are you sure you want to delete ALL data? This action cannot be undone.')) {
+                  onClearAll();
+                  setFeedback('All local data cleared.');
+                  setTimeout(() => setFeedback(null), 2500);
+                }
+              }}
+              className="w-full p-2.5 rounded-xl border border-rose-500/20 bg-rose-500/10 hover:bg-rose-500/20 text-rose-500 flex items-center justify-center space-x-1.5 text-xs font-semibold transition-all cursor-pointer"
+            >
+              <Trash2 className="w-3.5 h-3.5" />
+              <span>Delete All Data</span>
+            </button>
           </div>
         </div>
       </div>

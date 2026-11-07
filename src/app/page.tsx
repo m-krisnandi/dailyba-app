@@ -47,7 +47,6 @@ export default function Home() {
     setCurrency,
     setSavingsGoal,
     setDailySpendTarget,
-    resetToSampleData,
     clearAllData,
     importData,
   } = useFinanceStore();
@@ -104,11 +103,11 @@ export default function Home() {
       if (prevUserIdRef.current !== user.id) {
         prevUserIdRef.current = user.id;
         pullStateFromCloud().then((cloudData) => {
-          if (cloudData && (cloudData.transactions || cloudData.recurringBills)) {
+          if (cloudData && (cloudData.transactions || cloudData.recurringBills || cloudData.investments)) {
             importData(cloudData);
           } else {
-            // Brand new account: start fresh with sample data template and save to cloud
-            resetToSampleData();
+            // Brand new account: start fresh with clean empty data
+            clearAllData();
           }
           hasInitialSyncedRef.current = true;
         });
@@ -116,12 +115,12 @@ export default function Home() {
     } else {
       if (prevUserIdRef.current) {
         // User logged out: clear private data from screen so next person starts clean
-        resetToSampleData();
+        clearAllData();
       }
       prevUserIdRef.current = null;
       hasInitialSyncedRef.current = false;
     }
-  }, [isAuthenticated, user?.id, isHydrated]);
+  }, [isAuthenticated, user?.id, isHydrated, clearAllData, importData, pullStateFromCloud]);
 
   // Reactive Auto-Save to Cloud when local state changes
   useEffect(() => {
@@ -306,7 +305,6 @@ export default function Home() {
         language={state.language}
         state={state}
         onImportData={importData}
-        onResetSample={resetToSampleData}
         onClearAll={clearAllData}
       />
 
