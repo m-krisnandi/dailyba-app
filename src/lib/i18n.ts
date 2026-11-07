@@ -66,6 +66,16 @@ export interface Translations {
     billSource: string;
     dayOfMonth: string;
     noRecurringBills: string;
+    searchPlaceholder: string;
+    allTypes: string;
+    allSources: string;
+    filterResults: string;
+    noMatchingTransactions: string;
+    resetFilters: string;
+    page: string;
+    of: string;
+    prev: string;
+    next: string;
   };
   sources: Record<FundingSource, string>;
   expenseCategories: Record<ExpenseCategory, string>;
@@ -236,6 +246,16 @@ export const translations: Record<Language, Translations> = {
       billSource: 'Funding Source',
       dayOfMonth: 'Due Day of Month (Optional)',
       noRecurringBills: 'No recurring bills configured. Tap "Add Bill" to create one.',
+      searchPlaceholder: 'Search note, category, amount...',
+      allTypes: 'All Types',
+      allSources: 'All Sources',
+      filterResults: 'matching',
+      noMatchingTransactions: 'No transactions match your filter.',
+      resetFilters: 'Reset Filters',
+      page: 'Page',
+      of: 'of',
+      prev: 'Prev',
+      next: 'Next',
     },
     sources: {
       cash: 'Cash',
@@ -427,6 +447,16 @@ export const translations: Record<Language, Translations> = {
       billSource: '支払元',
       dayOfMonth: '支払日 (任意)',
       noRecurringBills: '登録されている固定費はありません。「固定費を追加」から登録できます。',
+      searchPlaceholder: 'メモ、カテゴリ、金額で検索...',
+      allTypes: 'すべての種別',
+      allSources: 'すべての口座',
+      filterResults: '件一致',
+      noMatchingTransactions: '条件に一致する取引履歴がありません。',
+      resetFilters: 'フィルターを解除',
+      page: 'ページ',
+      of: '/',
+      prev: '前へ',
+      next: '次へ',
     },
     sources: {
       cash: '現金',

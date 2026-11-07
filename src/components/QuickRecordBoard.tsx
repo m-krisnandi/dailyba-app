@@ -34,6 +34,9 @@ import {
   Pencil,
   X,
   Clock,
+  Search,
+  ChevronLeft,
+  ChevronRight,
 } from 'lucide-react';
 
 interface QuickRecordBoardProps {
@@ -123,6 +126,13 @@ export function QuickRecordBoard({
   const [billCurrency, setBillCurrency] = useState<Currency>(currency);
   const [billSource, setBillSource] = useState<FundingSource>('bank');
   const [billDay, setBillDay] = useState<string>('25');
+
+  // Transactions Feed Filters & Pagination
+  const [txSearchQuery, setTxSearchQuery] = useState('');
+  const [txFilterType, setTxFilterType] = useState<'all' | TransactionType>('all');
+  const [txFilterSource, setTxFilterSource] = useState<'all' | FundingSource>('all');
+  const [txCurrentPage, setTxCurrentPage] = useState(1);
+  const TX_PAGE_SIZE = 10;
 
   useEffect(() => {
     const today = new Date().toISOString().split('T')[0];
@@ -417,6 +427,77 @@ export function QuickRecordBoard({
     setIsBillModalOpen(false);
     setTimeout(() => setStatusMessage(null), 2500);
   };
+
+  // Filter & Search Handlers for Recent Transactions
+  const isTxFiltered = txSearchQuery.trim() !== '' || txFilterType !== 'all' || txFilterSource !== 'all';
+
+  const handleSearchChange = (val: string) => {
+    setTxSearchQuery(val);
+    setTxCurrentPage(1);
+  };
+
+  const handleFilterTypeChange = (nextType: 'all' | TransactionType) => {
+    setTxFilterType(nextType);
+    setTxCurrentPage(1);
+  };
+
+  const handleFilterSourceChange = (nextSource: 'all' | FundingSource) => {
+    setTxFilterSource(nextSource);
+    setTxCurrentPage(1);
+  };
+
+  const handleResetFilters = () => {
+    setTxSearchQuery('');
+    setTxFilterType('all');
+    setTxFilterSource('all');
+    setTxCurrentPage(1);
+  };
+
+  const filteredTransactions = useMemo(() => {
+    return transactions.filter((tx) => {
+      // Type filter
+      if (txFilterType !== 'all' && tx.type !== txFilterType) {
+        return false;
+      }
+      // Source filter
+      if (txFilterSource !== 'all' && tx.source !== txFilterSource) {
+        return false;
+      }
+      // Search query
+      if (txSearchQuery.trim()) {
+        const query = txSearchQuery.toLowerCase().trim();
+        const noteMatch = tx.note ? tx.note.toLowerCase().includes(query) : false;
+        const dateMatch = tx.date ? tx.date.includes(query) : false;
+        const amountMatch = String(tx.amount).includes(query);
+
+        const catRaw = (tx.category || '').toLowerCase();
+        const catLabel = (
+          tx.type === 'expense'
+            ? t.expenseCategories[tx.category as ExpenseCategory] || ''
+            : tx.type === 'income'
+            ? t.incomeCategories[tx.category as IncomeCategory] || ''
+            : t.record.typeSavings
+        ).toLowerCase();
+        const catMatch = catRaw.includes(query) || catLabel.includes(query);
+
+        const sourceLabel = (t.sources[tx.source] || '').toLowerCase();
+        const sourceMatch = (tx.source || '').toLowerCase().includes(query) || sourceLabel.includes(query);
+
+        if (!noteMatch && !dateMatch && !amountMatch && !catMatch && !sourceMatch) {
+          return false;
+        }
+      }
+      return true;
+    });
+  }, [transactions, txFilterType, txFilterSource, txSearchQuery, t]);
+
+  const totalPages = Math.max(1, Math.ceil(filteredTransactions.length / TX_PAGE_SIZE));
+  const currentPage = Math.min(txCurrentPage, totalPages);
+
+  const paginatedTransactions = useMemo(() => {
+    const startIndex = (currentPage - 1) * TX_PAGE_SIZE;
+    return filteredTransactions.slice(startIndex, startIndex + TX_PAGE_SIZE);
+  }, [filteredTransactions, currentPage]);
 
   return (
     <div className="space-y-6">
@@ -850,24 +931,146 @@ export function QuickRecordBoard({
         )}
       </div>
 
-      {/* Recent Transactions Feed */}
+      {/* Recent Transactions Feed with Advanced Filters & Pagination */}
       <div className="rounded-3xl border border-[var(--border-subtle)] bg-[var(--bg-surface)] p-5 sm:p-7 shadow-[var(--card-shadow)] space-y-4">
-        <div className="flex items-center justify-between">
-          <h3 className="text-sm font-bold text-[var(--text-main)]">
-            {t.record.recentTransactions}
-          </h3>
-          <span className="text-xs text-[var(--text-muted)] font-mono">
-            {transactions.length} {t.record.items}
-          </span>
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+          <div className="flex items-center space-x-2">
+            <h3 className="text-sm font-bold text-[var(--text-main)]">
+              {t.record.recentTransactions}
+            </h3>
+            {isTxFiltered && (
+              <span className="px-2 py-0.5 rounded-full bg-emerald-500/10 text-emerald-500 font-mono text-[11px] font-semibold">
+                {filteredTransactions.length} {t.record.filterResults}
+              </span>
+            )}
+          </div>
+          <div className="flex items-center space-x-2">
+            <span className="text-xs text-[var(--text-muted)] font-mono">
+              {transactions.length} {t.record.items}
+            </span>
+            {isTxFiltered && (
+              <button
+                type="button"
+                onClick={handleResetFilters}
+                className="text-xs text-emerald-500 hover:text-emerald-400 font-medium underline transition-colors cursor-pointer"
+              >
+                {t.record.resetFilters}
+              </button>
+            )}
+          </div>
         </div>
 
+        {/* Search & Filter Bar - visible when transactions exist or filter is active */}
+        {(transactions.length > 0 || isTxFiltered) && (
+          <div className="space-y-2.5 pt-1">
+            {/* Search Input & Funding Source Select */}
+            <div className="flex flex-col sm:flex-row gap-2">
+              <div className="relative flex-1 min-w-0">
+                <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-[var(--text-muted)] pointer-events-none" />
+                <input
+                  type="text"
+                  value={txSearchQuery}
+                  onChange={(e) => handleSearchChange(e.target.value)}
+                  placeholder={t.record.searchPlaceholder}
+                  className="w-full pl-9 pr-8 py-2 rounded-xl text-xs bg-[var(--bg-subtle)] border border-[var(--border-subtle)] text-[var(--text-main)] placeholder-[var(--text-faint)] focus:outline-none focus:border-emerald-500/50 transition-all"
+                />
+                {txSearchQuery && (
+                  <button
+                    type="button"
+                    onClick={() => handleSearchChange('')}
+                    className="absolute right-2.5 top-1/2 -translate-y-1/2 text-[var(--text-faint)] hover:text-[var(--text-main)] transition-colors p-0.5 cursor-pointer"
+                  >
+                    <X className="w-3.5 h-3.5" />
+                  </button>
+                )}
+              </div>
+
+              <div className="shrink-0">
+                <select
+                  value={txFilterSource}
+                  onChange={(e) => handleFilterSourceChange(e.target.value as any)}
+                  className="w-full sm:w-auto px-3 py-2 rounded-xl text-xs bg-[var(--bg-subtle)] border border-[var(--border-subtle)] text-[var(--text-main)] focus:outline-none focus:border-emerald-500/50 cursor-pointer transition-all"
+                >
+                  <option value="all">{t.record.allSources}</option>
+                  <option value="cash">{t.sources.cash}</option>
+                  <option value="bank">{t.sources.bank}</option>
+                  <option value="ewallet">{t.sources.ewallet}</option>
+                  <option value="credit_card">{t.sources.credit_card}</option>
+                </select>
+              </div>
+            </div>
+
+            {/* Type Filter Pills */}
+            <div className="flex items-center gap-1.5 overflow-x-auto pb-1 scrollbar-none">
+              <button
+                type="button"
+                onClick={() => handleFilterTypeChange('all')}
+                className={`px-3 py-1.5 rounded-lg text-xs font-semibold whitespace-nowrap transition-all cursor-pointer ${
+                  txFilterType === 'all'
+                    ? 'bg-[var(--text-main)] text-[var(--bg-main)] shadow-sm'
+                    : 'bg-[var(--bg-subtle)] text-[var(--text-muted)] hover:text-[var(--text-main)] border border-[var(--border-subtle)]'
+                }`}
+              >
+                {t.record.allTypes}
+              </button>
+              <button
+                type="button"
+                onClick={() => handleFilterTypeChange('expense')}
+                className={`px-3 py-1.5 rounded-lg text-xs font-semibold whitespace-nowrap transition-all cursor-pointer ${
+                  txFilterType === 'expense'
+                    ? 'bg-rose-500/20 text-rose-500 border border-rose-500/40 shadow-sm'
+                    : 'bg-[var(--bg-subtle)] text-[var(--text-muted)] hover:text-[var(--text-main)] border border-[var(--border-subtle)]'
+                }`}
+              >
+                {t.record.typeExpense}
+              </button>
+              <button
+                type="button"
+                onClick={() => handleFilterTypeChange('income')}
+                className={`px-3 py-1.5 rounded-lg text-xs font-semibold whitespace-nowrap transition-all cursor-pointer ${
+                  txFilterType === 'income'
+                    ? 'bg-emerald-500/20 text-emerald-500 border border-emerald-500/40 shadow-sm'
+                    : 'bg-[var(--bg-subtle)] text-[var(--text-muted)] hover:text-[var(--text-main)] border border-[var(--border-subtle)]'
+                }`}
+              >
+                {t.record.typeIncome}
+              </button>
+              <button
+                type="button"
+                onClick={() => handleFilterTypeChange('savings')}
+                className={`px-3 py-1.5 rounded-lg text-xs font-semibold whitespace-nowrap transition-all cursor-pointer ${
+                  txFilterType === 'savings'
+                    ? 'bg-amber-500/20 text-amber-500 border border-amber-500/40 shadow-sm'
+                    : 'bg-[var(--bg-subtle)] text-[var(--text-muted)] hover:text-[var(--text-main)] border border-[var(--border-subtle)]'
+                }`}
+              >
+                {t.record.typeSavings}
+              </button>
+            </div>
+          </div>
+        )}
+
+        {/* Content Feed */}
         {transactions.length === 0 ? (
           <p className="text-xs text-[var(--text-faint)] py-6 text-center">
             {t.record.noTransactions}
           </p>
+        ) : filteredTransactions.length === 0 ? (
+          <div className="py-8 text-center space-y-2">
+            <p className="text-xs text-[var(--text-muted)]">
+              {t.record.noMatchingTransactions}
+            </p>
+            <button
+              type="button"
+              onClick={handleResetFilters}
+              className="inline-flex items-center px-3 py-1.5 rounded-xl text-xs font-semibold bg-[var(--bg-subtle)] border border-[var(--border-subtle)] hover:border-emerald-500/50 text-[var(--text-main)] hover:text-emerald-500 transition-all cursor-pointer"
+            >
+              {t.record.resetFilters}
+            </button>
+          </div>
         ) : (
           <div className="space-y-2">
-            {transactions.slice(0, 10).map((tx) => {
+            {paginatedTransactions.map((tx) => {
               const isExpense = tx.type === 'expense';
               const isSavings = tx.type === 'savings';
               const isIncome = tx.type === 'income';
@@ -944,6 +1147,43 @@ export function QuickRecordBoard({
                 </div>
               );
             })}
+          </div>
+        )}
+
+        {/* Pagination Controls */}
+        {totalPages > 1 && (
+          <div className="pt-2 flex items-center justify-between border-t border-[var(--border-subtle)]">
+            <span className="text-[11px] text-[var(--text-muted)] font-mono">
+              {(currentPage - 1) * TX_PAGE_SIZE + 1}–
+              {Math.min(currentPage * TX_PAGE_SIZE, filteredTransactions.length)}{' '}
+              {t.record.of} {filteredTransactions.length}
+            </span>
+
+            <div className="flex items-center space-x-1 sm:space-x-2">
+              <button
+                type="button"
+                onClick={() => setTxCurrentPage((p) => Math.max(1, p - 1))}
+                disabled={currentPage <= 1}
+                className="px-2.5 py-1 rounded-lg text-xs font-medium border border-[var(--border-subtle)] bg-[var(--bg-subtle)] text-[var(--text-main)] hover:bg-[var(--bg-surface)] disabled:opacity-40 disabled:cursor-not-allowed transition-all flex items-center space-x-1 cursor-pointer"
+              >
+                <ChevronLeft className="w-3.5 h-3.5" />
+                <span className="hidden sm:inline">{t.record.prev}</span>
+              </button>
+
+              <span className="px-2 py-1 text-xs font-mono text-[var(--text-muted)]">
+                {currentPage} / {totalPages}
+              </span>
+
+              <button
+                type="button"
+                onClick={() => setTxCurrentPage((p) => Math.min(totalPages, p + 1))}
+                disabled={currentPage >= totalPages}
+                className="px-2.5 py-1 rounded-lg text-xs font-medium border border-[var(--border-subtle)] bg-[var(--bg-subtle)] text-[var(--text-main)] hover:bg-[var(--bg-surface)] disabled:opacity-40 disabled:cursor-not-allowed transition-all flex items-center space-x-1 cursor-pointer"
+              >
+                <span className="hidden sm:inline">{t.record.next}</span>
+                <ChevronRight className="w-3.5 h-3.5" />
+              </button>
+            </div>
           </div>
         )}
       </div>
