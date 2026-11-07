@@ -362,7 +362,7 @@ export const translations: Record<Language, Translations> = {
     },
   },
   ja: {
-    appTitle: 'Dailyba 収支管理',
+    appTitle: 'Dailyba',
     appSubtitle: '日々の収支バランス・資産トラッカー',
     nav: {
       record: '即時記録',
