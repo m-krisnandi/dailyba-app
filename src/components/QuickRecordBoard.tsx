@@ -214,9 +214,11 @@ export function QuickRecordBoard({
 
     // 1. Detect funding source from input keywords (e.g. "train 4000 bank")
     let detectedSource: FundingSource = source; // Default to active board source
-    if (/\b(bank|bca|mandiri|bni|bri|cimb|jago|jenius|atm|transfer|debit|wire)\b/.test(rawWords)) {
+    if (/\b(cc|credit|kredit|kartu kredit|creditcard|visa|mastercard|jcb|amex)\b/.test(rawWords)) {
+      detectedSource = 'credit_card';
+    } else if (/\b(bank|bca|mandiri|bni|bri|cimb|jago|jenius|atm|transfer|debit|wire)\b/.test(rawWords)) {
       detectedSource = 'bank';
-    } else if (/\b(ic|suica|pasmo|wallet|ewallet|e-wallet|ovo|gopay|dana|shopeepay|qris|card|kartu)\b/.test(rawWords)) {
+    } else if (/\b(ic|suica|pasmo|wallet|ewallet|e-wallet|ovo|gopay|dana|shopeepay|qris)\b/.test(rawWords)) {
       detectedSource = 'ewallet';
     } else if (/\b(cash|tunai|genkin)\b/.test(rawWords)) {
       detectedSource = 'cash';
@@ -224,7 +226,7 @@ export function QuickRecordBoard({
 
     // Clean up source words to leave the clean description/note
     const cleanWords = rawWords
-      .replace(/\b(bank|bca|mandiri|bni|bri|cimb|jago|jenius|atm|transfer|debit|wire|ic|suica|pasmo|wallet|ewallet|e-wallet|ovo|gopay|dana|shopeepay|qris|card|kartu|cash|tunai|genkin)\b/gi, '')
+      .replace(/\b(bank|bca|mandiri|bni|bri|cimb|jago|jenius|atm|transfer|debit|wire|ic|suica|pasmo|wallet|ewallet|e-wallet|ovo|gopay|dana|shopeepay|qris|cc|credit|kredit|kartu kredit|creditcard|visa|mastercard|jcb|amex|cash|tunai|genkin)\b/gi, '')
       .trim();
 
     const words = cleanWords || rawWords;
@@ -644,8 +646,8 @@ export function QuickRecordBoard({
           <label className="text-xs font-semibold text-[var(--text-muted)] uppercase tracking-wider">
             {t.record.fundingSource}
           </label>
-          <div className="grid grid-cols-3 gap-2">
-            {(['cash', 'bank', 'ewallet'] as FundingSource[]).map((src) => {
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-1.5 sm:gap-2">
+            {(['cash', 'bank', 'ewallet', 'credit_card'] as FundingSource[]).map((src) => {
               const Icon = FUNDING_SOURCE_ICONS[src];
               const isSelected = source === src;
               return (
@@ -653,14 +655,14 @@ export function QuickRecordBoard({
                   key={src}
                   type="button"
                   onClick={() => setSource(src)}
-                  className={`p-2 sm:p-2.5 rounded-xl border text-center flex items-center justify-center space-x-1.5 min-w-0 transition-all cursor-pointer ${
+                  className={`p-2.5 rounded-xl border text-center flex items-center justify-center space-x-1.5 min-w-0 transition-all cursor-pointer ${
                     isSelected
                       ? 'border-[var(--border-strong)] bg-[var(--bg-surface-solid)] text-[var(--text-main)] font-bold shadow-xs'
                       : 'border-[var(--border-subtle)] bg-[var(--bg-subtle)] hover:bg-[var(--bg-subtle-hover)] text-[var(--text-muted)]'
                   }`}
                 >
                   <Icon className="w-3.5 h-3.5" />
-                  <span className="text-xs">{t.sources[src]}</span>
+                  <span className="text-xs truncate">{t.sources[src]}</span>
                 </button>
               );
             })}
