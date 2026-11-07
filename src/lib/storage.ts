@@ -166,9 +166,7 @@ export function useFinanceStore() {
         ...bill,
         id: `bill_${Date.now()}_${Math.random().toString(36).substring(2, 6)}`,
       };
-      const currentBills = prev.recurringBills && prev.recurringBills.length > 0
-        ? prev.recurringBills
-        : DEFAULT_RECURRING_BILLS;
+      const currentBills = Array.isArray(prev.recurringBills) ? prev.recurringBills : [];
       return {
         ...prev,
         recurringBills: [...currentBills, newBill],
@@ -178,9 +176,7 @@ export function useFinanceStore() {
 
   const updateRecurringBill = useCallback((bill: RecurringBill) => {
     updateState((prev) => {
-      const currentBills = prev.recurringBills && prev.recurringBills.length > 0
-        ? prev.recurringBills
-        : DEFAULT_RECURRING_BILLS;
+      const currentBills = Array.isArray(prev.recurringBills) ? prev.recurringBills : [];
       const nextBills = currentBills.map((b) => (b.id === bill.id ? bill : b));
       return {
         ...prev,
@@ -191,9 +187,7 @@ export function useFinanceStore() {
 
   const deleteRecurringBill = useCallback((id: string) => {
     updateState((prev) => {
-      const currentBills = prev.recurringBills && prev.recurringBills.length > 0
-        ? prev.recurringBills
-        : DEFAULT_RECURRING_BILLS;
+      const currentBills = Array.isArray(prev.recurringBills) ? prev.recurringBills : [];
       const nextBills = currentBills.filter((b) => b.id !== id);
       return {
         ...prev,
@@ -225,7 +219,7 @@ export function useFinanceStore() {
       language: 'en',
       currency: 'JPY',
       savingsGoalMonthly: 50000,
-  dailySpendTarget: 3000,
+      dailySpendTarget: 3000,
       hiddenCategories: [],
       recurringBills: DEFAULT_RECURRING_BILLS,
     };
@@ -240,7 +234,7 @@ export function useFinanceStore() {
       language: 'en',
       currency: 'JPY',
       savingsGoalMonthly: 50000,
-  dailySpendTarget: 3000,
+      dailySpendTarget: 3000,
       hiddenCategories: [],
       recurringBills: [],
     };
@@ -257,7 +251,7 @@ export function useFinanceStore() {
       savingsGoalMonthly: typeof importedState.savingsGoalMonthly === 'number' ? importedState.savingsGoalMonthly : prev.savingsGoalMonthly,
       dailySpendTarget: typeof importedState.dailySpendTarget === 'number' ? importedState.dailySpendTarget : prev.dailySpendTarget,
       hiddenCategories: Array.isArray(importedState.hiddenCategories) ? importedState.hiddenCategories : (prev.hiddenCategories || []),
-      recurringBills: Array.isArray(importedState.recurringBills) ? importedState.recurringBills : (prev.recurringBills || DEFAULT_RECURRING_BILLS),
+      recurringBills: Array.isArray(importedState.recurringBills) ? importedState.recurringBills : (Array.isArray(prev.recurringBills) ? prev.recurringBills : []),
     }));
   }, [updateState]);
 

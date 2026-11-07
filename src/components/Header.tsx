@@ -117,12 +117,12 @@ export function Header({
 
   return (
     <header className="sticky top-0 z-30 border-b border-[var(--border-subtle)] bg-[var(--bg-surface)] backdrop-blur-2xl transition-colors duration-200 shadow-sm">
-      <div className="max-w-5xl mx-auto px-4 sm:px-6 h-16 flex items-center justify-between">
+      <div className="max-w-5xl mx-auto px-3 sm:px-6 h-14 sm:h-16 flex items-center justify-between gap-2">
         {/* Brand & Minimalist Logo */}
-        <div className="flex items-center space-x-3">
-          <KakeiboLogo size={38} />
+        <div className="flex items-center space-x-2 sm:space-x-3 shrink-0">
+          <KakeiboLogo size={32} />
           <div>
-            <h1 className="text-base font-bold tracking-tight text-[var(--text-main)] leading-none flex items-center space-x-1.5">
+            <h1 className="text-sm sm:text-base font-bold tracking-tight text-[var(--text-main)] leading-none flex items-center space-x-1.5 whitespace-nowrap">
               <span>{t.appTitle}</span>
               <span className="w-1.5 h-1.5 rounded-full bg-[var(--accent-emerald)] animate-pulse" />
             </h1>
@@ -133,10 +133,10 @@ export function Header({
         </div>
 
         {/* Controls */}
-        <div className="flex items-center space-x-2 sm:space-x-2.5">
+        <div className="flex items-center space-x-1.5 sm:space-x-2 shrink-0">
           {/* Live Rate Pill (Desktop) */}
           <div
-            className="hidden lg:flex items-center space-x-1.5 px-3 py-1.5 rounded-xl border border-[var(--border-subtle)] bg-[var(--bg-subtle)] text-[11px] text-[var(--text-muted)] tabular-numbers font-mono shadow-[inset_0_1px_0_0_rgba(255,255,255,0.1)]"
+            className="hidden lg:flex items-center space-x-1.5 px-3 py-1.5 rounded-xl border border-[var(--border-subtle)] bg-[var(--bg-subtle)] text-[11px] text-[var(--text-muted)] tabular-numbers font-mono shadow-[inset_0_1px_0_0_rgba(255,255,255,0.1)] shrink-0"
             title="Live Exchange Rate"
           >
             <span className="w-1.5 h-1.5 rounded-full bg-[var(--accent-emerald)] shadow-[0_0_8px_var(--accent-emerald)]" />
@@ -145,16 +145,16 @@ export function Header({
           </div>
 
           {/* Currency Dropdown Selector */}
-          <div className="relative" ref={currencyDropdownRef}>
+          <div className="relative shrink-0" ref={currencyDropdownRef}>
             <button
               type="button"
               onClick={() => setIsCurrencyDropdownOpen(!isCurrencyDropdownOpen)}
-              className="flex items-center space-x-1.5 px-3 py-1.5 rounded-xl border border-[var(--border-subtle)] bg-[var(--bg-subtle)] hover:bg-[var(--bg-subtle-hover)] text-xs font-bold text-[var(--text-main)] transition-all cursor-pointer font-mono shadow-xs"
+              className="flex items-center space-x-1 sm:space-x-1.5 px-2.5 sm:px-3 py-1.5 rounded-xl border border-[var(--border-subtle)] bg-[var(--bg-subtle)] hover:bg-[var(--bg-subtle-hover)] text-xs font-bold text-[var(--text-main)] transition-all cursor-pointer font-mono shadow-xs whitespace-nowrap"
               title="Select Active Currency"
             >
-              <span>{currentCurrencyItem.label}</span>
+              <span className="font-mono">{currentCurrencyItem.label}</span>
               <ChevronDown
-                className={`w-3.5 h-3.5 text-[var(--text-muted)] transition-transform duration-200 ${
+                className={`w-3 h-3 sm:w-3.5 sm:h-3.5 text-[var(--text-muted)] transition-transform duration-200 ${
                   isCurrencyDropdownOpen ? 'rotate-180 text-[var(--text-main)]' : ''
                 }`}
               />
@@ -200,32 +200,32 @@ export function Header({
           <button
             type="button"
             onClick={() => onLanguageChange(language === 'en' ? 'ja' : 'en')}
-            className="flex items-center space-x-1 px-2.5 py-1.5 rounded-xl border border-[var(--border-subtle)] bg-[var(--bg-subtle)] hover:bg-[var(--bg-subtle-hover)] text-xs font-medium text-[var(--text-main)] transition-all cursor-pointer"
-            title="Toggle Language"
+            className="flex items-center space-x-1 px-2 sm:px-2.5 py-1.5 rounded-xl border border-[var(--border-subtle)] bg-[var(--bg-subtle)] hover:bg-[var(--bg-subtle-hover)] text-xs font-medium text-[var(--text-main)] transition-all cursor-pointer whitespace-nowrap shrink-0"
+            title="Toggle Language (English / Japanese)"
           >
             <Globe className="w-3.5 h-3.5 text-[var(--text-muted)]" />
-            <span>{language === 'en' ? 'EN' : '日本語'}</span>
+            <span className="hidden sm:inline">{language === 'en' ? 'EN' : '日本語'}</span>
           </button>
 
           {/* Cloud Sync & Auth Button / User Profile Pill */}
-          <div className="relative" ref={userMenuRef}>
+          <div className="relative shrink-0" ref={userMenuRef}>
             {!isMounted ? (
-              <div className="w-20 h-7 rounded-xl bg-[var(--bg-subtle)]/60 border border-[var(--border-subtle)]" />
+              <div className="w-16 sm:w-20 h-7 rounded-xl bg-[var(--bg-subtle)]/60 border border-[var(--border-subtle)]" />
             ) : isAuthenticated && user ? (
               <button
                 type="button"
                 onClick={() => setIsUserMenuOpen(!isUserMenuOpen)}
-                className="flex items-center space-x-2 px-2.5 py-1.5 rounded-xl border border-emerald-500/30 bg-emerald-500/10 hover:bg-emerald-500/20 text-xs font-bold text-[var(--text-main)] transition-all cursor-pointer shadow-xs"
+                className="flex items-center space-x-1.5 sm:space-x-2 px-2 sm:px-2.5 py-1.5 rounded-xl border border-emerald-500/30 bg-emerald-500/10 hover:bg-emerald-500/20 text-xs font-bold text-[var(--text-main)] transition-all cursor-pointer shadow-xs whitespace-nowrap"
                 title="Account & Cloud Sync"
               >
-                <div className="w-5 h-5 rounded-full bg-gradient-to-tr from-emerald-500 to-teal-400 text-slate-950 flex items-center justify-center text-[10px] font-black">
+                <div className="w-5 h-5 rounded-full bg-gradient-to-tr from-emerald-500 to-teal-400 text-slate-950 flex items-center justify-center text-[10px] font-black shrink-0">
                   {userInitial}
                 </div>
                 <span className="hidden sm:inline max-w-[80px] truncate text-xs font-medium text-[var(--text-main)]">
                   {displayName}
                 </span>
                 <span
-                  className={`w-2 h-2 rounded-full ${
+                  className={`w-2 h-2 rounded-full shrink-0 ${
                     syncStatus === 'syncing'
                       ? 'bg-amber-400 animate-spin'
                       : syncStatus === 'error'
@@ -239,11 +239,11 @@ export function Header({
               <button
                 type="button"
                 onClick={onOpenAuth}
-                className="flex items-center space-x-1.5 px-3 py-1.5 rounded-xl border border-emerald-500/40 bg-emerald-500/15 hover:bg-emerald-500/25 text-xs font-bold text-emerald-400 hover:text-emerald-300 transition-all cursor-pointer shadow-xs"
+                className="flex items-center space-x-1.5 px-2.5 sm:px-3 py-1.5 rounded-xl border border-emerald-500/40 bg-emerald-500/15 hover:bg-emerald-500/25 text-xs font-bold text-emerald-400 hover:text-emerald-300 transition-all cursor-pointer shadow-xs whitespace-nowrap"
                 title="Sign In to your account"
               >
-                <LogIn className="w-3.5 h-3.5" />
-                <span>Sign In</span>
+                <LogIn className="w-3.5 h-3.5 shrink-0" />
+                <span className="whitespace-nowrap">Sign In</span>
               </button>
             )}
 
@@ -290,6 +290,18 @@ export function Header({
                   <button
                     type="button"
                     onClick={() => {
+                      onOpenBackup();
+                      setIsUserMenuOpen(false);
+                    }}
+                    className="w-full flex items-center space-x-2 px-2.5 py-2 rounded-xl text-xs text-[var(--text-muted)] hover:text-[var(--text-main)] hover:bg-[var(--bg-subtle)] transition-all cursor-pointer"
+                  >
+                    <Database className="w-3.5 h-3.5" />
+                    <span>Backup & Restore Data</span>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => {
                       onOpenAuth();
                       setIsUserMenuOpen(false);
                     }}
@@ -315,11 +327,11 @@ export function Header({
             )}
           </div>
 
-          {/* Backup / Export */}
+          {/* Backup / Export (Desktop & Tablet) */}
           <button
             type="button"
             onClick={onOpenBackup}
-            className="p-2 rounded-xl border border-[var(--border-subtle)] bg-[var(--bg-subtle)] hover:bg-[var(--bg-subtle-hover)] text-[var(--text-muted)] hover:text-[var(--text-main)] transition-all cursor-pointer"
+            className="hidden sm:flex p-2 rounded-xl border border-[var(--border-subtle)] bg-[var(--bg-subtle)] hover:bg-[var(--bg-subtle-hover)] text-[var(--text-muted)] hover:text-[var(--text-main)] transition-all cursor-pointer shrink-0"
             title={t.actions.export}
           >
             <Database className="w-4 h-4 stroke-[2]" />
@@ -329,7 +341,7 @@ export function Header({
           <button
             type="button"
             onClick={toggleTheme}
-            className="p-2 rounded-xl border border-[var(--border-subtle)] bg-[var(--bg-subtle)] hover:bg-[var(--bg-subtle-hover)] text-[var(--text-muted)] hover:text-[var(--text-main)] transition-all cursor-pointer"
+            className="p-1.5 sm:p-2 rounded-xl border border-[var(--border-subtle)] bg-[var(--bg-subtle)] hover:bg-[var(--bg-subtle-hover)] text-[var(--text-muted)] hover:text-[var(--text-main)] transition-all cursor-pointer shrink-0"
             title={isDark ? 'Switch to Light Mode' : 'Switch to Dark Mode'}
           >
             {isDark ? (

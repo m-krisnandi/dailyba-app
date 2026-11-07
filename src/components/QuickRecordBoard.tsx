@@ -57,7 +57,7 @@ export function QuickRecordBoard({
   rates = DEFAULT_RATES,
   transactions,
   hiddenCategories = [],
-  recurringBills = DEFAULT_RECURRING_BILLS,
+  recurringBills = [],
   onAddTransaction,
   onDeleteTransaction,
   onToggleHideCategory,
@@ -290,7 +290,7 @@ export function QuickRecordBoard({
   };
 
   // Check recurring bills status for current month
-  const activeRecurringBills = recurringBills && recurringBills.length > 0 ? recurringBills : DEFAULT_RECURRING_BILLS;
+  const activeRecurringBills = Array.isArray(recurringBills) ? recurringBills : [];
 
   const recurringStatus = useMemo(() => {
     if (!currentMonthPrefix) return activeRecurringBills.map((b) => ({ ...b, isPaid: false, paidTxId: undefined }));
@@ -746,37 +746,60 @@ export function QuickRecordBoard({
               return (
                 <div
                   key={bill.id}
-                  className="p-4 rounded-2xl border border-[var(--border-subtle)] bg-[var(--bg-subtle)] hover:bg-[var(--bg-subtle-hover)] flex items-center justify-between space-x-3 group transition-all"
+                  className="p-3.5 sm:p-4 rounded-2xl border border-[var(--border-subtle)] bg-[var(--bg-subtle)] hover:bg-[var(--bg-subtle-hover)] flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 sm:gap-3 group transition-all"
                 >
-                  <div className="flex items-center space-x-3 min-w-0">
-                    <div className="w-10 h-10 rounded-xl bg-[var(--bg-surface-solid)] border border-[var(--border-subtle)] flex items-center justify-center text-[var(--text-main)] shadow-xs shrink-0">
-                      <Icon className="w-4 h-4" />
+                  <div className="flex items-center justify-between sm:justify-start space-x-3 min-w-0 w-full sm:w-auto">
+                    <div className="flex items-center space-x-3 min-w-0">
+                      <div className="w-10 h-10 rounded-xl bg-[var(--bg-surface-solid)] border border-[var(--border-subtle)] flex items-center justify-center text-[var(--text-main)] shadow-xs shrink-0">
+                        <Icon className="w-4 h-4" />
+                      </div>
+                      <div className="min-w-0">
+                        <h4 className="text-xs font-bold text-[var(--text-main)] truncate">
+                          {billLabel}
+                        </h4>
+                        <p className="text-xs font-bold text-[var(--accent-emerald)] tabular-numbers font-mono mt-0.5 whitespace-nowrap">
+                          {formatCurrency(convertedBillAmount, currency)} <span className="text-[10px] text-[var(--text-muted)] font-normal">/ mo</span>
+                        </p>
+                        <p className="text-[10px] text-[var(--text-muted)] truncate mt-0.5 flex items-center space-x-1">
+                          {bill.dayOfMonth && (
+                            <span className="flex items-center space-x-0.5 mr-1 shrink-0">
+                              <Clock className="w-2.5 h-2.5" />
+                              <span>Day {bill.dayOfMonth}</span>
+                            </span>
+                          )}
+                          <span className="truncate">{t.sources[bill.source]}</span>
+                        </p>
+                      </div>
                     </div>
-                    <div className="min-w-0">
-                      <h4 className="text-xs font-bold text-[var(--text-main)] truncate">
-                        {billLabel}
-                      </h4>
-                      <p className="text-xs font-bold text-[var(--accent-emerald)] tabular-numbers font-mono mt-0.5">
-                        {formatCurrency(convertedBillAmount, currency)} / mo
-                      </p>
-                      <p className="text-[10px] text-[var(--text-muted)] truncate mt-0.5 flex items-center space-x-1">
-                        {bill.dayOfMonth && (
-                          <span className="flex items-center space-x-0.5 mr-1">
-                            <Clock className="w-2.5 h-2.5" />
-                            <span>Day {bill.dayOfMonth}</span>
-                          </span>
-                        )}
-                        <span>{t.sources[bill.source]}</span>
-                      </p>
+
+                    {/* Mobile only: edit & delete at top right of card */}
+                    <div className="flex items-center space-x-1 sm:hidden shrink-0">
+                      <button
+                        type="button"
+                        onClick={() => handleOpenEditBillModal(bill)}
+                        className="p-1.5 rounded-lg text-[var(--text-muted)] hover:text-[var(--text-main)] hover:bg-[var(--bg-surface-solid)] transition-all cursor-pointer"
+                        title={t.actions.edit}
+                      >
+                        <Pencil className="w-3.5 h-3.5" />
+                      </button>
+                      {onDeleteRecurringBill && (
+                        <button
+                          type="button"
+                          onClick={() => handleDeleteRecurringBill(bill)}
+                          className="p-1.5 rounded-lg text-[var(--text-muted)] hover:text-rose-500 hover:bg-rose-500/10 transition-all cursor-pointer"
+                          title={t.actions.delete}
+                        >
+                          <Trash2 className="w-3.5 h-3.5" />
+                        </button>
+                      )}
                     </div>
                   </div>
 
-                  <div className="flex items-center space-x-2 shrink-0">
-                    {/* Interactive Checkbox for Already Paid vs Unpaid */}
+                  <div className="flex items-center justify-between sm:justify-end space-x-2 shrink-0 pt-2 sm:pt-0 border-t sm:border-t-0 border-[var(--border-subtle)] w-full sm:w-auto">
                     <button
                       type="button"
                       onClick={() => handleToggleRecurringPaid(bill)}
-                      className={`inline-flex items-center space-x-2 px-3 py-1.5 rounded-xl border text-xs font-bold transition-all cursor-pointer select-none ${
+                      className={`w-full sm:w-auto inline-flex items-center justify-center space-x-2 px-3 py-1.5 rounded-xl border text-xs font-bold transition-all cursor-pointer select-none whitespace-nowrap ${
                         bill.isPaid
                           ? 'bg-emerald-500/15 border-emerald-500/40 text-emerald-700 dark:text-emerald-300 shadow-xs'
                           : 'border-[var(--border-subtle)] bg-[var(--bg-surface-solid)] text-[var(--text-muted)] hover:border-[var(--border-strong)] hover:text-[var(--text-main)]'
@@ -784,7 +807,7 @@ export function QuickRecordBoard({
                       title={bill.isPaid ? 'Click to unmark as paid' : 'Click to mark as paid'}
                     >
                       <div
-                        className={`w-4 h-4 rounded-md border flex items-center justify-center transition-all ${
+                        className={`w-4 h-4 rounded-md border flex items-center justify-center transition-all shrink-0 ${
                           bill.isPaid
                             ? 'bg-emerald-500 border-emerald-500 text-white'
                             : 'border-[var(--border-strong)] bg-transparent text-transparent'
@@ -792,11 +815,11 @@ export function QuickRecordBoard({
                       >
                         <Check className="w-3 h-3 stroke-[3]" />
                       </div>
-                      <span className="text-[11px]">{bill.isPaid ? t.actions.paidThisMonth : t.actions.confirmPay}</span>
+                      <span className="text-[11px] whitespace-nowrap">{bill.isPaid ? t.actions.paidThisMonth : t.actions.confirmPay}</span>
                     </button>
 
-                    {/* Quick Edit & Delete Actions */}
-                    <div className="flex items-center space-x-1 pl-1">
+                    {/* Desktop only edit & delete */}
+                    <div className="hidden sm:flex items-center space-x-1 pl-1">
                       <button
                         type="button"
                         onClick={() => handleOpenEditBillModal(bill)}
