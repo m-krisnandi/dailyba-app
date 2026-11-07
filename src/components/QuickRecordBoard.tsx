@@ -1006,7 +1006,7 @@ export function QuickRecordBoard({
                 onClick={() => handleFilterTypeChange('all')}
                 className={`px-3 py-1.5 rounded-lg text-xs font-semibold whitespace-nowrap transition-all cursor-pointer ${
                   txFilterType === 'all'
-                    ? 'bg-[var(--text-main)] text-[var(--bg-main)] shadow-sm'
+                    ? 'bg-[var(--btn-primary-bg)] text-[var(--btn-primary-text)] border border-[var(--btn-primary-border)] shadow-xs'
                     : 'bg-[var(--bg-subtle)] text-[var(--text-muted)] hover:text-[var(--text-main)] border border-[var(--border-subtle)]'
                 }`}
               >

@@ -8,6 +8,7 @@
 
   /* Liquid Glass LIGHT Theme — Soft Frosted Pearlescent Glass */
   --bg-primary: #edf2f7;
+  --bg-main: #edf2f7;
   --bg-surface: rgba(255, 255, 255, 0.68);
   --bg-surface-solid: rgba(255, 255, 255, 0.88);
   --bg-subtle: rgba(15, 23, 42, 0.035);
@@ -56,6 +57,7 @@
   /* Liquid Glass DARK Theme — Deep Slate Metallic & Refracted Frosted Panels */
   /* Inspired by liquidglassdesign.com/gallery/liquid-glass-finance-app-ui */
   --bg-primary: #0a0e13;
+  --bg-main: #0a0e13;
   --bg-surface: rgba(255, 255, 255, 0.05);
   --bg-surface-solid: rgba(22, 30, 42, 0.82);
   --bg-subtle: rgba(255, 255, 255, 0.045);
