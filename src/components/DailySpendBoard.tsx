@@ -273,8 +273,8 @@ export function DailySpendBoard({
             </p>
           </div>
 
-          {/* Action Buttons: Record Today's Spend + Adjust Target */}
-          <div className="flex items-center space-x-2 shrink-0">
+          {/* Action Buttons: Responsive 2-column on mobile, inline on desktop */}
+          <div className="grid grid-cols-2 gap-2 w-full sm:w-auto sm:flex sm:items-center sm:space-x-2 shrink-0 mt-1 sm:mt-0">
             {onAddTransaction && (
               <button
                 type="button"
@@ -282,18 +282,21 @@ export function DailySpendBoard({
                   setAddExpenseDate(todayStr);
                   setIsAddExpenseModalOpen(true);
                 }}
-                className="inline-flex items-center space-x-1.5 px-3.5 sm:px-4 py-2 sm:py-2.5 rounded-2xl bg-[var(--btn-primary-bg)] text-[var(--btn-primary-text)] border border-[var(--btn-primary-border)] shadow-[var(--btn-primary-shadow)] hover:opacity-90 active:scale-95 text-xs sm:text-sm font-bold transition-all cursor-pointer shrink-0"
+                className="flex items-center justify-center space-x-1.5 px-3 sm:px-4 py-2.5 rounded-2xl bg-[var(--btn-primary-bg)] text-[var(--btn-primary-text)] border border-[var(--btn-primary-border)] shadow-[var(--btn-primary-shadow)] hover:opacity-90 active:scale-95 text-xs sm:text-sm font-bold transition-all cursor-pointer min-w-0"
                 title="Record Today's Spend"
               >
-                <Plus className="w-4 h-4" />
-                <span>{t.record.recordTodayExpense || "Record Today's Spend"}</span>
+                <Plus className="w-4 h-4 shrink-0" />
+                <span className="truncate">
+                  <span className="sm:hidden">+ Spend</span>
+                  <span className="hidden sm:inline">{t.record.recordTodayExpense || "Record Today's Spend"}</span>
+                </span>
               </button>
             )}
 
             <button
               type="button"
               onClick={() => setIsEditingTarget(!isEditingTarget)}
-              className={`inline-flex items-center space-x-1.5 px-3.5 sm:px-4 py-2 sm:py-2.5 rounded-2xl border text-xs sm:text-sm font-bold transition-all shadow-xs cursor-pointer ${
+              className={`flex items-center justify-center space-x-1.5 px-3 sm:px-4 py-2.5 rounded-2xl border text-xs sm:text-sm font-bold transition-all shadow-xs cursor-pointer min-w-0 ${
                 isEditingTarget
                   ? 'bg-[var(--bg-surface-solid)] border-[var(--border-strong)] text-[var(--text-main)] ring-1 ring-[var(--border-strong)]'
                   : 'border-[var(--border-subtle)] bg-[var(--bg-subtle)] hover:bg-[var(--bg-subtle-hover)] hover:border-[var(--border-strong)] text-[var(--text-main)]'
@@ -301,13 +304,16 @@ export function DailySpendBoard({
             >
               {isEditingTarget ? (
                 <>
-                  <X className="w-4 h-4" />
+                  <X className="w-4 h-4 shrink-0" />
                   <span>{t.actions.cancel}</span>
                 </>
               ) : (
                 <>
-                  <SlidersHorizontal className="w-4 h-4" />
-                  <span>{t.dailySpend.adjustDailyTarget}</span>
+                  <SlidersHorizontal className="w-4 h-4 shrink-0" />
+                  <span className="truncate">
+                    <span className="sm:hidden">Set Target</span>
+                    <span className="hidden sm:inline">{t.dailySpend.adjustDailyTarget}</span>
+                  </span>
                 </>
               )}
             </button>
