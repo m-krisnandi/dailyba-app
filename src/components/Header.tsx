@@ -7,6 +7,7 @@ import { ExchangeRates, DEFAULT_RATES } from '@/lib/currency';
 import { KakeiboLogo } from '@/components/KakeiboLogo';
 import { useAuth } from '@/lib/authContext';
 import { APP_VERSION } from '@/lib/version';
+import { Capacitor } from '@capacitor/core';
 import {
   Globe,
   Sun,
@@ -20,6 +21,8 @@ import {
   RefreshCw,
   LogOut,
   User as UserIcon,
+  Smartphone,
+  Download,
 } from 'lucide-react';
 
 interface HeaderProps {
@@ -54,6 +57,7 @@ export function Header({
   const [isCurrencyDropdownOpen, setIsCurrencyDropdownOpen] = useState(false);
   const [isMounted, setIsMounted] = useState(false);
   const [isUserMenuOpen, setIsUserMenuOpen] = useState(false);
+  const [isNativeApp, setIsNativeApp] = useState(true); // default true to avoid SSR layout shift, checked upon mount
   const currencyDropdownRef = useRef<HTMLDivElement>(null);
   const userMenuRef = useRef<HTMLDivElement>(null);
   const t = translations[language];
@@ -68,6 +72,11 @@ export function Header({
     } else {
       document.documentElement.classList.add('dark');
       setIsDark(true);
+    }
+    try {
+      setIsNativeApp(Capacitor.isNativePlatform());
+    } catch {
+      setIsNativeApp(false);
     }
     setIsMounted(true);
   }, []);
@@ -151,6 +160,21 @@ export function Header({
             <ArrowRightLeft className="w-3 h-3 text-[var(--text-faint)]" />
             <span>{rateText}</span>
           </div>
+
+          {/* Download Android APK (Web Browser Only - Hidden on Capacitor Native Android/iOS App) */}
+          {isMounted && !isNativeApp && (
+            <a
+              href="/dailyba.apk"
+              download="dailyba-v1.2.0.apk"
+              className="flex items-center space-x-1 sm:space-x-1.5 px-2 sm:px-2.5 py-1.5 rounded-xl border border-emerald-500/35 bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-400 hover:text-emerald-300 text-xs font-bold transition-all shadow-xs shrink-0 cursor-pointer"
+              title="Download Android APK (v1.2.0)"
+            >
+              <Smartphone className="w-3.5 h-3.5 shrink-0" />
+              <span className="hidden sm:inline">Get APK</span>
+              <span className="sm:hidden font-mono text-[10px]">APK</span>
+              <Download className="w-3 h-3 hidden md:inline shrink-0 opacity-80" />
+            </a>
+          )}
 
           {/* Currency Dropdown Selector */}
           <div className="relative shrink-0" ref={currencyDropdownRef}>
