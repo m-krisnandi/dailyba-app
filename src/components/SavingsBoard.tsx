@@ -226,7 +226,7 @@ export function SavingsBoard({
                 Monthly buffer target
               </span>
             </div>
-            <div className="flex items-center space-x-2">
+            <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2.5">
               <div className="relative flex-1">
                 <input
                   type="text"
@@ -237,7 +237,7 @@ export function SavingsBoard({
                     setGoalInput(formatNumberWithCommas(raw));
                   }}
                   placeholder="0"
-                  className="w-full bg-[var(--bg-surface-solid)] border border-[var(--border-subtle)] focus:border-[var(--border-strong)] rounded-xl pl-4 pr-14 py-2.5 text-sm font-bold text-[var(--text-main)] outline-none tabular-numbers font-mono"
+                  className="w-full bg-[var(--bg-surface-solid)] border border-[var(--border-subtle)] focus:border-[var(--border-strong)] rounded-xl pl-4 pr-16 py-3 sm:py-2.5 text-base sm:text-sm font-bold text-[var(--text-main)] outline-none tabular-numbers font-mono"
                 />
                 <span className="absolute right-3.5 top-1/2 -translate-y-1/2 text-xs font-mono font-bold text-[var(--text-muted)] pointer-events-none select-none">
                   {currency}
@@ -245,7 +245,7 @@ export function SavingsBoard({
               </div>
               <button
                 type="submit"
-                className="bg-[var(--btn-primary-bg)] text-[var(--btn-primary-text)] border border-[var(--btn-primary-border)] shadow-[var(--btn-primary-shadow)] hover:opacity-90 px-5 py-2.5 rounded-xl text-xs sm:text-sm font-bold transition-all cursor-pointer shrink-0"
+                className="w-full sm:w-auto bg-[var(--btn-primary-bg)] text-[var(--btn-primary-text)] border border-[var(--btn-primary-border)] shadow-[var(--btn-primary-shadow)] hover:opacity-90 px-6 py-3 sm:py-2.5 rounded-xl text-sm font-bold transition-all cursor-pointer shrink-0 text-center"
               >
                 {t.savings.updateTarget}
               </button>

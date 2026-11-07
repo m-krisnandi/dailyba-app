@@ -61,6 +61,11 @@ export interface RecurringBill {
   dayOfMonth?: number;
 }
 
+export interface MonthlyBudgetPlan {
+  totalTarget?: number;
+  categoryTargets?: Partial<Record<ExpenseCategory | string, number>>;
+}
+
 export interface FinanceState {
   transactions: Transaction[];
   investments: InvestmentAsset[];
@@ -70,4 +75,5 @@ export interface FinanceState {
   dailySpendTarget: number;
   currency: Currency;
   language: Language;
+  monthlyBudgets?: Record<string, MonthlyBudgetPlan>; // Keyed by "YYYY-MM"
 }

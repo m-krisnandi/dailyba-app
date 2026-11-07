@@ -117,6 +117,22 @@ export interface Translations {
     savingGoal: string;
     currentMonth: string;
     allMonths: string;
+    monthlyBudgetPlan: string;
+    monthlyBudgetPlanDesc: string;
+    setBudgetPlan: string;
+    editBudgetPlan: string;
+    totalMonthlyBudget: string;
+    plannedBudget: string;
+    budgetRemaining: string;
+    budgetOver: string;
+    categoryBudgets: string;
+    noBudgetPlanSet: string;
+    totalAllocated: string;
+    selectMonth: string;
+    quickJump: string;
+    withinBudget: string;
+    overBudget: string;
+    targetVsActual: string;
   };
   investments: {
     title: string;
@@ -320,6 +336,22 @@ export const translations: Record<Language, Translations> = {
       savingGoal: 'Monthly Savings Target',
       currentMonth: 'Current Month',
       allMonths: 'All Months',
+      monthlyBudgetPlan: 'Monthly Budget & Spending Plan',
+      monthlyBudgetPlanDesc: 'Target your monthly spending limit and track category allocations.',
+      setBudgetPlan: 'Set Budget Plan',
+      editBudgetPlan: 'Edit Plan',
+      totalMonthlyBudget: 'Total Monthly Budget',
+      plannedBudget: 'Budget Limit',
+      budgetRemaining: 'Remaining',
+      budgetOver: 'Over Limit',
+      categoryBudgets: 'Category Allocations',
+      noBudgetPlanSet: 'No budget plan set for this month yet. Tap "Set Budget Plan" to plan your spending.',
+      totalAllocated: 'Allocated',
+      selectMonth: 'Select Month',
+      quickJump: 'Quick Jump',
+      withinBudget: 'Within Budget',
+      overBudget: 'Over Budget',
+      targetVsActual: 'Planned vs Actual Spent',
     },
     investments: {
       title: 'Investment Portfolio',
@@ -521,6 +553,22 @@ export const translations: Record<Language, Translations> = {
       savingGoal: '今月の貯金目標',
       currentMonth: '当月',
       allMonths: '全期間',
+      monthlyBudgetPlan: '月間予算・支出計画',
+      monthlyBudgetPlanDesc: '今月の支出目標を設定し、カテゴリー別の使用状況を把握',
+      setBudgetPlan: '予算計画を設定',
+      editBudgetPlan: '計画を編集',
+      totalMonthlyBudget: '今月の予算総額',
+      plannedBudget: '予算上限',
+      budgetRemaining: '予算残額',
+      budgetOver: '予算超過',
+      categoryBudgets: 'カテゴリー別予算配分',
+      noBudgetPlanSet: 'この月の予算計画はまだ設定されていません。「予算計画を設定」から登録できます。',
+      totalAllocated: '配分合計',
+      selectMonth: '年月を選択',
+      quickJump: '月を選択',
+      withinBudget: '予算内',
+      overBudget: '予算超過',
+      targetVsActual: '計画予算と実支出',
     },
     investments: {
       title: '資産運用ポートフォリオ',

@@ -86,6 +86,8 @@ export function Header({
   }, []);
 
   const toggleTheme = () => {
+    // Prevent GPU compositor stuttering on Xiaomi/MIUI by temporarily freezing transitions
+    document.documentElement.classList.add('no-theme-transition');
     if (isDark) {
       document.documentElement.classList.remove('dark');
       localStorage.setItem('kakeibo_theme', 'light');
@@ -95,6 +97,11 @@ export function Header({
       localStorage.setItem('kakeibo_theme', 'dark');
       setIsDark(true);
     }
+    window.requestAnimationFrame(() => {
+      setTimeout(() => {
+        document.documentElement.classList.remove('no-theme-transition');
+      }, 50);
+    });
   };
 
   const idrRate = rates.IDR ? Math.round(rates.IDR * 10) / 10 : 114.2;

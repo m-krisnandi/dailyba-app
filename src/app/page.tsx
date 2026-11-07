@@ -47,6 +47,7 @@ export default function Home() {
     setCurrency,
     setSavingsGoal,
     setDailySpendTarget,
+    updateMonthlyBudget,
     clearAllData,
     importData,
   } = useFinanceStore();
@@ -252,6 +253,8 @@ export default function Home() {
             rates={rates}
             transactions={state.transactions}
             hiddenCategories={state.hiddenCategories || []}
+            monthlyBudgets={state.monthlyBudgets || {}}
+            onUpdateMonthlyBudget={updateMonthlyBudget}
           />
         )}
 

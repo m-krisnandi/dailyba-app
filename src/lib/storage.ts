@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useState, useCallback, useRef } from 'react';
-import { Currency, ExpenseCategory, FinanceState, InvestmentAsset, Language, RecurringBill, Transaction } from '@/types/finance';
+import { Currency, ExpenseCategory, FinanceState, InvestmentAsset, Language, MonthlyBudgetPlan, RecurringBill, Transaction } from '@/types/finance';
 
 const STORAGE_KEY = 'dailyba_finance_v1';
 
@@ -14,6 +14,7 @@ export const DEFAULT_STATE: FinanceState = {
   dailySpendTarget: 3000,
   hiddenCategories: [],
   recurringBills: [],
+  monthlyBudgets: {},
 };
 
 // Known mock identifiers to purge permanently
@@ -58,6 +59,7 @@ export function getStoredState(): FinanceState {
         dailySpendTarget: typeof parsed.dailySpendTarget === 'number' ? parsed.dailySpendTarget : 3000,
         hiddenCategories: Array.isArray(parsed.hiddenCategories) ? parsed.hiddenCategories : [],
         recurringBills: cleaned.recurringBills || [],
+        monthlyBudgets: parsed.monthlyBudgets && typeof parsed.monthlyBudgets === 'object' ? parsed.monthlyBudgets : {},
       };
     }
   } catch (e) {
@@ -236,6 +238,16 @@ export function useFinanceStore() {
     updateState((prev) => ({ ...prev, dailySpendTarget }));
   }, [updateState]);
 
+  const updateMonthlyBudget = useCallback((month: string, plan: MonthlyBudgetPlan) => {
+    updateState((prev) => ({
+      ...prev,
+      monthlyBudgets: {
+        ...(prev.monthlyBudgets || {}),
+        [month]: plan,
+      },
+    }));
+  }, [updateState]);
+
   const resetToSampleData = useCallback(() => {
     const next: FinanceState = {
       transactions: [],
@@ -246,6 +258,7 @@ export function useFinanceStore() {
       dailySpendTarget: 3000,
       hiddenCategories: [],
       recurringBills: [],
+      monthlyBudgets: {},
     };
     saveState(next);
     setState(next);
@@ -261,6 +274,7 @@ export function useFinanceStore() {
       dailySpendTarget: 3000,
       hiddenCategories: [],
       recurringBills: [],
+      monthlyBudgets: {},
     };
     saveState(next);
     setState(next);
@@ -277,6 +291,7 @@ export function useFinanceStore() {
       dailySpendTarget: typeof importedState.dailySpendTarget === 'number' ? importedState.dailySpendTarget : prev.dailySpendTarget,
       hiddenCategories: Array.isArray(importedState.hiddenCategories) ? importedState.hiddenCategories : (prev.hiddenCategories || []),
       recurringBills: Array.isArray(cleaned.recurringBills) ? cleaned.recurringBills : (Array.isArray(prev.recurringBills) ? prev.recurringBills : []),
+      monthlyBudgets: importedState.monthlyBudgets && typeof importedState.monthlyBudgets === 'object' ? importedState.monthlyBudgets : (prev.monthlyBudgets || {}),
     }));
   }, [updateState]);
 
@@ -296,6 +311,7 @@ export function useFinanceStore() {
     setCurrency,
     setSavingsGoal,
     setDailySpendTarget,
+    updateMonthlyBudget,
     resetToSampleData,
     clearAllData,
     importData,

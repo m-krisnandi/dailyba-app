@@ -114,6 +114,15 @@ body {
   transition: background-color 200ms ease, color 200ms ease;
 }
 
+/* Instant theme switch override: avoids GPU compositor stuttering on Xiaomi/MIUI */
+.no-theme-transition,
+.no-theme-transition *,
+.no-theme-transition *::before,
+.no-theme-transition *::after {
+  transition: none !important;
+  animation-duration: 0s !important;
+}
+
 /* Liquid Glass Card & Modal Component Classes */
 .liquid-glass-card {
   background: var(--bg-surface);

@@ -1,10 +1,10 @@
 'use client';
 
-import React, { useMemo, useState, useEffect } from 'react';
-import { Currency, ExpenseCategory, Language, Transaction } from '@/types/finance';
+import React, { useMemo, useState, useEffect, useRef } from 'react';
+import { Currency, ExpenseCategory, Language, MonthlyBudgetPlan, Transaction } from '@/types/finance';
 import { formatCurrency, translations } from '@/lib/i18n';
 import { EXPENSE_CATEGORY_ICONS } from '@/lib/constants';
-import { convertCurrency, DEFAULT_RATES, ExchangeRates } from '@/lib/currency';
+import { convertCurrency, DEFAULT_RATES, ExchangeRates, formatNumberWithCommas, parseRawNumber } from '@/lib/currency';
 import {
   ArrowDownRight,
   ArrowUpRight,
@@ -15,6 +15,14 @@ import {
   ChevronRight,
   Flame,
   Percent,
+  Calendar,
+  Target,
+  Edit3,
+  X,
+  Check,
+  ChevronDown,
+  AlertCircle,
+  Plus,
 } from 'lucide-react';
 import {
   ResponsiveContainer,
@@ -33,7 +41,12 @@ interface MonthlySummaryBoardProps {
   rates?: ExchangeRates;
   transactions: Transaction[];
   hiddenCategories?: string[];
+  monthlyBudgets?: Record<string, MonthlyBudgetPlan>;
+  onUpdateMonthlyBudget?: (month: string, plan: MonthlyBudgetPlan) => void;
 }
+
+const MONTH_NAMES_EN = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+const MONTH_NAMES_JA = ['1月', '2月', '3月', '4月', '5月', '6月', '7月', '8月', '9月', '10月', '11月', '12月'];
 
 export function MonthlySummaryBoard({
   language,
@@ -41,15 +54,48 @@ export function MonthlySummaryBoard({
   rates = DEFAULT_RATES,
   transactions,
   hiddenCategories = [],
+  monthlyBudgets = {},
+  onUpdateMonthlyBudget,
 }: MonthlySummaryBoardProps) {
   const t = translations[language];
 
   // Selected month YYYY-MM
   const [selectedMonth, setSelectedMonth] = useState<string>('2026-11');
+  const [isMonthPickerOpen, setIsMonthPickerOpen] = useState(false);
+  const [pickerYear, setPickerYear] = useState<number>(2026);
+  const monthPickerRef = useRef<HTMLDivElement>(null);
+
+  // Budget Modal State
+  const [isBudgetModalOpen, setIsBudgetModalOpen] = useState(false);
+  const [modalTotalTarget, setModalTotalTarget] = useState<string>('');
+  const [modalCategoryTargets, setModalCategoryTargets] = useState<Record<string, string>>({});
 
   useEffect(() => {
-    setSelectedMonth(new Date().toISOString().slice(0, 7));
+    const current = new Date().toISOString().slice(0, 7);
+    setSelectedMonth(current);
+    setPickerYear(parseInt(current.split('-')[0], 10));
   }, []);
+
+  // Sync pickerYear when selectedMonth changes
+  useEffect(() => {
+    const [y] = selectedMonth.split('-').map(Number);
+    if (y) setPickerYear(y);
+  }, [selectedMonth]);
+
+  // Click outside to close month picker popover
+  useEffect(() => {
+    const handleClickOutside = (e: MouseEvent) => {
+      if (monthPickerRef.current && !monthPickerRef.current.contains(e.target as Node)) {
+        setIsMonthPickerOpen(false);
+      }
+    };
+    if (isMonthPickerOpen) {
+      document.addEventListener('mousedown', handleClickOutside);
+    }
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, [isMonthPickerOpen]);
 
   const handlePrevMonth = () => {
     const [year, month] = selectedMonth.split('-').map(Number);
@@ -107,7 +153,7 @@ export function MonthlySummaryBoard({
 
   const savingsRate = useMemo(() => {
     if (totalIncome <= 0) return 0;
-    return Math.min(100, Math.round(((totalSaved) / totalIncome) * 100));
+    return Math.min(100, Math.round((totalSaved / totalIncome) * 100));
   }, [totalIncome, totalSaved]);
 
   const daysInMonth = useMemo(() => {
@@ -124,8 +170,8 @@ export function MonthlySummaryBoard({
     return Math.round(((totalExpense - prevTotalExpense) / prevTotalExpense) * 100);
   }, [totalExpense, prevTotalExpense]);
 
-  // Breakdown per Category converted to active currency (Hidden categories strictly omitted)
-  const categoryBreakdown = useMemo(() => {
+  // Breakdown per Category converted to active currency
+  const { categoryBreakdown, categorySpentMap } = useMemo(() => {
     const map: Record<string, number> = {};
     monthTransactions
       .filter((tx) => tx.type === 'expense' && !hiddenCategories.includes(tx.category))
@@ -145,7 +191,10 @@ export function MonthlySummaryBoard({
       };
     });
 
-    return list.sort((a, b) => b.amount - a.amount);
+    return {
+      categoryBreakdown: list.sort((a, b) => b.amount - a.amount),
+      categorySpentMap: map,
+    };
   }, [monthTransactions, totalExpense, t.expenseCategories, currency, rates, hiddenCategories]);
 
   // Chart data
@@ -156,42 +205,410 @@ export function MonthlySummaryBoard({
     }));
   }, [categoryBreakdown]);
 
+  // Active Monthly Budget Plan
+  const activePlan = monthlyBudgets[selectedMonth];
+  const budgetTotalTarget = activePlan?.totalTarget || 0;
+  const categoryTargets = activePlan?.categoryTargets || {};
+
+  const budgetUsagePercent = budgetTotalTarget > 0 ? Math.round((totalExpense / budgetTotalTarget) * 100) : 0;
+  const isOverBudget = budgetTotalTarget > 0 && totalExpense > budgetTotalTarget;
+  const budgetRemaining = Math.max(0, budgetTotalTarget - totalExpense);
+  const budgetOverAmount = Math.max(0, totalExpense - budgetTotalTarget);
+
+  const hasBudgetPlan = budgetTotalTarget > 0 || Object.keys(categoryTargets).length > 0;
+
+  // Active categories eligible for budgeting
+  const activeCategories = useMemo(() => {
+    return (Object.keys(EXPENSE_CATEGORY_ICONS) as ExpenseCategory[]).filter(
+      (cat) => !hiddenCategories.includes(cat)
+    );
+  }, [hiddenCategories]);
+
+  // Target presets according to active currency
+  const totalBudgetPresets = useMemo(() => {
+    switch (currency) {
+      case 'IDR':
+        return [3000000, 5000000, 10000000, 15000000, 20000000];
+      case 'USD':
+        return [500, 1000, 1500, 2000, 3000];
+      case 'MMK':
+        return [500000, 1000000, 1500000, 2000000, 3000000];
+      case 'JPY':
+      default:
+        return [50000, 100000, 150000, 200000, 300000];
+    }
+  }, [currency]);
+
+  const handleOpenBudgetModal = () => {
+    if (activePlan) {
+      setModalTotalTarget(activePlan.totalTarget ? formatNumberWithCommas(activePlan.totalTarget) : '');
+      const cats: Record<string, string> = {};
+      if (activePlan.categoryTargets) {
+        Object.entries(activePlan.categoryTargets).forEach(([k, v]) => {
+          if (v && v > 0) cats[k] = formatNumberWithCommas(v);
+        });
+      }
+      setModalCategoryTargets(cats);
+    } else {
+      setModalTotalTarget('');
+      setModalCategoryTargets({});
+    }
+    setIsBudgetModalOpen(true);
+  };
+
+  const handleSaveBudgetPlan = (e: React.FormEvent) => {
+    e.preventDefault();
+    const totalNum = parseRawNumber(modalTotalTarget);
+    const catMap: Partial<Record<ExpenseCategory | string, number>> = {};
+    Object.entries(modalCategoryTargets).forEach(([k, v]) => {
+      const val = parseRawNumber(v);
+      if (val > 0) {
+        catMap[k] = val;
+      }
+    });
+
+    if (onUpdateMonthlyBudget) {
+      onUpdateMonthlyBudget(selectedMonth, {
+        totalTarget: totalNum > 0 ? totalNum : undefined,
+        categoryTargets: Object.keys(catMap).length > 0 ? catMap : undefined,
+      });
+    }
+    setIsBudgetModalOpen(false);
+  };
+
+  const currentYear = new Date().getFullYear();
+  const currentMonthNum = new Date().getMonth() + 1;
+  const currentMonthPadded = `${currentYear}-${String(currentMonthNum).padStart(2, '0')}`;
+
+  const monthNames = language === 'ja' ? MONTH_NAMES_JA : MONTH_NAMES_EN;
+
   return (
     <div className="space-y-6">
-      {/* Month Navigator Header (iOS Liquid Glass) */}
-      <div className="flex items-center justify-between bg-[var(--bg-surface)]  p-5 rounded-3xl border border-[var(--border-subtle)] shadow-[var(--card-shadow)]">
-        <div>
-          <span className="text-xs font-semibold text-[var(--text-muted)] uppercase tracking-wider block">
-            {t.summary.monthlyTitle}
-          </span>
-          <h2 className="text-xl sm:text-2xl font-extrabold text-[var(--text-main)] tabular-numbers font-mono mt-0.5">
-            {selectedMonth}
-          </h2>
+      {/* Month Navigator Header (iOS Liquid Glass with Quick-Jump Month Picker) */}
+      <div className="relative flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 bg-[var(--bg-surface)] p-4 sm:p-5 rounded-3xl border border-[var(--border-subtle)] shadow-[var(--card-shadow)]">
+        <div className="flex items-center justify-between sm:justify-start gap-3">
+          <div>
+            <span className="text-xs font-semibold text-[var(--text-muted)] uppercase tracking-wider block">
+              {t.summary.monthlyTitle}
+            </span>
+
+            {/* Clickable Month Pill Trigger */}
+            <div className="relative mt-1" ref={monthPickerRef}>
+              <button
+                type="button"
+                onClick={() => setIsMonthPickerOpen(!isMonthPickerOpen)}
+                className="group flex items-center space-x-2 px-3 py-1.5 -ml-1 rounded-2xl bg-[var(--bg-subtle)] hover:bg-[var(--bg-subtle-hover)] border border-[var(--border-subtle)] transition-all cursor-pointer shadow-xs"
+                title={t.summary.selectMonth}
+              >
+                <Calendar className="w-4 h-4 text-[var(--accent-emerald)]" />
+                <h2 className="text-xl sm:text-2xl font-black text-[var(--text-main)] tabular-numbers font-mono tracking-tight">
+                  {selectedMonth}
+                </h2>
+                <ChevronDown
+                  className={`w-4 h-4 text-[var(--text-muted)] group-hover:text-[var(--text-main)] transition-transform duration-200 ${
+                    isMonthPickerOpen ? 'rotate-180' : ''
+                  }`}
+                />
+              </button>
+
+              {/* Quick Jump Month Picker Popover */}
+              {isMonthPickerOpen && (
+                <div className="absolute left-0 top-full mt-2 w-72 sm:w-80 rounded-3xl border border-[var(--border-strong)] bg-[var(--bg-surface-solid)] backdrop-blur-3xl shadow-[var(--modal-shadow)] p-4 z-50 animate-fade-in space-y-3.5">
+                  <div className="flex items-center justify-between border-b border-[var(--border-subtle)] pb-2.5">
+                    <span className="text-xs font-bold text-[var(--text-muted)] uppercase tracking-wider">
+                      {t.summary.selectMonth}
+                    </span>
+                    <button
+                      type="button"
+                      onClick={() => setSelectedMonth(currentMonthPadded)}
+                      className="px-2.5 py-1 rounded-xl bg-[var(--bg-subtle)] hover:bg-[var(--bg-subtle-hover)] text-[11px] font-bold text-[var(--text-main)] border border-[var(--border-subtle)] transition-all cursor-pointer font-mono"
+                    >
+                      {t.summary.currentMonth}
+                    </button>
+                  </div>
+
+                  {/* Year Stepper */}
+                  <div className="flex items-center justify-between px-1">
+                    <button
+                      type="button"
+                      onClick={() => setPickerYear((y) => y - 1)}
+                      className="p-1.5 rounded-xl border border-[var(--border-subtle)] bg-[var(--bg-subtle)] hover:bg-[var(--bg-subtle-hover)] text-[var(--text-main)] transition-all cursor-pointer"
+                    >
+                      <ChevronLeft className="w-4 h-4" />
+                    </button>
+                    <span className="text-lg font-black text-[var(--text-main)] font-mono tabular-numbers">
+                      {pickerYear}
+                    </span>
+                    <button
+                      type="button"
+                      onClick={() => setPickerYear((y) => y + 1)}
+                      className="p-1.5 rounded-xl border border-[var(--border-subtle)] bg-[var(--bg-subtle)] hover:bg-[var(--bg-subtle-hover)] text-[var(--text-main)] transition-all cursor-pointer"
+                    >
+                      <ChevronRight className="w-4 h-4" />
+                    </button>
+                  </div>
+
+                  {/* 12-Month Grid */}
+                  <div className="grid grid-cols-3 gap-2">
+                    {monthNames.map((name, idx) => {
+                      const mStr = `${pickerYear}-${String(idx + 1).padStart(2, '0')}`;
+                      const isSelected = selectedMonth === mStr;
+                      const isCurrent = currentMonthPadded === mStr;
+
+                      return (
+                        <button
+                          key={name}
+                          type="button"
+                          onClick={() => {
+                            setSelectedMonth(mStr);
+                            setIsMonthPickerOpen(false);
+                          }}
+                          className={`py-2 rounded-xl text-xs font-bold transition-all cursor-pointer border relative ${
+                            isSelected
+                              ? 'bg-[var(--btn-primary-bg)] text-[var(--btn-primary-text)] border-[var(--btn-primary-border)] shadow-md'
+                              : 'border-[var(--border-subtle)] bg-[var(--bg-subtle)] hover:bg-[var(--bg-subtle-hover)] text-[var(--text-main)]'
+                          }`}
+                        >
+                          {name}
+                          {isCurrent && !isSelected && (
+                            <span className="absolute top-1 right-1 w-1.5 h-1.5 rounded-full bg-[var(--accent-emerald)]" />
+                          )}
+                        </button>
+                      );
+                    })}
+                  </div>
+
+                  {/* Native input month fallback / quick trigger */}
+                  <div className="pt-2 border-t border-[var(--border-subtle)] flex items-center justify-between">
+                    <span className="text-[11px] text-[var(--text-muted)] font-mono">
+                      Native wheel:
+                    </span>
+                    <input
+                      type="month"
+                      value={selectedMonth}
+                      onChange={(e) => {
+                        if (e.target.value) {
+                          setSelectedMonth(e.target.value);
+                          setIsMonthPickerOpen(false);
+                        }
+                      }}
+                      className="text-xs font-mono font-bold bg-[var(--bg-subtle)] border border-[var(--border-subtle)] rounded-xl px-2.5 py-1 text-[var(--text-main)] cursor-pointer outline-none"
+                    />
+                  </div>
+                </div>
+              )}
+            </div>
+          </div>
         </div>
 
-        <div className="flex items-center space-x-1.5">
+        {/* Stepper Buttons */}
+        <div className="flex items-center justify-end space-x-2">
           <button
             type="button"
             onClick={handlePrevMonth}
-            className="p-2.5 rounded-xl border border-[var(--border-subtle)] bg-[var(--bg-subtle)] hover:bg-[var(--bg-subtle-hover)] text-[var(--text-main)] transition-all cursor-pointer"
+            className="p-2.5 rounded-2xl border border-[var(--border-subtle)] bg-[var(--bg-subtle)] hover:bg-[var(--bg-subtle-hover)] text-[var(--text-main)] transition-all cursor-pointer shadow-xs"
+            title="Previous Month"
           >
             <ChevronLeft className="w-4 h-4" />
           </button>
           <button
             type="button"
-            onClick={() => setSelectedMonth(new Date().toISOString().slice(0, 7))}
-            className="px-3.5 py-2 rounded-xl border border-[var(--border-subtle)] bg-[var(--bg-subtle)] hover:bg-[var(--bg-subtle-hover)] text-xs font-bold text-[var(--text-main)] transition-all cursor-pointer"
+            onClick={() => setSelectedMonth(currentMonthPadded)}
+            className="px-4 py-2.5 rounded-2xl border border-[var(--border-subtle)] bg-[var(--bg-subtle)] hover:bg-[var(--bg-subtle-hover)] text-xs font-bold text-[var(--text-main)] transition-all cursor-pointer shadow-xs font-mono"
           >
             {t.summary.currentMonth}
           </button>
           <button
             type="button"
             onClick={handleNextMonth}
-            className="p-2.5 rounded-xl border border-[var(--border-subtle)] bg-[var(--bg-subtle)] hover:bg-[var(--bg-subtle-hover)] text-[var(--text-main)] transition-all cursor-pointer"
+            className="p-2.5 rounded-2xl border border-[var(--border-subtle)] bg-[var(--bg-subtle)] hover:bg-[var(--bg-subtle-hover)] text-[var(--text-main)] transition-all cursor-pointer shadow-xs"
+            title="Next Month"
           >
             <ChevronRight className="w-4 h-4" />
           </button>
         </div>
+      </div>
+
+      {/* MONTHLY BUDGET & SPENDING PLAN CARD */}
+      <div className="p-5 sm:p-6 rounded-3xl border border-[var(--border-subtle)] bg-[var(--bg-surface)] shadow-[var(--card-shadow)] space-y-5">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-[var(--border-subtle)] pb-4">
+          <div className="flex items-center space-x-3">
+            <div className="w-10 h-10 rounded-2xl bg-emerald-500/10 border border-emerald-500/20 text-emerald-500 flex items-center justify-center shrink-0">
+              <Target className="w-5 h-5" />
+            </div>
+            <div>
+              <h3 className="text-base font-extrabold text-[var(--text-main)] flex items-center space-x-2">
+                <span>{t.summary.monthlyBudgetPlan}</span>
+                <span className="text-xs font-mono px-2 py-0.5 rounded-lg bg-[var(--bg-subtle)] border border-[var(--border-subtle)] text-[var(--text-muted)] font-bold">
+                  {selectedMonth}
+                </span>
+              </h3>
+              <p className="text-xs text-[var(--text-muted)] mt-0.5">
+                {t.summary.monthlyBudgetPlanDesc}
+              </p>
+            </div>
+          </div>
+
+          <button
+            type="button"
+            onClick={handleOpenBudgetModal}
+            className="self-start sm:self-auto flex items-center space-x-2 px-4 py-2 rounded-2xl bg-[var(--btn-primary-bg)] text-[var(--btn-primary-text)] border border-[var(--btn-primary-border)] shadow-[var(--btn-primary-shadow)] hover:opacity-90 text-xs font-bold transition-all cursor-pointer shrink-0"
+          >
+            <Edit3 className="w-3.5 h-3.5" />
+            <span>{hasBudgetPlan ? t.summary.editBudgetPlan : t.summary.setBudgetPlan}</span>
+          </button>
+        </div>
+
+        {!hasBudgetPlan ? (
+          <div className="py-6 px-4 rounded-2xl bg-[var(--bg-subtle)] border border-dashed border-[var(--border-strong)] text-center space-y-3">
+            <p className="text-xs sm:text-sm text-[var(--text-muted)] max-w-md mx-auto">
+              {t.summary.noBudgetPlanSet}
+            </p>
+            <button
+              type="button"
+              onClick={handleOpenBudgetModal}
+              className="inline-flex items-center space-x-1.5 px-4 py-2 rounded-xl bg-[var(--bg-surface-solid)] border border-[var(--border-strong)] text-xs font-bold text-[var(--text-main)] hover:border-[var(--border-specular)] transition-all cursor-pointer"
+            >
+              <Plus className="w-3.5 h-3.5 text-[var(--accent-emerald)]" />
+              <span>{t.summary.setBudgetPlan}</span>
+            </button>
+          </div>
+        ) : (
+          <div className="space-y-5">
+            {/* Overall Monthly Spending Target vs Actual */}
+            <div className="p-4 sm:p-5 rounded-2xl bg-[var(--bg-subtle)] border border-[var(--border-subtle)] space-y-3.5">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                <div>
+                  <span className="text-xs font-semibold text-[var(--text-muted)] uppercase tracking-wider block">
+                    {t.summary.targetVsActual}
+                  </span>
+                  <div className="flex items-baseline space-x-2 mt-1">
+                    <span className="text-2xl sm:text-3xl font-black text-[var(--text-main)] font-mono tabular-numbers">
+                      {formatCurrency(totalExpense, currency)}
+                    </span>
+                    {budgetTotalTarget > 0 && (
+                      <span className="text-xs sm:text-sm text-[var(--text-muted)] font-mono font-bold">
+                        / {formatCurrency(budgetTotalTarget, currency)} {t.summary.plannedBudget}
+                      </span>
+                    )}
+                  </div>
+                </div>
+
+                {budgetTotalTarget > 0 && (
+                  <div className="self-start sm:self-auto">
+                    {isOverBudget ? (
+                      <span className="inline-flex items-center space-x-1.5 px-3 py-1 rounded-xl bg-rose-500/10 border border-rose-500/20 text-rose-500 text-xs font-bold font-mono">
+                        <AlertCircle className="w-3.5 h-3.5" />
+                        <span>
+                          {t.summary.overBudget} (+{formatCurrency(budgetOverAmount, currency)})
+                        </span>
+                      </span>
+                    ) : (
+                      <span className="inline-flex items-center space-x-1.5 px-3 py-1 rounded-xl bg-emerald-500/10 border border-emerald-500/20 text-emerald-500 text-xs font-bold font-mono">
+                        <Check className="w-3.5 h-3.5" />
+                        <span>
+                          {t.summary.withinBudget} ({formatCurrency(budgetRemaining, currency)} {t.summary.budgetRemaining})
+                        </span>
+                      </span>
+                    )}
+                  </div>
+                )}
+              </div>
+
+              {/* Master Budget Progress Bar */}
+              {budgetTotalTarget > 0 && (
+                <div className="space-y-1.5">
+                  <div className="w-full h-3 rounded-full bg-[var(--bg-surface-solid)] border border-[var(--border-subtle)] overflow-hidden p-0.5">
+                    <div
+                      className={`h-full rounded-full transition-all duration-500 ${
+                        isOverBudget
+                          ? 'bg-rose-500'
+                          : budgetUsagePercent > 85
+                          ? 'bg-amber-500'
+                          : 'bg-[var(--accent-emerald)]'
+                      }`}
+                      style={{ width: `${Math.min(100, budgetUsagePercent)}%` }}
+                    />
+                  </div>
+                  <div className="flex items-center justify-between text-[11px] font-mono text-[var(--text-muted)]">
+                    <span>
+                      {budgetUsagePercent}% {t.summary.plannedBudget.toLowerCase()} used
+                    </span>
+                    <span>
+                      {daysInMonth} days in {selectedMonth}
+                    </span>
+                  </div>
+                </div>
+              )}
+            </div>
+
+            {/* Category Allocations Breakdown */}
+            {Object.keys(categoryTargets).length > 0 && (
+              <div className="space-y-3">
+                <span className="text-xs font-bold text-[var(--text-muted)] uppercase tracking-wider block">
+                  {t.summary.categoryBudgets}
+                </span>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                  {Object.entries(categoryTargets).map(([catKey, targetVal]) => {
+                    if (!targetVal || targetVal <= 0) return null;
+                    const Icon = EXPENSE_CATEGORY_ICONS[catKey as ExpenseCategory] || TrendingDown;
+                    const spent = categorySpentMap[catKey] || 0;
+                    const percent = Math.round((spent / targetVal) * 100);
+                    const isCatOver = spent > targetVal;
+                    const diff = Math.abs(targetVal - spent);
+                    const catLabel = t.expenseCategories[catKey as ExpenseCategory] || catKey;
+
+                    return (
+                      <div
+                        key={catKey}
+                        className="p-3.5 rounded-2xl border border-[var(--border-subtle)] bg-[var(--bg-subtle)] space-y-2"
+                      >
+                        <div className="flex items-center justify-between text-xs">
+                          <div className="flex items-center space-x-2">
+                            <div className="w-7 h-7 rounded-xl bg-[var(--bg-surface-solid)] border border-[var(--border-subtle)] flex items-center justify-center text-[var(--text-muted)] shrink-0">
+                              <Icon className="w-3.5 h-3.5" />
+                            </div>
+                            <span className="font-bold text-[var(--text-main)]">{catLabel}</span>
+                          </div>
+
+                          <span
+                            className={`font-mono text-[11px] font-bold px-2 py-0.5 rounded-lg ${
+                              isCatOver
+                                ? 'bg-rose-500/10 text-rose-500 border border-rose-500/20'
+                                : 'bg-emerald-500/10 text-emerald-500 border border-emerald-500/20'
+                            }`}
+                          >
+                            {isCatOver ? `+${formatCurrency(diff, currency)} over` : `${formatCurrency(diff, currency)} left`}
+                          </span>
+                        </div>
+
+                        <div className="flex items-baseline justify-between text-xs font-mono">
+                          <span className="font-bold text-[var(--text-main)] tabular-numbers">
+                            {formatCurrency(spent, currency)}
+                          </span>
+                          <span className="text-[var(--text-muted)] text-[11px] tabular-numbers">
+                            target: {formatCurrency(targetVal, currency)} ({percent}%)
+                          </span>
+                        </div>
+
+                        {/* Progress */}
+                        <div className="w-full h-1.5 rounded-full bg-[var(--bg-surface-solid)] overflow-hidden">
+                          <div
+                            className={`h-full rounded-full transition-all duration-300 ${
+                              isCatOver ? 'bg-rose-500' : 'bg-[var(--accent-emerald)]'
+                            }`}
+                            style={{ width: `${Math.min(100, percent)}%` }}
+                          />
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
+          </div>
+        )}
       </div>
 
       {/* 4 Big Metrics Grid (iOS Liquid Glass Cards) */}
@@ -256,7 +673,7 @@ export function MonthlySummaryBoard({
       {/* 3 Secondary KPI Cards */}
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 sm:gap-4">
         {/* Savings Rate */}
-        <div className="p-4 sm:p-5 rounded-3xl border border-[var(--border-subtle)] bg-[var(--bg-surface)]  shadow-[var(--card-shadow)] flex items-center space-x-3.5">
+        <div className="p-4 sm:p-5 rounded-3xl border border-[var(--border-subtle)] bg-[var(--bg-surface)] shadow-[var(--card-shadow)] flex items-center space-x-3.5">
           <div className="w-10 h-10 rounded-2xl bg-amber-500/10 border border-amber-500/20 text-amber-500 flex items-center justify-center shrink-0">
             <Percent className="w-5 h-5" />
           </div>
@@ -274,7 +691,7 @@ export function MonthlySummaryBoard({
         </div>
 
         {/* Daily Burn Rate */}
-        <div className="p-4 sm:p-5 rounded-3xl border border-[var(--border-subtle)] bg-[var(--bg-surface)]  shadow-[var(--card-shadow)] flex items-center space-x-3.5">
+        <div className="p-4 sm:p-5 rounded-3xl border border-[var(--border-subtle)] bg-[var(--bg-surface)] shadow-[var(--card-shadow)] flex items-center space-x-3.5">
           <div className="w-10 h-10 rounded-2xl bg-rose-500/10 border border-rose-500/20 text-rose-500 flex items-center justify-center shrink-0">
             <Flame className="w-5 h-5" />
           </div>
@@ -292,7 +709,7 @@ export function MonthlySummaryBoard({
         </div>
 
         {/* Comparison vs Previous Month */}
-        <div className="p-4 sm:p-5 rounded-3xl border border-[var(--border-subtle)] bg-[var(--bg-surface)]  shadow-[var(--card-shadow)] flex items-center space-x-3.5">
+        <div className="p-4 sm:p-5 rounded-3xl border border-[var(--border-subtle)] bg-[var(--bg-surface)] shadow-[var(--card-shadow)] flex items-center space-x-3.5">
           <div
             className={`w-10 h-10 rounded-2xl flex items-center justify-center shrink-0 border ${
               expenseDiff > 0
@@ -322,10 +739,10 @@ export function MonthlySummaryBoard({
         </div>
       </div>
 
-      {/* Breakdown per Category & Visual Chart (iOS Liquid Glass Cards) */}
+      {/* Breakdown per Category & Visual Chart */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* Category List */}
-        <div className="p-5 sm:p-6 rounded-3xl border border-[var(--border-subtle)] bg-[var(--bg-surface)]  shadow-[var(--card-shadow)] space-y-4">
+        <div className="p-5 sm:p-6 rounded-3xl border border-[var(--border-subtle)] bg-[var(--bg-surface)] shadow-[var(--card-shadow)] space-y-4">
           <h3 className="text-sm font-bold text-[var(--text-main)]">
             {t.summary.categoryBreakdown}
           </h3>
@@ -369,7 +786,7 @@ export function MonthlySummaryBoard({
         </div>
 
         {/* Top Categories Comparison Bar Chart */}
-        <div className="p-5 sm:p-6 rounded-3xl border border-[var(--border-subtle)] bg-[var(--bg-surface)]  shadow-[var(--card-shadow)] flex flex-col">
+        <div className="p-5 sm:p-6 rounded-3xl border border-[var(--border-subtle)] bg-[var(--bg-surface)] shadow-[var(--card-shadow)] flex flex-col">
           <div className="flex items-center justify-between mb-4">
             <h3 className="text-sm font-bold text-[var(--text-main)]">
               {t.summary.topCategoriesComparison}
@@ -471,6 +888,153 @@ export function MonthlySummaryBoard({
           )}
         </div>
       </div>
+
+      {/* SET / EDIT BUDGET PLAN MODAL */}
+      {isBudgetModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/70 backdrop-blur-md animate-fade-in">
+          <div className="w-full max-w-lg rounded-3xl border border-[var(--border-strong)] bg-[var(--bg-surface-solid)] backdrop-blur-3xl shadow-[var(--modal-shadow)] p-5 sm:p-6 space-y-5 max-h-[90vh] overflow-y-auto">
+            <div className="flex items-center justify-between border-b border-[var(--border-subtle)] pb-3">
+              <div className="flex items-center space-x-2.5">
+                <div className="w-8 h-8 rounded-xl bg-emerald-500/10 border border-emerald-500/20 text-emerald-500 flex items-center justify-center">
+                  <Target className="w-4 h-4" />
+                </div>
+                <div>
+                  <h3 className="text-base font-extrabold text-[var(--text-main)]">
+                    {t.summary.monthlyBudgetPlan}
+                  </h3>
+                  <p className="text-[11px] font-mono text-[var(--text-muted)]">
+                    Target for {selectedMonth} ({currency})
+                  </p>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => setIsBudgetModalOpen(false)}
+                className="p-1.5 rounded-xl text-[var(--text-muted)] hover:text-[var(--text-main)] hover:bg-[var(--bg-subtle)] transition-all cursor-pointer"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <form onSubmit={handleSaveBudgetPlan} className="space-y-4">
+              {/* Total Monthly Target */}
+              <div className="space-y-2">
+                <div className="flex items-center justify-between">
+                  <label className="text-xs font-bold text-[var(--text-muted)] uppercase tracking-wider">
+                    {t.summary.totalMonthlyBudget} ({currency})
+                  </label>
+                  <span className="text-[11px] text-[var(--text-faint)] font-mono">
+                    Max overall spending
+                  </span>
+                </div>
+                <div className="relative">
+                  <input
+                    type="text"
+                    inputMode="decimal"
+                    value={modalTotalTarget}
+                    onChange={(e) => {
+                      const raw = e.target.value.replace(/[^0-9.]/g, '');
+                      setModalTotalTarget(formatNumberWithCommas(raw));
+                    }}
+                    placeholder="e.g. 150,000"
+                    className="w-full bg-[var(--bg-subtle)] border border-[var(--border-subtle)] focus:border-[var(--border-strong)] rounded-2xl pl-4 pr-16 py-3.5 text-base font-bold text-[var(--text-main)] outline-none tabular-numbers font-mono"
+                  />
+                  <span className="absolute right-4 top-1/2 -translate-y-1/2 text-xs font-mono font-bold text-[var(--text-muted)] pointer-events-none select-none">
+                    {currency}
+                  </span>
+                </div>
+
+                {/* Presets */}
+                <div className="flex flex-wrap items-center gap-1.5 pt-1">
+                  <span className="text-[11px] text-[var(--text-muted)] mr-1 font-mono">
+                    Presets:
+                  </span>
+                  {totalBudgetPresets.map((val) => (
+                    <button
+                      key={val}
+                      type="button"
+                      onClick={() => setModalTotalTarget(formatNumberWithCommas(val))}
+                      className="px-2.5 py-1 rounded-xl border border-[var(--border-subtle)] bg-[var(--bg-subtle)] hover:bg-[var(--bg-subtle-hover)] text-xs font-semibold text-[var(--text-main)] tabular-numbers font-mono transition-all cursor-pointer"
+                    >
+                      {formatCurrency(val, currency)}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {/* Category Budget Targets */}
+              <div className="space-y-2.5 pt-3 border-t border-[var(--border-subtle)]">
+                <div className="flex items-center justify-between">
+                  <span className="text-xs font-bold text-[var(--text-muted)] uppercase tracking-wider">
+                    {t.summary.categoryBudgets}
+                  </span>
+                  <span className="text-[11px] text-[var(--text-faint)] font-mono">
+                    Optional per-category limits
+                  </span>
+                </div>
+
+                <div className="space-y-2 max-h-56 overflow-y-auto pr-1">
+                  {activeCategories.map((catKey) => {
+                    const Icon = EXPENSE_CATEGORY_ICONS[catKey] || TrendingDown;
+                    const catLabel = t.expenseCategories[catKey] || catKey;
+                    const currentVal = modalCategoryTargets[catKey] || '';
+
+                    return (
+                      <div
+                        key={catKey}
+                        className="flex items-center justify-between gap-3 p-2 rounded-xl bg-[var(--bg-subtle)] border border-[var(--border-subtle)]"
+                      >
+                        <div className="flex items-center space-x-2 shrink-0">
+                          <Icon className="w-4 h-4 text-[var(--text-muted)]" />
+                          <span className="text-xs font-bold text-[var(--text-main)]">
+                            {catLabel}
+                          </span>
+                        </div>
+                        <div className="relative w-36 sm:w-44">
+                          <input
+                            type="text"
+                            inputMode="decimal"
+                            value={currentVal}
+                            onChange={(e) => {
+                              const raw = e.target.value.replace(/[^0-9.]/g, '');
+                              setModalCategoryTargets((prev) => ({
+                                ...prev,
+                                [catKey]: formatNumberWithCommas(raw),
+                              }));
+                            }}
+                            placeholder="0"
+                            className="w-full bg-[var(--bg-surface-solid)] border border-[var(--border-subtle)] focus:border-[var(--border-strong)] rounded-xl pl-3 pr-12 py-1.5 text-xs font-bold text-[var(--text-main)] outline-none tabular-numbers font-mono"
+                          />
+                          <span className="absolute right-2.5 top-1/2 -translate-y-1/2 text-[10px] font-mono text-[var(--text-muted)] pointer-events-none">
+                            {currency}
+                          </span>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+
+              {/* Action buttons */}
+              <div className="flex flex-col-reverse sm:flex-row items-stretch sm:items-center justify-end gap-2.5 pt-4 border-t border-[var(--border-subtle)]">
+                <button
+                  type="button"
+                  onClick={() => setIsBudgetModalOpen(false)}
+                  className="w-full sm:w-auto px-5 py-2.5 rounded-2xl border border-[var(--border-subtle)] bg-[var(--bg-subtle)] hover:bg-[var(--bg-subtle-hover)] text-xs font-bold text-[var(--text-muted)] hover:text-[var(--text-main)] transition-all cursor-pointer text-center"
+                >
+                  {t.actions.cancel}
+                </button>
+                <button
+                  type="submit"
+                  className="w-full sm:w-auto px-6 py-2.5 rounded-2xl bg-[var(--btn-primary-bg)] text-[var(--btn-primary-text)] border border-[var(--btn-primary-border)] shadow-[var(--btn-primary-shadow)] hover:opacity-90 text-xs font-bold transition-all cursor-pointer text-center"
+                >
+                  {t.actions.save}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
