@@ -71,9 +71,10 @@ export function MonthlySummaryBoard({
   const [modalCategoryTargets, setModalCategoryTargets] = useState<Record<string, string>>({});
 
   useEffect(() => {
-    const current = new Date().toISOString().slice(0, 7);
+    const now = new Date();
+    const current = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
     setSelectedMonth(current);
-    setPickerYear(parseInt(current.split('-')[0], 10));
+    setPickerYear(now.getFullYear());
   }, []);
 
   // Sync pickerYear when selectedMonth changes
@@ -99,14 +100,24 @@ export function MonthlySummaryBoard({
 
   const handlePrevMonth = () => {
     const [year, month] = selectedMonth.split('-').map(Number);
-    const date = new Date(year, month - 2, 1);
-    setSelectedMonth(date.toISOString().slice(0, 7));
+    let newYear = year;
+    let newMonth = month - 1;
+    if (newMonth < 1) {
+      newMonth = 12;
+      newYear -= 1;
+    }
+    setSelectedMonth(`${newYear}-${String(newMonth).padStart(2, '0')}`);
   };
 
   const handleNextMonth = () => {
     const [year, month] = selectedMonth.split('-').map(Number);
-    const date = new Date(year, month, 1);
-    setSelectedMonth(date.toISOString().slice(0, 7));
+    let newYear = year;
+    let newMonth = month + 1;
+    if (newMonth > 12) {
+      newMonth = 1;
+      newYear += 1;
+    }
+    setSelectedMonth(`${newYear}-${String(newMonth).padStart(2, '0')}`);
   };
 
   // Filter transactions for selected month
@@ -117,8 +128,13 @@ export function MonthlySummaryBoard({
   // Previous month for comparison
   const prevMonthStr = useMemo(() => {
     const [year, month] = selectedMonth.split('-').map(Number);
-    const date = new Date(year, month - 2, 1);
-    return date.toISOString().slice(0, 7);
+    let newYear = year;
+    let newMonth = month - 1;
+    if (newMonth < 1) {
+      newMonth = 12;
+      newYear -= 1;
+    }
+    return `${newYear}-${String(newMonth).padStart(2, '0')}`;
   }, [selectedMonth]);
 
   const prevMonthTransactions = useMemo(() => {

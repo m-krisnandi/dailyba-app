@@ -45,7 +45,8 @@ export function SavingsBoard({
   const [currentMonthStr, setCurrentMonthStr] = useState<string>('2026-11');
 
   useEffect(() => {
-    setCurrentMonthStr(new Date().toISOString().slice(0, 7));
+    const now = new Date();
+    setCurrentMonthStr(`${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`);
   }, []);
 
   // Goal converted to current currency
