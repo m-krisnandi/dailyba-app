@@ -104,16 +104,20 @@ export default function Home() {
       if (prevUserIdRef.current !== user.id) {
         prevUserIdRef.current = user.id;
         pullStateFromCloud().then((cloudData) => {
-          if (cloudData && (cloudData.transactions?.length || cloudData.recurringBills?.length)) {
+          if (cloudData && (cloudData.transactions || cloudData.recurringBills)) {
             importData(cloudData);
           } else {
-            // No cloud data on remote account yet: populate cloud with current local state
-            pushStateToCloud(state);
+            // Brand new account: start fresh with sample data template and save to cloud
+            resetToSampleData();
           }
           hasInitialSyncedRef.current = true;
         });
       }
     } else {
+      if (prevUserIdRef.current) {
+        // User logged out: clear private data from screen so next person starts clean
+        resetToSampleData();
+      }
       prevUserIdRef.current = null;
       hasInitialSyncedRef.current = false;
     }

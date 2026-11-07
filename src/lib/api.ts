@@ -4,10 +4,7 @@
 import { FinanceState } from '@/types/finance';
 
 const DEFAULT_SERVER_URL =
-  process.env.NEXT_PUBLIC_API_URL ||
-  (typeof window !== 'undefined' && window.location.hostname.includes('pdfumi.com')
-    ? 'https://dailyba.pdfumi.com'
-    : 'http://localhost:4000');
+  process.env.NEXT_PUBLIC_API_URL || 'https://dailyba.pdfumi.com';
 
 export const AUTH_TOKEN_KEY = 'dailyba_auth_token';
 export const AUTH_USER_KEY = 'dailyba_auth_user';
