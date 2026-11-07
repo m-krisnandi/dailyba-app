@@ -4,17 +4,17 @@ import { useEffect, useState, useCallback, useRef } from 'react';
 import { Currency, ExpenseCategory, FinanceState, InvestmentAsset, Language, RecurringBill, Transaction } from '@/types/finance';
 import { DEFAULT_RECURRING_BILLS, INITIAL_SAMPLE_INVESTMENTS, INITIAL_SAMPLE_TRANSACTIONS } from './constants';
 
-const STORAGE_KEY = 'kakeibo_finance_v1';
+const STORAGE_KEY = 'dailyba_finance_v1';
 
 export const DEFAULT_STATE: FinanceState = {
-  transactions: INITIAL_SAMPLE_TRANSACTIONS,
-  investments: INITIAL_SAMPLE_INVESTMENTS,
+  transactions: [],
+  investments: [],
   language: 'en',
   currency: 'JPY',
   savingsGoalMonthly: 50000,
   dailySpendTarget: 3000,
   hiddenCategories: [],
-  recurringBills: DEFAULT_RECURRING_BILLS,
+  recurringBills: [],
 };
 
 export function getStoredState(): FinanceState {
@@ -27,16 +27,14 @@ export function getStoredState(): FinanceState {
     if (raw) {
       const parsed = JSON.parse(raw);
       return {
-        transactions: Array.isArray(parsed.transactions) ? parsed.transactions : INITIAL_SAMPLE_TRANSACTIONS,
-        investments: Array.isArray(parsed.investments) ? parsed.investments : INITIAL_SAMPLE_INVESTMENTS,
+        transactions: Array.isArray(parsed.transactions) ? parsed.transactions : [],
+        investments: Array.isArray(parsed.investments) ? parsed.investments : [],
         language: parsed.language || 'en',
         currency: parsed.currency || 'JPY',
         savingsGoalMonthly: typeof parsed.savingsGoalMonthly === 'number' ? parsed.savingsGoalMonthly : 50000,
         dailySpendTarget: typeof parsed.dailySpendTarget === 'number' ? parsed.dailySpendTarget : 3000,
         hiddenCategories: Array.isArray(parsed.hiddenCategories) ? parsed.hiddenCategories : [],
-        recurringBills: Array.isArray(parsed.recurringBills) && parsed.recurringBills.length > 0
-          ? parsed.recurringBills
-          : DEFAULT_RECURRING_BILLS,
+        recurringBills: Array.isArray(parsed.recurringBills) ? parsed.recurringBills : [],
       };
     }
   } catch (e) {
