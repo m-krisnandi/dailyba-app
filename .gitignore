@@ -19,6 +19,12 @@ server/node_modules
 # production
 /build
 
+# android & ios local builds
+android/local.properties
+android/.gradle
+android/app/build
+build-artifacts/
+
 # database & volumes
 *.db
 *.db-wal
