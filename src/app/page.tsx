@@ -346,7 +346,7 @@ export default function Home() {
       />
 
       {/* Version Changelog Modal */}
-      <ChangelogModal
+      <ChangelogModal language={state.language}
         isOpen={isChangelogModalOpen}
         onClose={() => setIsChangelogModalOpen(false)}
       />

@@ -15,6 +15,7 @@ import { formatCurrency, translations } from '@/lib/i18n';
 import { convertCurrency, DEFAULT_RATES, ExchangeRates, formatNumberWithCommas, parseRawNumber } from '@/lib/currency';
 import { CustomDatePicker } from '@/components/CustomDatePicker';
 import { EditTransactionModal } from '@/components/EditTransactionModal';
+import { TransactionDetailModal } from '@/components/TransactionDetailModal';
 import {
   EXPENSE_CATEGORY_ICONS,
   INCOME_CATEGORY_ICONS,
@@ -73,6 +74,7 @@ export function QuickRecordBoard({
 }: QuickRecordBoardProps) {
   const t = translations[language];
   const [editingTx, setEditingTx] = useState<Transaction | null>(null);
+  const [selectedDetailTx, setSelectedDetailTx] = useState<Transaction | null>(null);
   const [showOnboarding, setShowOnboarding] = useState(false);
 
   useEffect(() => {
@@ -1192,7 +1194,9 @@ export function QuickRecordBoard({
               return (
                 <div
                   key={tx.id}
-                  className="p-3 sm:p-3.5 rounded-2xl bg-[var(--bg-subtle)] border border-[var(--border-subtle)] hover:border-[var(--border-strong)] flex items-center justify-between space-x-2.5 sm:space-x-3 group transition-all min-w-0"
+                  onClick={() => setSelectedDetailTx(tx)}
+                  className="p-3 sm:p-3.5 rounded-2xl bg-[var(--bg-subtle)] border border-[var(--border-subtle)] hover:border-[var(--border-strong)] flex items-center justify-between space-x-2.5 sm:space-x-3 group transition-all min-w-0 cursor-pointer hover:bg-[var(--bg-surface-solid)] active:scale-[0.99]"
+                  title="Click to view full transaction details"
                 >
                   <div className="flex items-center space-x-2.5 sm:space-x-3 min-w-0">
                     <div
@@ -1233,7 +1237,10 @@ export function QuickRecordBoard({
                     {onUpdateTransaction && (
                       <button
                         type="button"
-                        onClick={() => setEditingTx(tx)}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setEditingTx(tx);
+                        }}
                         className="opacity-70 sm:opacity-0 sm:group-hover:opacity-100 p-1 text-[var(--text-faint)] hover:text-[var(--text-main)] transition-all cursor-pointer shrink-0"
                         title={t.actions.edit}
                       >
@@ -1242,7 +1249,10 @@ export function QuickRecordBoard({
                     )}
                     <button
                       type="button"
-                      onClick={() => onDeleteTransaction(tx.id)}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        onDeleteTransaction(tx.id);
+                      }}
                       className="opacity-70 sm:opacity-0 sm:group-hover:opacity-100 p-1 text-[var(--text-faint)] hover:text-rose-500 transition-all cursor-pointer shrink-0"
                       title={t.actions.delete}
                     >
@@ -1599,6 +1609,18 @@ export function QuickRecordBoard({
         onSave={(updated) => {
           if (onUpdateTransaction) onUpdateTransaction(updated);
         }}
+      />
+
+      {/* Transaction Detail Viewer Modal */}
+      <TransactionDetailModal
+        isOpen={!!selectedDetailTx}
+        transaction={selectedDetailTx}
+        language={language}
+        currency={currency}
+        rates={rates}
+        onClose={() => setSelectedDetailTx(null)}
+        onEdit={(tx) => setEditingTx(tx)}
+        onDelete={(id) => onDeleteTransaction(id)}
       />
     </div>
   );

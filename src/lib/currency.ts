@@ -11,16 +11,16 @@ export interface ExchangeRates {
   updatedAt: string;
 }
 
-// Fallback baseline rates (Base JPY)
+// Fallback baseline rates (Base JPY) - Real-world open market rates
 export const DEFAULT_RATES: ExchangeRates = {
   JPY: 1,
   IDR: 114.18,
   USD: 0.006314,
-  MMK: 13.26,
-  updatedAt: '2026-11-07',
+  MMK: 28.0, // Real-world market rate (1 JPY ≈ 28 MMK / 1 USD ≈ 4,430 MMK)
+  updatedAt: '2026-11-08',
 };
 
-const STORAGE_RATES_KEY = 'kakeibo_exchange_rates_v1';
+const STORAGE_RATES_KEY = 'dailyba_exchange_rates_v2';
 
 export function getCachedRates(): ExchangeRates {
   if (typeof window === 'undefined') return DEFAULT_RATES;
@@ -28,7 +28,8 @@ export function getCachedRates(): ExchangeRates {
     const raw = localStorage.getItem(STORAGE_RATES_KEY);
     if (raw) {
       const parsed = JSON.parse(raw);
-      if (parsed.JPY && parsed.IDR && parsed.USD && parsed.MMK) {
+      // Ensure MMK is using the realistic market rate (> 20) instead of the outdated 13.26 artificial peg
+      if (parsed.JPY && parsed.IDR && parsed.USD && parsed.MMK && parsed.MMK > 20) {
         return parsed;
       }
     }
@@ -50,17 +51,52 @@ export function saveCachedRates(rates: ExchangeRates) {
 
 export async function fetchLiveExchangeRates(): Promise<ExchangeRates | null> {
   try {
+    // 1. Fetch international interbank rates (JPY base)
     const res = await fetch('https://open.er-api.com/v6/latest/JPY', {
       headers: { Accept: 'application/json' },
     });
-    if (!res.ok) return null;
-    const data = await res.json();
-    if (data && data.result === 'success' && data.rates) {
+    
+    let jpyRates: any = null;
+    if (res.ok) {
+      const data = await res.json();
+      if (data && data.result === 'success' && data.rates) {
+        jpyRates = data.rates;
+      }
+    }
+
+    // 2. Fetch real-world open market Myanmar Kyat rate (curb/street rate)
+    // Standard central bank pegs (~13.25) are not used in actual market transactions in Myanmar.
+    let marketMMKRate = 28.0;
+    try {
+      const mmkRes = await fetch('https://myanmar-currency-api.github.io/api/latest.json');
+      if (mmkRes.ok) {
+        const mmkData = await mmkRes.json();
+        const jpnItem = mmkData?.data?.find((x: any) => x.currency === 'JPN');
+        if (jpnItem && jpnItem.buy && jpnItem.sell) {
+          const buy = parseFloat(jpnItem.buy);
+          const sell = parseFloat(jpnItem.sell);
+          if (buy > 0 && sell > 0) {
+            marketMMKRate = Math.round(((buy + sell) / 2) * 100) / 100;
+          }
+        } else {
+          // If direct JPN isn't available, derive from USD/MMK market rate
+          const usdItem = mmkData?.data?.find((x: any) => x.currency === 'USD');
+          if (usdItem && jpyRates?.USD) {
+            const usdMmk = (parseFloat(usdItem.buy) + parseFloat(usdItem.sell)) / 2;
+            marketMMKRate = Math.round(usdMmk * Number(jpyRates.USD) * 100) / 100;
+          }
+        }
+      }
+    } catch (e) {
+      console.warn('Could not fetch market MMK rate, using real-market baseline:', e);
+    }
+
+    if (jpyRates) {
       const rates: ExchangeRates = {
         JPY: 1,
-        IDR: Number(data.rates.IDR) || 114.18,
-        USD: Number(data.rates.USD) || 0.006314,
-        MMK: Number(data.rates.MMK) || 13.26,
+        IDR: Number(jpyRates.IDR) || 114.18,
+        USD: Number(jpyRates.USD) || 0.006314,
+        MMK: marketMMKRate || 28.0,
         updatedAt: new Date().toISOString(),
       };
       saveCachedRates(rates);
@@ -121,7 +157,7 @@ export function convertCurrency(
   } else if (from === 'USD') {
     inJPY = amount / (validRates.USD || 0.006314);
   } else if (from === 'MMK') {
-    inJPY = amount / (validRates.MMK || 13.26);
+    inJPY = amount / (validRates.MMK || 28.0);
   }
 
   // Convert JPY -> `to`
@@ -132,7 +168,7 @@ export function convertCurrency(
     return Math.round(inJPY * (validRates.IDR || 114.18));
   }
   if (to === 'MMK') {
-    return Math.round(inJPY * (validRates.MMK || 13.26));
+    return Math.round(inJPY * (validRates.MMK || 28.0));
   }
   if (to === 'USD') {
     return Math.round(inJPY * (validRates.USD || 0.006314) * 100) / 100;

@@ -5,6 +5,7 @@ import { Currency, ExpenseCategory, Language, Transaction } from '@/types/financ
 import { formatCurrency, translations } from '@/lib/i18n';
 import { EditTransactionModal } from '@/components/EditTransactionModal';
 import { AddTransactionModal } from '@/components/AddTransactionModal';
+import { TransactionDetailModal } from '@/components/TransactionDetailModal';
 import { Edit3 } from 'lucide-react';
 import { convertCurrency, DEFAULT_RATES, ExchangeRates, formatNumberWithCommas, parseRawNumber } from '@/lib/currency';
 import { EXPENSE_CATEGORY_ICONS } from '@/lib/constants';
@@ -61,6 +62,7 @@ export function DailySpendBoard({
   onAddTransaction,
 }: DailySpendBoardProps) {
   const [editingTx, setEditingTx] = useState<Transaction | null>(null);
+  const [selectedDetailTx, setSelectedDetailTx] = useState<Transaction | null>(null);
   const [isAddExpenseModalOpen, setIsAddExpenseModalOpen] = useState(false);
   const [addExpenseDate, setAddExpenseDate] = useState<string>('');
   const t = translations[language];
@@ -762,7 +764,8 @@ export function DailySpendBoard({
                           return (
                             <div
                               key={tx.id}
-                              className="p-3 rounded-xl bg-[var(--bg-surface)] border border-[var(--border-subtle)] flex items-center justify-between space-x-2 group transition-all"
+                              onClick={() => setSelectedDetailTx(tx)}
+                              className="p-3 rounded-xl bg-[var(--bg-surface)] border border-[var(--border-subtle)] hover:border-[var(--border-strong)] flex items-center justify-between space-x-2 group transition-all cursor-pointer"
                             >
                               <div className="flex items-center space-x-2.5 min-w-0">
                                 <div className="w-7 h-7 rounded-lg bg-[var(--bg-subtle)] border border-[var(--border-subtle)] flex items-center justify-center text-[var(--text-main)] shrink-0">
@@ -786,7 +789,7 @@ export function DailySpendBoard({
                                 {onUpdateTransaction && (
                                   <button
                                     type="button"
-                                    onClick={() => setEditingTx(tx)}
+                                    onClick={(e) => { e.stopPropagation(); setEditingTx(tx); }}
                                     className="p-1 rounded text-[var(--text-faint)] hover:text-[var(--text-main)] transition-all cursor-pointer opacity-70 hover:opacity-100"
                                     title={t.actions.edit}
                                   >
@@ -796,7 +799,7 @@ export function DailySpendBoard({
                                 {onDeleteTransaction && (
                                   <button
                                     type="button"
-                                    onClick={() => onDeleteTransaction(tx.id)}
+                                    onClick={(e) => { e.stopPropagation(); onDeleteTransaction(tx.id); }}
                                     className="p-1 rounded text-[var(--text-faint)] hover:text-rose-500 transition-all cursor-pointer opacity-70 hover:opacity-100"
                                     title={t.actions.delete}
                                   >
@@ -826,6 +829,27 @@ export function DailySpendBoard({
         onSave={(updated) => {
           if (onUpdateTransaction) onUpdateTransaction(updated);
         }}
+      />
+      {/* Transaction Detail Modal */}
+      <TransactionDetailModal
+        isOpen={!!selectedDetailTx}
+        transaction={selectedDetailTx}
+        language={language}
+        currency={currency}
+        rates={rates}
+        onClose={() => setSelectedDetailTx(null)}
+        onEdit={(tx) => {
+          setSelectedDetailTx(null);
+          setEditingTx(tx);
+        }}
+        onDelete={
+          onDeleteTransaction
+            ? (id) => {
+                setSelectedDetailTx(null);
+                onDeleteTransaction(id);
+              }
+            : undefined
+        }
       />
       {/* Add Transaction Modal */}
       {onAddTransaction && (

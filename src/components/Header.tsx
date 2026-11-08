@@ -116,7 +116,7 @@ export function Header({
 
   const idrRate = rates.IDR ? Math.round(rates.IDR * 10) / 10 : 114.2;
   const usdRate = rates.USD ? Math.round((1 / rates.USD) * 10) / 10 : 158.4;
-  const mmkRate = rates.MMK ? Math.round(rates.MMK * 10) / 10 : 13.3;
+  const mmkRate = rates.MMK ? Math.round(rates.MMK * 10) / 10 : 28.0;
 
   const rateText =
     currency === 'IDR'

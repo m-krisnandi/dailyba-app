@@ -1,16 +1,20 @@
 'use client';
 
 import React from 'react';
+import { Language } from '@/types/finance';
 import { APP_VERSION, APP_BUILD, APP_CHANGELOG } from '@/lib/version';
-import { Sparkles, X, CheckCircle2, Download, Tag } from 'lucide-react';
+import { Sparkles, X, CheckCircle2, Download } from 'lucide-react';
 
 interface ChangelogModalProps {
   isOpen: boolean;
+  language?: Language;
   onClose: () => void;
 }
 
-export function ChangelogModal({ isOpen, onClose }: ChangelogModalProps) {
+export function ChangelogModal({ isOpen, language = 'en', onClose }: ChangelogModalProps) {
   if (!isOpen) return null;
+
+  const isJa = language === 'ja';
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/70 backdrop-blur-md animate-fade-in">
@@ -24,14 +28,14 @@ export function ChangelogModal({ isOpen, onClose }: ChangelogModalProps) {
             <div>
               <div className="flex items-center space-x-2">
                 <h3 className="text-base font-extrabold text-[var(--text-main)]">
-                  What's New in Dailyba
+                  {isJa ? 'Dailyba 更新履歴' : "What's New in Dailyba"}
                 </h3>
                 <span className="px-2 py-0.5 rounded-lg bg-[var(--btn-primary-bg)] text-[var(--btn-primary-text)] text-[10px] font-mono font-bold">
                   v{APP_VERSION}
                 </span>
               </div>
               <p className="text-[11px] font-mono text-[var(--text-muted)] mt-0.5">
-                Build: {APP_BUILD} • Daily Balance & Wealth Tracker
+                Build: {APP_BUILD} • {isJa ? '日々の収支バランス・資産トラッカー' : 'Daily Balance & Wealth Tracker'}
               </p>
             </div>
           </div>
@@ -46,72 +50,77 @@ export function ChangelogModal({ isOpen, onClose }: ChangelogModalProps) {
 
         {/* Changelog Timeline */}
         <div className="space-y-4">
-          {APP_CHANGELOG.map((item, idx) => (
-            <div
-              key={item.version}
-              className={`p-4 rounded-2xl border transition-all ${
-                idx === 0
-                  ? 'bg-emerald-500/5 border-emerald-500/30'
-                  : 'bg-[var(--bg-subtle)] border-[var(--border-subtle)] opacity-75'
-              }`}
-            >
-              <div className="flex items-center justify-between gap-2 mb-2">
-                <div className="flex items-center space-x-2">
-                  <span
-                    className={`px-2 py-0.5 rounded-lg text-[11px] font-mono font-extrabold ${
-                      idx === 0
-                        ? 'bg-[var(--accent-emerald)] text-white'
-                        : 'bg-[var(--bg-surface)] text-[var(--text-main)] border border-[var(--border-subtle)]'
-                    }`}
-                  >
-                    v{item.version}
-                  </span>
-                  {idx === 0 && (
-                    <span className="text-[10px] font-bold text-[var(--accent-emerald)] uppercase tracking-wider">
-                      Latest
+          {APP_CHANGELOG.map((item, idx) => {
+            const title = item.title[language] || item.title.en;
+            const highlights = item.highlights[language] || item.highlights.en;
+
+            return (
+              <div
+                key={item.version}
+                className={`p-4 rounded-2xl border transition-all ${
+                  idx === 0
+                    ? 'bg-emerald-500/5 border-emerald-500/30'
+                    : 'bg-[var(--bg-subtle)] border-[var(--border-subtle)] opacity-85'
+                }`}
+              >
+                <div className="flex items-center justify-between gap-2 mb-2">
+                  <div className="flex items-center space-x-2">
+                    <span
+                      className={`px-2 py-0.5 rounded-lg text-[11px] font-mono font-extrabold ${
+                        idx === 0
+                          ? 'bg-[var(--accent-emerald)] text-white'
+                          : 'bg-[var(--bg-surface)] text-[var(--text-main)] border border-[var(--border-subtle)]'
+                      }`}
+                    >
+                      v{item.version}
                     </span>
-                  )}
+                    {idx === 0 && (
+                      <span className="text-[10px] font-bold text-[var(--accent-emerald)] uppercase tracking-wider">
+                        {isJa ? '最新版' : 'Latest'}
+                      </span>
+                    )}
+                  </div>
+                  <span className="text-[11px] font-mono text-[var(--text-faint)]">
+                    {item.date}
+                  </span>
                 </div>
-                <span className="text-[11px] font-mono text-[var(--text-faint)]">
-                  {item.date}
-                </span>
+
+                <h4 className="text-xs sm:text-sm font-bold text-[var(--text-main)] mb-2.5">
+                  {title}
+                </h4>
+
+                <ul className="space-y-1.5">
+                  {highlights.map((h, hIdx) => (
+                    <li
+                      key={hIdx}
+                      className="flex items-start space-x-2 text-xs text-[var(--text-muted)] leading-relaxed"
+                    >
+                      <CheckCircle2 className="w-3.5 h-3.5 text-[var(--accent-emerald)] shrink-0 mt-0.5" />
+                      <span>{h}</span>
+                    </li>
+                  ))}
+                </ul>
               </div>
-
-              <h4 className="text-xs sm:text-sm font-bold text-[var(--text-main)] mb-2.5">
-                {item.title}
-              </h4>
-
-              <ul className="space-y-1.5">
-                {item.highlights.map((h, hIdx) => (
-                  <li
-                    key={hIdx}
-                    className="flex items-start space-x-2 text-xs text-[var(--text-muted)] leading-relaxed"
-                  >
-                    <CheckCircle2 className="w-3.5 h-3.5 text-[var(--accent-emerald)] shrink-0 mt-0.5" />
-                    <span>{h}</span>
-                  </li>
-                ))}
-              </ul>
-            </div>
-          ))}
+            );
+          })}
         </div>
 
         {/* Footer Actions */}
         <div className="flex flex-col sm:flex-row items-center justify-between gap-2.5 pt-3 border-t border-[var(--border-subtle)]">
           <a
             href="/dailyba.apk"
-            download="dailyba.apk"
+            download={`dailyba-v${APP_VERSION}.apk`}
             className="w-full sm:w-auto inline-flex items-center justify-center space-x-2 px-4 py-2.5 rounded-2xl bg-emerald-500/15 border border-emerald-500/30 text-emerald-500 hover:bg-emerald-500/25 text-xs font-bold transition-all cursor-pointer"
           >
             <Download className="w-3.5 h-3.5" />
-            <span>Download APK (v{APP_VERSION})</span>
+            <span>{isJa ? `APKダウンロード (v${APP_VERSION})` : `Download APK (v${APP_VERSION})`}</span>
           </a>
           <button
             type="button"
             onClick={onClose}
             className="w-full sm:w-auto px-5 py-2.5 rounded-2xl bg-[var(--btn-primary-bg)] text-[var(--btn-primary-text)] border border-[var(--btn-primary-border)] shadow-[var(--btn-primary-shadow)] hover:opacity-90 text-xs font-bold transition-all cursor-pointer text-center"
           >
-            Close
+            {isJa ? '閉じる' : 'Close'}
           </button>
         </div>
       </div>
