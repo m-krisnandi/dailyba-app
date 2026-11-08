@@ -198,6 +198,9 @@ export interface Translations {
     filterAll: string;
     filterThisMonth: string;
     filterThisWeek: string;
+    filterCustom: string;
+    from: string;
+    to: string;
   };
 }
 
@@ -423,6 +426,9 @@ export const translations: Record<Language, Translations> = {
       filterAll: 'All Days',
       filterThisMonth: 'This Month',
       filterThisWeek: 'This Week',
+      filterCustom: 'Custom Range',
+      from: 'From',
+      to: 'To',
     },
   },
   ja: {
@@ -646,6 +652,9 @@ export const translations: Record<Language, Translations> = {
       filterAll: '全期間',
       filterThisMonth: '今月',
       filterThisWeek: '今週',
+      filterCustom: '期間指定',
+      from: '開始日',
+      to: '終了日',
     },
   },
 };

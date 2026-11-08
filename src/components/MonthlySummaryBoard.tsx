@@ -447,11 +447,8 @@ export function MonthlySummaryBoard({
               <Target className="w-5 h-5" />
             </div>
             <div>
-              <h3 className="text-base font-extrabold text-[var(--text-main)] flex items-center space-x-2">
-                <span>{t.summary.monthlyBudgetPlan}</span>
-                <span className="text-xs font-mono px-2 py-0.5 rounded-lg bg-[var(--bg-subtle)] border border-[var(--border-subtle)] text-[var(--text-muted)] font-bold">
-                  {selectedMonth}
-                </span>
+              <h3 className="text-base font-extrabold text-[var(--text-main)]">
+                {t.summary.monthlyBudgetPlan}
               </h3>
               <p className="text-xs text-[var(--text-muted)] mt-0.5">
                 {t.summary.monthlyBudgetPlanDesc}

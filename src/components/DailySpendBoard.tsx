@@ -82,7 +82,9 @@ export function DailySpendBoard({
   // Target input state
   const [isEditingTarget, setIsEditingTarget] = useState(false);
   const [targetInputStr, setTargetInputStr] = useState(formatNumberWithCommas(targetInCurrency));
-  const [filterMode, setFilterMode] = useState<'month' | 'week' | 'all'>('month');
+  const [filterMode, setFilterMode] = useState<'month' | 'week' | 'custom' | 'all'>('month');
+  const [customFrom, setCustomFrom] = useState<string>(() => `${currentMonthStr}-01`);
+  const [customTo, setCustomTo] = useState<string>(() => todayStr);
   const [expandedDates, setExpandedDates] = useState<Record<string, boolean>>({ [todayStr]: true });
   const [statusMessage, setStatusMessage] = useState<string | null>(null);
 
@@ -209,9 +211,19 @@ export function DailySpendBoard({
       sevenDaysAgo.setDate(todayDate.getDate() - 7);
       const sevenDaysAgoStr = sevenDaysAgo.toISOString().split('T')[0];
       array = array.filter((d) => d >= sevenDaysAgoStr && d <= todayStr);
+    } else if (filterMode === 'custom') {
+      if (customFrom && customTo) {
+        const start = customFrom <= customTo ? customFrom : customTo;
+        const end = customFrom <= customTo ? customTo : customFrom;
+        array = array.filter((d) => d >= start && d <= end);
+      } else if (customFrom) {
+        array = array.filter((d) => d >= customFrom);
+      } else if (customTo) {
+        array = array.filter((d) => d <= customTo);
+      }
     }
     return array;
-  }, [expenseTransactions, todayStr, currentMonthStr, filterMode]);
+  }, [expenseTransactions, todayStr, currentMonthStr, filterMode, customFrom, customTo]);
 
   // Quick preset targets
   const targetPresets = useMemo(() => {
@@ -593,11 +605,11 @@ export function DailySpendBoard({
           </div>
 
           {/* Filter Pills */}
-          <div className="flex items-center space-x-1.5 p-1 bg-[var(--bg-subtle)] rounded-xl border border-[var(--border-subtle)]">
+          <div className="flex items-center space-x-1 p-1 bg-[var(--bg-subtle)] rounded-xl border border-[var(--border-subtle)] overflow-x-auto max-w-full">
             <button
               type="button"
               onClick={() => setFilterMode('month')}
-              className={`px-3 py-1 rounded-lg text-xs font-semibold transition-all cursor-pointer ${
+              className={`px-2.5 sm:px-3 py-1 rounded-lg text-xs font-semibold transition-all cursor-pointer whitespace-nowrap ${
                 filterMode === 'month'
                   ? 'bg-[var(--bg-surface-solid)] text-[var(--text-main)] shadow-xs'
                   : 'text-[var(--text-muted)] hover:text-[var(--text-main)]'
@@ -608,7 +620,7 @@ export function DailySpendBoard({
             <button
               type="button"
               onClick={() => setFilterMode('week')}
-              className={`px-3 py-1 rounded-lg text-xs font-semibold transition-all cursor-pointer ${
+              className={`px-2.5 sm:px-3 py-1 rounded-lg text-xs font-semibold transition-all cursor-pointer whitespace-nowrap ${
                 filterMode === 'week'
                   ? 'bg-[var(--bg-surface-solid)] text-[var(--text-main)] shadow-xs'
                   : 'text-[var(--text-muted)] hover:text-[var(--text-main)]'
@@ -618,8 +630,19 @@ export function DailySpendBoard({
             </button>
             <button
               type="button"
+              onClick={() => setFilterMode('custom')}
+              className={`px-2.5 sm:px-3 py-1 rounded-lg text-xs font-semibold transition-all cursor-pointer whitespace-nowrap ${
+                filterMode === 'custom'
+                  ? 'bg-[var(--bg-surface-solid)] text-[var(--text-main)] shadow-xs'
+                  : 'text-[var(--text-muted)] hover:text-[var(--text-main)]'
+              }`}
+            >
+              {t.dailySpend.filterCustom}
+            </button>
+            <button
+              type="button"
               onClick={() => setFilterMode('all')}
-              className={`px-3 py-1 rounded-lg text-xs font-semibold transition-all cursor-pointer ${
+              className={`px-2.5 sm:px-3 py-1 rounded-lg text-xs font-semibold transition-all cursor-pointer whitespace-nowrap ${
                 filterMode === 'all'
                   ? 'bg-[var(--bg-surface-solid)] text-[var(--text-main)] shadow-xs'
                   : 'text-[var(--text-muted)] hover:text-[var(--text-main)]'
@@ -629,6 +652,34 @@ export function DailySpendBoard({
             </button>
           </div>
         </div>
+
+        {/* Custom Date Range Picker Accordion */}
+        {filterMode === 'custom' && (
+          <div className="p-3.5 rounded-2xl bg-[var(--bg-subtle)] border border-[var(--border-subtle)] flex flex-wrap items-center justify-between gap-3 animate-fade-in text-xs">
+            <div className="flex items-center space-x-2">
+              <span className="text-[11px] font-bold text-[var(--text-muted)] uppercase tracking-wider">
+                {t.dailySpend.from}:
+              </span>
+              <input
+                type="date"
+                value={customFrom}
+                onChange={(e) => setCustomFrom(e.target.value)}
+                className="px-3 py-1.5 rounded-xl bg-[var(--bg-surface-solid)] border border-[var(--border-subtle)] text-[var(--text-main)] font-mono text-xs focus:border-[var(--border-strong)] outline-none cursor-pointer"
+              />
+            </div>
+            <div className="flex items-center space-x-2">
+              <span className="text-[11px] font-bold text-[var(--text-muted)] uppercase tracking-wider">
+                {t.dailySpend.to}:
+              </span>
+              <input
+                type="date"
+                value={customTo}
+                onChange={(e) => setCustomTo(e.target.value)}
+                className="px-3 py-1.5 rounded-xl bg-[var(--bg-surface-solid)] border border-[var(--border-subtle)] text-[var(--text-main)] font-mono text-xs focus:border-[var(--border-strong)] outline-none cursor-pointer"
+              />
+            </div>
+          </div>
+        )}
 
         {/* Date cards */}
         {sortedDates.length === 0 ? (
