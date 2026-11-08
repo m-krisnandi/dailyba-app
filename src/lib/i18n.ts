@@ -161,6 +161,9 @@ export interface Translations {
     holdingsBreakdown: string;
     valuationMonitor: string;
     returnLabel: string;
+    amountInvested: string;
+    customValuationToggle: string;
+    customValuationHint: string;
   };
   savings: {
     title: string;
@@ -383,6 +386,9 @@ export const translations: Record<Language, Translations> = {
       holdingsBreakdown: 'Holdings Breakdown',
       valuationMonitor: 'Valuation Monitor',
       returnLabel: 'Return',
+      amountInvested: 'Amount Saved / Invested',
+      customValuationToggle: 'Customize Market Valuation (Optional)',
+      customValuationHint: 'Leave disabled if you just invested or market value equals your capital.',
     },
     savings: {
       title: 'Savings & Reserve Vault',
@@ -603,6 +609,9 @@ export const translations: Record<Language, Translations> = {
       holdingsBreakdown: '保有内訳',
       valuationMonitor: '時価モニター',
       returnLabel: '利回り',
+      amountInvested: '投資・積立元本金額',
+      customValuationToggle: '時価評価額を個別調整（任意）',
+      customValuationHint: '新規積立時や時価が元本と同額の場合はチェック不要です。',
     },
     savings: {
       title: '貯蓄・準備資金管理',

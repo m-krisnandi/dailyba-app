@@ -44,9 +44,10 @@ export function InvestmentBoard({
 
   // Form State
   const [name, setName] = useState('');
-  const [category, setCategory] = useState<InvestmentAsset['category']>('mutual_fund');
+  const [category, setCategory] = useState<InvestmentAsset['category']>('gold');
   const [costBasisStr, setCostBasisStr] = useState('');
   const [currentValueStr, setCurrentValueStr] = useState('');
+  const [isCustomValuation, setIsCustomValuation] = useState(false);
 
   // Total Portfolio Cost Basis converted to active currency
   const totalCostBasis = useMemo(() => {
@@ -72,9 +73,10 @@ export function InvestmentBoard({
   const handleOpenAdd = () => {
     setEditingId(null);
     setName('');
-    setCategory('mutual_fund');
+    setCategory('gold');
     setCostBasisStr('');
     setCurrentValueStr('');
+    setIsCustomValuation(false);
     setIsModalOpen(true);
   };
 
@@ -87,21 +89,25 @@ export function InvestmentBoard({
     const cv = convertCurrency(inv.currentValue, inv.currency, currency, rates);
     setCostBasisStr(formatNumberWithCommas(cb));
     setCurrentValueStr(formatNumberWithCommas(cv));
+    setIsCustomValuation(Math.abs(cv - cb) > 1);
     setIsModalOpen(true);
   };
 
   const handleSaveAsset = (e: React.FormEvent) => {
     e.preventDefault();
     const cb = parseRawNumber(costBasisStr);
-    const cv = parseRawNumber(currentValueStr);
-    if (!name.trim() || isNaN(cb) || isNaN(cv)) return;
+    if (!name.trim() || isNaN(cb) || cb <= 0) return;
+
+    // If custom valuation not toggled or empty, automatically equals costBasis
+    const cv = isCustomValuation && currentValueStr ? parseRawNumber(currentValueStr) : cb;
+    const finalCv = isNaN(cv) || cv < 0 ? cb : cv;
 
     onAddOrUpdateInvestment({
       id: editingId || `inv_${Date.now()}`,
       name: name.trim(),
       category,
       costBasis: cb,
-      currentValue: cv,
+      currentValue: finalCv,
       currency,
       updatedAt: new Date().toISOString(),
     });
@@ -277,50 +283,36 @@ export function InvestmentBoard({
               const valInCur = convertCurrency(inv.currentValue, inv.currency, currency, rates);
               const gain = valInCur - costInCur;
               const gainPct = costInCur > 0 ? ((gain / costInCur) * 100).toFixed(1) : '0.0';
+              const hasDiff = Math.abs(gain) > 1;
 
               return (
                 <div
                   key={inv.id}
-                  className="p-4 rounded-2xl border border-[var(--border-subtle)] bg-[var(--bg-subtle)] hover:border-[var(--border-strong)] transition-all flex items-center justify-between space-x-3 group"
+                  className="p-4 sm:p-5 rounded-2xl border border-[var(--border-subtle)] bg-[var(--bg-surface-solid)] hover:border-[var(--border-strong)] transition-all space-y-3 group shadow-xs"
                 >
-                  <div className="flex items-center space-x-3 min-w-0">
-                    <div className="w-10 h-10 rounded-xl bg-[var(--bg-surface-solid)] border border-[var(--border-subtle)] flex items-center justify-center text-[var(--text-main)] shadow-xs shrink-0">
-                      <Icon className="w-5 h-5" />
-                    </div>
-                    <div className="min-w-0">
-                      <h4 className="text-xs sm:text-sm font-bold text-[var(--text-main)] truncate">
-                        {inv.name}
-                      </h4>
-                      <p className="text-[11px] text-[var(--text-muted)]">
-                        {t.investmentCategories[inv.category]} • Cost:{' '}
-                        {formatCurrency(costInCur, currency)}
-                      </p>
-                    </div>
-                  </div>
-
-                  <div className="flex items-center space-x-4 shrink-0">
-                    <div className="text-right">
-                      <p className="text-xs sm:text-sm font-bold text-[var(--text-main)] tabular-numbers font-mono">
-                        {formatCurrency(valInCur, currency)}
-                      </p>
-                      <p
-                        className={`text-[11px] font-bold tabular-numbers font-mono ${
-                          gain >= 0
-                            ? 'text-emerald-600 dark:text-emerald-400'
-                            : 'text-rose-600 dark:text-rose-400'
-                        }`}
-                      >
-                        {gain >= 0 ? '+' : ''}
-                        {formatCurrency(gain, currency)} ({gain >= 0 ? '+' : ''}
-                        {gainPct}%)
-                      </p>
+                  {/* Top Bar: Icon + Name & Category Pill + Action Buttons */}
+                  <div className="flex items-start justify-between gap-3">
+                    <div className="flex items-center space-x-3 min-w-0 flex-1">
+                      <div className="w-10 h-10 rounded-xl bg-[var(--bg-subtle)] border border-[var(--border-subtle)] flex items-center justify-center text-[var(--text-main)] shadow-xs shrink-0">
+                        <Icon className="w-5 h-5 text-emerald-500" />
+                      </div>
+                      <div className="min-w-0 flex-1">
+                        <h4 className="text-sm font-bold text-[var(--text-main)] truncate">
+                          {inv.name}
+                        </h4>
+                        <div className="flex items-center space-x-2 mt-0.5">
+                          <span className="inline-block px-2 py-0.5 rounded-md bg-[var(--bg-subtle)] text-[10px] font-semibold text-[var(--text-muted)] border border-[var(--border-subtle)]">
+                            {t.investmentCategories[inv.category]}
+                          </span>
+                        </div>
+                      </div>
                     </div>
 
-                    <div className="flex items-center space-x-1 pl-1">
+                    <div className="flex items-center space-x-1 shrink-0">
                       <button
                         type="button"
                         onClick={() => handleOpenEdit(inv)}
-                        className="p-2 rounded-xl text-[var(--text-muted)] hover:text-[var(--text-main)] hover:bg-[var(--bg-surface-solid)] transition-all cursor-pointer"
+                        className="p-2 rounded-xl text-[var(--text-muted)] hover:text-[var(--text-main)] hover:bg-[var(--bg-subtle)] transition-all cursor-pointer"
                         title={t.actions.edit}
                       >
                         <Pencil className="w-3.5 h-3.5" />
@@ -333,6 +325,41 @@ export function InvestmentBoard({
                       >
                         <Trash2 className="w-3.5 h-3.5" />
                       </button>
+                    </div>
+                  </div>
+
+                  {/* Bottom Bar: Modal/Cost vs Market Valuation & Return */}
+                  <div className="pt-2.5 border-t border-[var(--border-subtle)] flex items-center justify-between gap-3 flex-wrap">
+                    <div>
+                      <span className="text-[10px] uppercase tracking-wider text-[var(--text-faint)] font-medium block">
+                        {t.investments.costBasis}
+                      </span>
+                      <span className="text-xs sm:text-sm font-bold text-[var(--text-muted)] tabular-numbers font-mono">
+                        {formatCurrency(costInCur, currency)}
+                      </span>
+                    </div>
+
+                    <div className="text-right">
+                      <span className="text-[10px] uppercase tracking-wider text-[var(--text-faint)] font-medium block">
+                        {t.investments.currentValue}
+                      </span>
+                      <div className="flex items-center space-x-2 justify-end">
+                        <span className="text-sm sm:text-base font-bold text-[var(--text-main)] tabular-numbers font-mono">
+                          {formatCurrency(valInCur, currency)}
+                        </span>
+                        {hasDiff && (
+                          <span
+                            className={`text-[10px] font-bold font-mono px-1.5 py-0.5 rounded border inline-flex items-center ${
+                              gain >= 0
+                                ? 'bg-emerald-500/15 border-emerald-500/30 text-emerald-600 dark:text-emerald-400'
+                                : 'bg-rose-500/15 border-rose-500/30 text-rose-600 dark:text-rose-400'
+                            }`}
+                          >
+                            {gain >= 0 ? '+' : ''}
+                            {gainPct}%
+                          </span>
+                        )}
+                      </div>
                     </div>
                   </div>
                 </div>
@@ -411,11 +438,12 @@ export function InvestmentBoard({
                 </select>
               </div>
 
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <label className="text-xs font-semibold text-[var(--text-muted)] uppercase tracking-wider block mb-1">
-                    {t.investments.costBasis} ({currency})
-                  </label>
+              {/* Single Primary Amount Input */}
+              <div>
+                <label className="text-xs font-semibold text-[var(--text-muted)] uppercase tracking-wider block mb-1">
+                  {t.investments.amountInvested} ({currency})
+                </label>
+                <div className="relative">
                   <input
                     type="text"
                     inputMode="decimal"
@@ -424,28 +452,64 @@ export function InvestmentBoard({
                     onChange={(e) => {
                       const raw = e.target.value.replace(/[^0-9.]/g, '');
                       setCostBasisStr(formatNumberWithCommas(raw));
+                      if (!isCustomValuation) {
+                        setCurrentValueStr(formatNumberWithCommas(raw));
+                      }
                     }}
                     placeholder="0"
-                    className="w-full bg-[var(--bg-subtle)] border border-[var(--border-subtle)] focus:border-[var(--border-strong)] rounded-xl px-4 py-2.5 text-xs text-[var(--text-main)] tabular-numbers font-mono outline-none"
+                    className="w-full bg-[var(--bg-subtle)] border border-[var(--border-subtle)] focus:border-[var(--border-strong)] rounded-xl pl-4 pr-14 py-2.5 text-sm font-bold text-[var(--text-main)] tabular-numbers font-mono outline-none"
                   />
+                  <span className="absolute right-3.5 top-1/2 -translate-y-1/2 text-xs font-mono font-bold text-[var(--text-muted)] pointer-events-none select-none">
+                    {currency}
+                  </span>
                 </div>
-                <div>
-                  <label className="text-xs font-semibold text-[var(--text-muted)] uppercase tracking-wider block mb-1">
-                    {t.investments.currentValue} ({currency})
-                  </label>
-                  <input
-                    type="text"
-                    inputMode="decimal"
-                    required
-                    value={currentValueStr}
-                    onChange={(e) => {
-                      const raw = e.target.value.replace(/[^0-9.]/g, '');
-                      setCurrentValueStr(formatNumberWithCommas(raw));
-                    }}
-                    placeholder="0"
-                    className="w-full bg-[var(--bg-subtle)] border border-[var(--border-subtle)] focus:border-[var(--border-strong)] rounded-xl px-4 py-2.5 text-xs text-[var(--text-main)] tabular-numbers font-mono outline-none"
-                  />
-                </div>
+              </div>
+
+              {/* Optional Custom Market Valuation Accordion */}
+              <div className="pt-1">
+                <button
+                  type="button"
+                  onClick={() => {
+                    const next = !isCustomValuation;
+                    setIsCustomValuation(next);
+                    if (next && !currentValueStr) {
+                      setCurrentValueStr(costBasisStr);
+                    }
+                  }}
+                  className="text-xs font-medium text-[var(--accent-emerald)] hover:underline inline-flex items-center space-x-1.5 cursor-pointer py-1"
+                >
+                  <span className="w-4 h-4 rounded-full border border-[var(--border-strong)] flex items-center justify-center text-[10px] font-bold">
+                    {isCustomValuation ? '−' : '+'}
+                  </span>
+                  <span>{t.investments.customValuationToggle}</span>
+                </button>
+
+                {isCustomValuation && (
+                  <div className="mt-2 p-3.5 rounded-2xl bg-[var(--bg-subtle)] border border-[var(--border-subtle)] space-y-2 animate-fade-in">
+                    <label className="text-xs font-semibold text-[var(--text-muted)] block">
+                      {t.investments.currentValue} ({currency})
+                    </label>
+                    <div className="relative">
+                      <input
+                        type="text"
+                        inputMode="decimal"
+                        value={currentValueStr}
+                        onChange={(e) => {
+                          const raw = e.target.value.replace(/[^0-9.]/g, '');
+                          setCurrentValueStr(formatNumberWithCommas(raw));
+                        }}
+                        placeholder={costBasisStr || '0'}
+                        className="w-full bg-[var(--bg-surface-solid)] border border-[var(--border-subtle)] focus:border-[var(--border-strong)] rounded-xl pl-3 pr-14 py-2 text-xs font-bold text-[var(--text-main)] tabular-numbers font-mono outline-none"
+                      />
+                      <span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs font-mono font-bold text-[var(--text-muted)] pointer-events-none select-none">
+                        {currency}
+                      </span>
+                    </div>
+                    <p className="text-[10px] text-[var(--text-faint)] leading-relaxed">
+                      {t.investments.customValuationHint}
+                    </p>
+                  </div>
+                )}
               </div>
 
               <div className="flex items-center space-x-2 pt-2">
