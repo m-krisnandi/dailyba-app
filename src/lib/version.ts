@@ -1,6 +1,6 @@
 import { Language } from '@/types/finance';
 
-export const APP_VERSION = '1.3.4';
+export const APP_VERSION = '1.3.5';
 export const APP_BUILD = '20261108';
 
 export interface LocalizedChangelogItem {
@@ -11,6 +11,28 @@ export interface LocalizedChangelogItem {
 }
 
 export const APP_CHANGELOG: LocalizedChangelogItem[] = [
+  {
+    version: '1.3.5',
+    date: '2026-11-08',
+    title: {
+      en: 'Complete Japanese Localization across Daily Spend & Investments',
+      ja: '日次支出・資産管理の日本語翻訳の徹底と最適化',
+    },
+    highlights: {
+      en: [
+        'Daily Spend Action Buttons: localized "Add Spend" and "Set Target" on mobile screens to Japanese.',
+        'Target Adherence & Metrics: translated "Target Adherence" (目標遵守状況), "Safe/Over" (目標内/超過), and "Month-to-Date Spend" (今月の累計支出).',
+        'Chart Legend: localized "Within Target" (目標内) and "Exceeded" (目標超過).',
+        'Net Worth Title: removed trailing English "(Net Worth)" to display clean "純資産総額".',
+      ],
+      ja: [
+        '日次支出ボタンの日本語化：スマホ画面で「Add Spend」および「Set Target」と表示されていたボタンを「支出を記録」「目標を設定」に翻訳。',
+        '目標遵守・集計指標の翻訳：「Target Adherence」を「目標遵守状況」、「Safe / Over」を「目標内 / 超過」、「Month-to-Date Spend」を「今月の累計支出」に日本語化。',
+        '推移グラフの凡例：「Within Target / Exceeded」を「目標内 / 目標超過」に翻訳。',
+        '純資産タイトルの整理：英語の「(Net Worth)」を省き、すっきりとした「純資産総額」に統一。',
+      ],
+    },
+  },
   {
     version: '1.3.4',
     date: '2026-11-08',

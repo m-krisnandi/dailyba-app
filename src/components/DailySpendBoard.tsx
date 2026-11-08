@@ -301,7 +301,7 @@ export function DailySpendBoard({
               >
                 <Plus className="w-4 h-4 shrink-0" />
                 <span className="truncate">
-                  <span className="sm:hidden">Add Spend</span>
+                  <span className="sm:hidden">{t.dailySpend.addSpend}</span>
                   <span className="hidden sm:inline">{t.record.recordTodayExpense || "Record Today's Spend"}</span>
                 </span>
               </button>
@@ -325,7 +325,7 @@ export function DailySpendBoard({
                 <>
                   <SlidersHorizontal className="w-4 h-4 shrink-0" />
                   <span className="truncate">
-                    <span className="sm:hidden">Set Target</span>
+                    <span className="sm:hidden">{t.dailySpend.setTarget}</span>
                     <span className="hidden sm:inline">{t.dailySpend.adjustDailyTarget}</span>
                   </span>
                 </>
@@ -345,7 +345,7 @@ export function DailySpendBoard({
                 {t.dailySpend.adjustDailyTarget} ({currency})
               </label>
               <span className="text-[11px] text-[var(--text-faint)] font-mono">
-                Set comfortable everyday limit
+                {language === 'ja' ? '無理のない1日の限度額を設定' : 'Set comfortable everyday limit'}
               </span>
             </div>
             <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2.5">
@@ -467,13 +467,13 @@ export function DailySpendBoard({
         {/* Target Discipline */}
         <div className="p-4 sm:p-5 rounded-2xl border border-[var(--border-subtle)] bg-[var(--bg-surface)]  shadow-xs space-y-1">
           <span className="text-xs text-[var(--text-muted)] font-medium block">
-            Target Adherence
+            {t.dailySpend.targetAdherence}
           </span>
           <p className="text-xl sm:text-2xl font-bold text-[var(--text-main)] tabular-numbers font-mono flex items-center space-x-1.5">
-            <span className="text-emerald-500">{monthlyDaysStats.safeDays} Safe</span>
+            <span className="text-emerald-500">{monthlyDaysStats.safeDays} {t.dailySpend.safeDays}</span>
             <span className="text-[var(--text-faint)] text-sm">/</span>
             <span className={monthlyDaysStats.overDays > 0 ? 'text-rose-500 text-sm' : 'text-[var(--text-muted)] text-sm'}>
-              {monthlyDaysStats.overDays} Over
+              {monthlyDaysStats.overDays} {t.dailySpend.overDays}
             </span>
           </p>
           <p className="text-[10px] text-[var(--text-faint)]">
@@ -484,7 +484,7 @@ export function DailySpendBoard({
         {/* Monthly Running Total */}
         <div className="p-4 sm:p-5 rounded-2xl border border-[var(--border-subtle)] bg-[var(--bg-surface)]  shadow-xs space-y-1">
           <span className="text-xs text-[var(--text-muted)] font-medium block">
-            Month-to-Date Spend
+            {t.dailySpend.monthToDateSpend}
           </span>
           <p className="text-xl sm:text-2xl font-bold text-[var(--text-main)] tabular-numbers font-mono">
             {formatCurrency(monthlyTotalSpent, currency)}
@@ -510,11 +510,11 @@ export function DailySpendBoard({
           <div className="flex items-center space-x-3 text-xs font-mono">
             <span className="flex items-center space-x-1 text-emerald-500">
               <span className="w-2.5 h-2.5 rounded-sm bg-emerald-500 inline-block" />
-              <span>Within Target</span>
+              <span>{t.dailySpend.withinTargetLegend}</span>
             </span>
             <span className="flex items-center space-x-1 text-rose-500">
               <span className="w-2.5 h-2.5 rounded-sm bg-rose-500 inline-block" />
-              <span>Exceeded</span>
+              <span>{t.dailySpend.exceededLegend}</span>
             </span>
           </div>
         </div>

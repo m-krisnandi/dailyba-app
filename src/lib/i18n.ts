@@ -201,6 +201,14 @@ export interface Translations {
     filterCustom: string;
     from: string;
     to: string;
+    targetAdherence: string;
+    monthToDateSpend: string;
+    addSpend: string;
+    setTarget: string;
+    safeDays: string;
+    overDays: string;
+    withinTargetLegend: string;
+    exceededLegend: string;
   };
 }
 
@@ -430,6 +438,14 @@ export const translations: Record<Language, Translations> = {
       filterCustom: 'Custom Range',
       from: 'From',
       to: 'To',
+      targetAdherence: 'Target Adherence',
+      monthToDateSpend: 'Month-to-Date Spend',
+      addSpend: 'Add Spend',
+      setTarget: 'Set Target',
+      safeDays: 'Safe',
+      overDays: 'Over',
+      withinTargetLegend: 'Within Target',
+      exceededLegend: 'Exceeded',
     },
   },
   ja: {
@@ -595,7 +611,7 @@ export const translations: Record<Language, Translations> = {
     },
     investments: {
       title: '資産運用ポートフォリオ',
-      netWorthTitle: '純資産総額 (Net Worth)',
+      netWorthTitle: '純資産総額',
       combinedSubtitle: '現金預金 + 保有投資資産の時価総額',
       totalCostBasis: '投資元本合計',
       totalCurrentValue: '評価額合計',
@@ -657,6 +673,14 @@ export const translations: Record<Language, Translations> = {
       filterCustom: '期間指定',
       from: '開始日',
       to: '終了日',
+      targetAdherence: '目標遵守状況',
+      monthToDateSpend: '今月の累計支出',
+      addSpend: '支出を記録',
+      setTarget: '目標を設定',
+      safeDays: '目標内',
+      overDays: '超過',
+      withinTargetLegend: '目標内',
+      exceededLegend: '目標超過',
     },
   },
 };
