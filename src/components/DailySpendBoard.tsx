@@ -287,7 +287,7 @@ export function DailySpendBoard({
               >
                 <Plus className="w-4 h-4 shrink-0" />
                 <span className="truncate">
-                  <span className="sm:hidden">+ Spend</span>
+                  <span className="sm:hidden">Add Spend</span>
                   <span className="hidden sm:inline">{t.record.recordTodayExpense || "Record Today's Spend"}</span>
                 </span>
               </button>
