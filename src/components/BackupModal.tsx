@@ -3,6 +3,7 @@
 import React, { useRef, useState } from 'react';
 import { FinanceState, Language } from '@/types/finance';
 import { translations } from '@/lib/i18n';
+import { useBodyScrollLock } from '@/lib/useBodyScrollLock';
 import {
   Download,
   Upload,
@@ -32,6 +33,8 @@ export function BackupModal({
   onImportData,
   onClearAll,
 }: BackupModalProps) {
+  useBodyScrollLock(isOpen);
+
   const t = translations[language];
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [feedback, setFeedback] = useState<string | null>(null);

@@ -3,6 +3,7 @@
 import React from 'react';
 import { Language } from '@/types/finance';
 import { APP_VERSION, APP_BUILD, APP_CHANGELOG } from '@/lib/version';
+import { useBodyScrollLock } from '@/lib/useBodyScrollLock';
 import { Sparkles, X, CheckCircle2, Download } from 'lucide-react';
 
 interface ChangelogModalProps {
@@ -12,6 +13,8 @@ interface ChangelogModalProps {
 }
 
 export function ChangelogModal({ isOpen, language = 'en', onClose }: ChangelogModalProps) {
+  useBodyScrollLock(isOpen);
+
   if (!isOpen) return null;
 
   const isJa = language === 'ja';

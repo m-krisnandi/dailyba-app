@@ -6,6 +6,7 @@ import { formatCurrency, translations } from '@/lib/i18n';
 import { EXPENSE_CATEGORY_ICONS } from '@/lib/constants';
 import { getMonthDateRange, isDateInMonthCycle } from '@/lib/dateUtils';
 import { AddTransactionModal } from '@/components/AddTransactionModal';
+import { useBodyScrollLock } from '@/lib/useBodyScrollLock';
 import { convertCurrency, DEFAULT_RATES, ExchangeRates, formatNumberWithCommas, parseRawNumber } from '@/lib/currency';
 import {
   ArrowDownRight,
@@ -100,6 +101,7 @@ export function MonthlySummaryBoard({
 
   // Budget Modal State
   const [isBudgetModalOpen, setIsBudgetModalOpen] = useState(false);
+  useBodyScrollLock(isBudgetModalOpen);
   const [isAddTxModalOpen, setIsAddTxModalOpen] = useState(false);
   const [addTxInitialType, setAddTxInitialType] = useState<TransactionType>('expense');
   const [addTxInitialCategory, setAddTxInitialCategory] = useState<string | undefined>(undefined);

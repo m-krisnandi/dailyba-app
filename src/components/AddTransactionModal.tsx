@@ -17,6 +17,7 @@ import {
   FUNDING_SOURCE_ICONS,
 } from '@/lib/constants';
 import { formatNumberWithCommas, parseRawNumber } from '@/lib/currency';
+import { useBodyScrollLock } from '@/lib/useBodyScrollLock';
 import {
   X,
   Check,
@@ -56,6 +57,8 @@ export function AddTransactionModal({
   initialNote,
   title,
 }: AddTransactionModalProps) {
+  useBodyScrollLock(isOpen);
+
   const t = translations[language];
 
   const todayStr = new Date().toISOString().split('T')[0];

@@ -16,6 +16,7 @@ import { convertCurrency, DEFAULT_RATES, ExchangeRates, formatNumberWithCommas, 
 import { CustomDatePicker } from '@/components/CustomDatePicker';
 import { EditTransactionModal } from '@/components/EditTransactionModal';
 import { TransactionDetailModal } from '@/components/TransactionDetailModal';
+import { useBodyScrollLock } from '@/lib/useBodyScrollLock';
 import {
   EXPENSE_CATEGORY_ICONS,
   INCOME_CATEGORY_ICONS,
@@ -141,6 +142,7 @@ export function QuickRecordBoard({
   // Modals state
   const [isCategoryModalOpen, setIsCategoryModalOpen] = useState(false);
   const [isBillModalOpen, setIsBillModalOpen] = useState(false);
+  useBodyScrollLock(isCategoryModalOpen || isBillModalOpen);
   const [editingBill, setEditingBill] = useState<RecurringBill | null>(null);
 
   // Bill form state
@@ -564,8 +566,8 @@ export function QuickRecordBoard({
               </div>
               <p className="text-[11px] text-[var(--text-muted)] leading-relaxed">
                 {language === 'ja'
-                  ? '下の入力フォームまたは右下の [+] ボタンから、支出・収入・貯金振替を即座に記録できます。'
-                  : 'Use the quick form below or the [+] button in the bottom right corner to log your first expense, income, or savings.'}
+                  ? '下の入力フォームまたはクイック入力から、支出・収入・貯金振替を即座に記録できます。'
+                  : 'Use the quick form below or Smart Quick Entry to log your first expense, income, or savings.'}
               </p>
             </div>
 

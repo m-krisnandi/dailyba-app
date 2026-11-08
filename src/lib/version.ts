@@ -1,6 +1,6 @@
 import { Language } from '@/types/finance';
 
-export const APP_VERSION = '1.3.3';
+export const APP_VERSION = '1.3.4';
 export const APP_BUILD = '20261108';
 
 export interface LocalizedChangelogItem {
@@ -11,6 +11,28 @@ export interface LocalizedChangelogItem {
 }
 
 export const APP_CHANGELOG: LocalizedChangelogItem[] = [
+  {
+    version: '1.3.4',
+    date: '2026-11-08',
+    title: {
+      en: 'Background Scroll Lock, Clean Auth Dialog & Mobile TopBar Responsiveness',
+      ja: 'モーダル背景スクロール防止・ログイン画面クリーン化・スマホTopbar表示最適化',
+    },
+    highlights: {
+      en: [
+        'Removed VPS Server Info: eliminated technical server URL and configuration from the Auth modal for a clean end-user experience.',
+        'Modal Background Scroll Lock: opening any modal now locks background page scrolling (prevents scroll bleed), adhering to mobile & web UX best practices.',
+        'Mobile Topbar Responsiveness: resolved header overflow on narrow devices (iPhone SE/Android ~360-390px) where the theme toggle (Sun/Moon) was clipped.',
+        'Guide Alignment: updated Quick Start Guide text to eliminate outdated floating button references.',
+      ],
+      ja: [
+        'サーバー情報フッターの削除：ログイン画面下部のVPSサーバーURLおよび開発者向け設定を非表示にし、すっきりしたデザインに改善。',
+        'モーダル展開時の背景スクロールロック：ダイアログ表示中に背面のページがスクロールしてしまう不具合を解消（UX標準仕様）。',
+        'スマホTopBar表示の最適化：幅の狭いスマートフォン（iPhone SEや375-390px端末）でライト/ダークモード切替ボタンが画面外に見切れる問題を解消。',
+        'ガイド文言の最新化：クイックスタートガイドの操作案内を現行UIに合わせて更新。',
+      ],
+    },
+  },
   {
     version: '1.3.3',
     date: '2026-11-08',

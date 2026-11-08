@@ -16,6 +16,7 @@ import {
   FUNDING_SOURCE_ICONS,
 } from '@/lib/constants';
 import { convertCurrency, DEFAULT_RATES, ExchangeRates } from '@/lib/currency';
+import { useBodyScrollLock } from '@/lib/useBodyScrollLock';
 import {
   X,
   Calendar,
@@ -52,6 +53,8 @@ export function TransactionDetailModal({
   onEdit,
   onDelete,
 }: TransactionDetailModalProps) {
+  useBodyScrollLock(isOpen && !!transaction);
+
   if (!isOpen || !transaction) return null;
 
   const t = translations[language];
@@ -131,17 +134,17 @@ export function TransactionDetailModal({
             >
               {isExpense ? (
                 <>
-                  <TrendingDown className="w-3 h-3" />
+                  <TrendingDown className="w-3.5 h-3.5" />
                   <span>{t.record.typeExpense}</span>
                 </>
               ) : isIncome ? (
                 <>
-                  <TrendingUp className="w-3 h-3" />
+                  <TrendingUp className="w-3.5 h-3.5" />
                   <span>{t.record.typeIncome}</span>
                 </>
               ) : (
                 <>
-                  <Wallet className="w-3 h-3" />
+                  <Wallet className="w-3.5 h-3.5" />
                   <span>{t.record.typeSavings}</span>
                 </>
               )}

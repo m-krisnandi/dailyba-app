@@ -17,6 +17,7 @@ import {
   FUNDING_SOURCE_ICONS,
 } from '@/lib/constants';
 import { formatNumberWithCommas, parseRawNumber } from '@/lib/currency';
+import { useBodyScrollLock } from '@/lib/useBodyScrollLock';
 import {
   X,
   Check,
@@ -45,6 +46,8 @@ export function EditTransactionModal({
   onClose,
   onSave,
 }: EditTransactionModalProps) {
+  useBodyScrollLock(isOpen && !!transaction);
+
   const t = translations[language];
 
   const [type, setType] = useState<TransactionType>('expense');

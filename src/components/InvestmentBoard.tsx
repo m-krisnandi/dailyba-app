@@ -4,6 +4,7 @@ import React, { useMemo, useState } from 'react';
 import { Currency, InvestmentAsset, Language } from '@/types/finance';
 import { formatCurrency, translations } from '@/lib/i18n';
 import { convertCurrency, DEFAULT_RATES, ExchangeRates, formatNumberWithCommas, parseRawNumber } from '@/lib/currency';
+import { useBodyScrollLock } from '@/lib/useBodyScrollLock';
 import {
   TrendingUp,
   TrendingDown,
@@ -40,6 +41,7 @@ export function InvestmentBoard({
   const t = translations[language];
 
   const [isModalOpen, setIsModalOpen] = useState(false);
+  useBodyScrollLock(isModalOpen);
   const [editingId, setEditingId] = useState<string | null>(null);
 
   // Form State

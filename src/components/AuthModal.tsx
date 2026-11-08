@@ -2,6 +2,7 @@
 
 import React, { useState } from 'react';
 import { useAuth } from '@/lib/authContext';
+import { useBodyScrollLock } from '@/lib/useBodyScrollLock';
 import {
   Mail,
   Lock,
@@ -10,12 +11,10 @@ import {
   CheckCircle2,
   AlertCircle,
   Loader2,
-  Server,
   Cloud,
   ShieldCheck,
   X,
   ArrowRight,
-  RefreshCw,
   Eye,
   EyeOff,
 } from 'lucide-react';
@@ -29,13 +28,13 @@ interface AuthModalProps {
 type AuthTab = 'login' | 'register' | 'forgot';
 
 export function AuthModal({ isOpen, onClose, onSuccess }: AuthModalProps) {
+  useBodyScrollLock(isOpen);
+
   const {
     login,
     register,
     forgotPassword,
     resetPassword,
-    serverUrl,
-    setServerUrl,
   } = useAuth();
 
   const [tab, setTab] = useState<AuthTab>('login');
@@ -57,11 +56,6 @@ export function AuthModal({ isOpen, onClose, onSuccess }: AuthModalProps) {
   const [forgotStep, setForgotStep] = useState<1 | 2>(1);
   const [resetCode, setResetCode] = useState('');
   const [newPassword, setNewPassword] = useState('');
-
-  // Server settings toggle
-  const [showServerConfig, setShowServerConfig] = useState(false);
-  const [customServerUrl, setCustomServerUrl] = useState(serverUrl);
-  const [serverCheckStatus, setServerCheckStatus] = useState<string | null>(null);
 
   if (!isOpen) return null;
 
@@ -190,23 +184,6 @@ export function AuthModal({ isOpen, onClose, onSuccess }: AuthModalProps) {
       }, 1500);
     } else {
       setError(res.message || 'Failed to reset password. Check your verification code.');
-    }
-  };
-
-  const testServerConnection = async () => {
-    setServerCheckStatus('Testing connection...');
-    try {
-      const cleanUrl = customServerUrl.trim().replace(new RegExp('/+$'), '');
-      const res = await fetch(`${cleanUrl}/api/health`, { method: 'GET' });
-      const data = await res.json();
-      if (data.status === 'ok') {
-        setServerUrl(cleanUrl);
-        setServerCheckStatus('Connected successfully to Dailyba REST API!');
-      } else {
-        setServerCheckStatus('Server responded with unexpected format.');
-      }
-    } catch {
-      setServerCheckStatus('Failed to connect. Make sure Dailyba server is running on ' + customServerUrl);
     }
   };
 
@@ -591,51 +568,6 @@ export function AuthModal({ isOpen, onClose, onSuccess }: AuthModalProps) {
             )}
           </div>
         )}
-
-        {/* Footer: Server Configuration Toggle */}
-        <div className="mt-5 pt-3 border-t border-[var(--border-subtle)] relative z-10">
-          <button
-            type="button"
-            onClick={() => setShowServerConfig(!showServerConfig)}
-            className="w-full flex items-center justify-between text-[11px] text-[var(--text-faint)] hover:text-[var(--text-muted)] transition-colors cursor-pointer"
-          >
-            <div className="flex items-center space-x-1.5">
-              <Server className="w-3 h-3" />
-              <span>VPS Server: <strong className="font-mono text-[var(--text-muted)]">{serverUrl}</strong></span>
-            </div>
-            <span>{showServerConfig ? 'Hide' : 'Configure'}</span>
-          </button>
-
-          {showServerConfig && (
-            <div className="mt-2.5 p-3 rounded-2xl bg-[var(--bg-subtle)] border border-[var(--border-subtle)] space-y-2 animate-fade-in">
-              <label className="block text-[10px] font-bold text-[var(--text-muted)] uppercase tracking-wider">
-                REST API Base URL
-              </label>
-              <div className="flex items-center space-x-2">
-                <input
-                  type="text"
-                  value={customServerUrl}
-                  onChange={(e) => setCustomServerUrl(e.target.value)}
-                  placeholder="http://localhost:4000 or https://dailyba.pdfumi.com"
-                  className="flex-1 px-3 py-1.5 rounded-lg border border-[var(--border-subtle)] bg-[var(--bg-surface)] text-[11px] font-mono text-[var(--text-main)] focus:outline-none focus:border-emerald-500"
-                />
-                <button
-                  type="button"
-                  onClick={testServerConnection}
-                  className="px-2.5 py-1.5 rounded-lg bg-[var(--bg-surface)] hover:bg-[var(--bg-surface-solid)] border border-[var(--border-subtle)] text-[11px] font-bold text-[var(--text-main)] cursor-pointer flex items-center space-x-1"
-                >
-                  <RefreshCw className="w-3 h-3" />
-                  <span>Test</span>
-                </button>
-              </div>
-              {serverCheckStatus && (
-                <p className="text-[10px] font-mono text-emerald-400">
-                  {serverCheckStatus}
-                </p>
-              )}
-            </div>
-          )}
-        </div>
       </div>
     </div>
   );
