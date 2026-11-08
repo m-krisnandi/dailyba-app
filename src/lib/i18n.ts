@@ -309,7 +309,7 @@ export const translations: Record<Language, Translations> = {
       stock: 'Stocks & Equities',
       crypto: 'Crypto & Digital Assets',
       mutual_fund: 'Mutual Funds / ETF',
-      gold: 'Physical Gold / Commodity',
+      gold: 'Gold & Commodities (Physical / Digital)',
       deposit: 'Fixed Term Deposit',
     },
     summary: {
@@ -529,7 +529,7 @@ export const translations: Record<Language, Translations> = {
       stock: '個別株式',
       crypto: '暗号資産 (BTC等)',
       mutual_fund: '投資信託 / ETF',
-      gold: '純金積立 / 金地金',
+      gold: '金・貴金属 (現物 / デジタル積立)',
       deposit: '定期預金',
     },
     summary: {
