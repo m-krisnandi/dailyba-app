@@ -16,6 +16,7 @@ import { convertCurrency, DEFAULT_RATES, ExchangeRates, formatNumberWithCommas, 
 import { CustomDatePicker } from '@/components/CustomDatePicker';
 import { EditTransactionModal } from '@/components/EditTransactionModal';
 import { TransactionDetailModal } from '@/components/TransactionDetailModal';
+import { CustomSelect, CustomSelectOption } from '@/components/CustomSelect';
 import { useBodyScrollLock } from '@/lib/useBodyScrollLock';
 import {
   EXPENSE_CATEGORY_ICONS,
@@ -125,6 +126,47 @@ export function QuickRecordBoard({
   const visibleIncomeCategories = useMemo(() => {
     return allIncomeCategories.filter((c) => !hiddenCategories.includes(c));
   }, [allIncomeCategories, hiddenCategories]);
+
+  const filterSourceOptions = useMemo<CustomSelectOption<FundingSource | 'all'>[]>(
+    () => [
+      { value: 'all', label: t.record.allSources, icon: SlidersHorizontal },
+      { value: 'cash', label: t.sources.cash, icon: FUNDING_SOURCE_ICONS.cash },
+      { value: 'bank', label: t.sources.bank, icon: FUNDING_SOURCE_ICONS.bank },
+      { value: 'ewallet', label: t.sources.ewallet, icon: FUNDING_SOURCE_ICONS.ewallet },
+      { value: 'credit_card', label: t.sources.credit_card, icon: FUNDING_SOURCE_ICONS.credit_card },
+    ],
+    [t]
+  );
+
+  const billCurrencyOptions = useMemo<CustomSelectOption<Currency>[]>(
+    () => [
+      { value: 'JPY', label: 'JPY (¥)' },
+      { value: 'IDR', label: 'IDR (Rp)' },
+      { value: 'USD', label: 'USD ($)' },
+    ],
+    []
+  );
+
+  const billCategoryOptions = useMemo<CustomSelectOption<ExpenseCategory>[]>(
+    () =>
+      visibleExpenseCategories.map((cat) => ({
+        value: cat,
+        label: t.expenseCategories[cat] || cat,
+        icon: EXPENSE_CATEGORY_ICONS[cat],
+      })),
+    [visibleExpenseCategories, t]
+  );
+
+  const billSourceOptions = useMemo<CustomSelectOption<FundingSource>[]>(
+    () => [
+      { value: 'bank', label: t.sources.bank, icon: FUNDING_SOURCE_ICONS.bank },
+      { value: 'credit_card', label: t.sources.credit_card, icon: FUNDING_SOURCE_ICONS.credit_card },
+      { value: 'cash', label: t.sources.cash, icon: FUNDING_SOURCE_ICONS.cash },
+      { value: 'ewallet', label: t.sources.ewallet, icon: FUNDING_SOURCE_ICONS.ewallet },
+    ],
+    [t]
+  );
+
 
   const [type, setType] = useState<TransactionType>('expense');
   const [amountStr, setAmountStr] = useState('');
@@ -1085,18 +1127,12 @@ export function QuickRecordBoard({
                 )}
               </div>
 
-              <div className="shrink-0">
-                <select
+              <div className="shrink-0 min-w-[140px] sm:min-w-[160px]">
+                <CustomSelect
                   value={txFilterSource}
-                  onChange={(e) => handleFilterSourceChange(e.target.value as any)}
-                  className="w-full sm:w-auto px-3 py-2 rounded-xl text-xs bg-[var(--bg-subtle)] border border-[var(--border-subtle)] text-[var(--text-main)] focus:outline-none focus:border-emerald-500/50 cursor-pointer transition-all"
-                >
-                  <option value="all">{t.record.allSources}</option>
-                  <option value="cash">{t.sources.cash}</option>
-                  <option value="bank">{t.sources.bank}</option>
-                  <option value="ewallet">{t.sources.ewallet}</option>
-                  <option value="credit_card">{t.sources.credit_card}</option>
-                </select>
+                  onChange={(val) => handleFilterSourceChange(val as any)}
+                  options={filterSourceOptions}
+                />
               </div>
             </div>
 
@@ -1520,15 +1556,11 @@ export function QuickRecordBoard({
                 <label className="text-xs font-semibold text-[var(--text-muted)]">
                   {language === "ja" ? "通貨" : "Currency"}
                 </label>
-                <select
+                <CustomSelect
                   value={billCurrency}
-                  onChange={(e) => setBillCurrency(e.target.value as Currency)}
-                  className="w-full bg-[var(--bg-subtle)] border border-[var(--border-subtle)] focus:border-[var(--border-strong)] rounded-xl px-4 py-2.5 text-xs text-[var(--text-main)] outline-none cursor-pointer"
-                >
-                  <option value="JPY">JPY (¥)</option>
-                  <option value="IDR">IDR (Rp)</option>
-                  <option value="USD">USD ($)</option>
-                </select>
+                  onChange={(val) => setBillCurrency(val as Currency)}
+                  options={billCurrencyOptions}
+                />
               </div>
             </div>
 
@@ -1538,33 +1570,22 @@ export function QuickRecordBoard({
                 <label className="text-xs font-semibold text-[var(--text-muted)]">
                   {t.record.billCategory}
                 </label>
-                <select
+                <CustomSelect
                   value={billCategory}
-                  onChange={(e) => setBillCategory(e.target.value as ExpenseCategory)}
-                  className="w-full bg-[var(--bg-subtle)] border border-[var(--border-subtle)] focus:border-[var(--border-strong)] rounded-xl px-4 py-2.5 text-xs text-[var(--text-main)] outline-none cursor-pointer"
-                >
-                  {visibleExpenseCategories.map((cat) => (
-                    <option key={cat} value={cat}>
-                      {t.expenseCategories[cat]}
-                    </option>
-                  ))}
-                </select>
+                  onChange={(val) => setBillCategory(val as ExpenseCategory)}
+                  options={billCategoryOptions}
+                />
               </div>
 
               <div className="space-y-1.5">
                 <label className="text-xs font-semibold text-[var(--text-muted)]">
                   {t.record.billSource}
                 </label>
-                <select
+                <CustomSelect
                   value={billSource}
-                  onChange={(e) => setBillSource(e.target.value as FundingSource)}
-                  className="w-full bg-[var(--bg-subtle)] border border-[var(--border-subtle)] focus:border-[var(--border-strong)] rounded-xl px-4 py-2.5 text-xs text-[var(--text-main)] outline-none cursor-pointer"
-                >
-                  <option value="bank">{t.sources.bank}</option>
-                  <option value="credit_card">{t.sources.credit_card}</option>
-                  <option value="cash">{t.sources.cash}</option>
-                  <option value="ewallet">{t.sources.ewallet}</option>
-                </select>
+                  onChange={(val) => setBillSource(val as FundingSource)}
+                  options={billSourceOptions}
+                />
               </div>
             </div>
 

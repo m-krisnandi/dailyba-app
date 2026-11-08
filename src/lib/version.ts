@@ -1,6 +1,6 @@
 import { Language } from '@/types/finance';
 
-export const APP_VERSION = '1.3.6';
+export const APP_VERSION = '1.3.7';
 export const APP_BUILD = '20261109';
 
 export interface LocalizedChangelogItem {
@@ -11,6 +11,28 @@ export interface LocalizedChangelogItem {
 }
 
 export const APP_CHANGELOG: LocalizedChangelogItem[] = [
+  {
+    version: '1.3.7',
+    date: '2026-11-09',
+    title: {
+      en: 'Sleek Liquid Glass Custom Dropdowns across all Modals & Filters',
+      ja: 'ネイティブセレクトの廃止とリキッドグラス・カスタムドロップダウンの刷新',
+    },
+    highlights: {
+      en: [
+        'Custom Liquid Glass Dropdowns: replaced all generic browser OS <select> popovers with custom designed liquid-glass dropdown components.',
+        'Rich Visual Icons: each category, payment source, and asset class dropdown item now renders with its corresponding colorful icon.',
+        'Smooth Animations & Micro-interactions: added rotating chevron indicators, subtle glass blur, active checkmarks, and click-outside dismissal.',
+        'Seamless Modal Integration: custom dropdowns seamlessly fit into Add/Edit Transaction modals, Recurring Bills dialog, Asset Portfolio, and Transaction History filters.',
+      ],
+      ja: [
+        'リキッドグラス・カスタムドロップダウン：ブラウザ標準の無機質なOSネイティブ <select> を全廃し、アプリのデザインに調和する洗練されたガラス調ドロップダウンを新設。',
+        'カテゴリー・口座アイコンの表示：各選択肢（食費、交通費、銀行振込、暗号資産など）に専用アイコンをあしらい、視認性と操作性を大幅に向上。',
+        'スムーズな開閉アニメーション：180度回転する矢印、チェックマーク、ホバーハイライト、外側クリック時の自動クローズに対応。',
+        '全モーダルへの一括適用：取引記録・編集モーダル、毎月の固定費設定、資産追加・編集、取引履歴フィルターのすべてで美しいドロップダウンUIを統一。',
+      ],
+    },
+  },
   {
     version: '1.3.6',
     date: '2026-11-09',

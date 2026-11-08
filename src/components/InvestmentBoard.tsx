@@ -5,6 +5,7 @@ import { Currency, InvestmentAsset, Language } from '@/types/finance';
 import { formatCurrency, translations } from '@/lib/i18n';
 import { convertCurrency, DEFAULT_RATES, ExchangeRates, formatNumberWithCommas, parseRawNumber } from '@/lib/currency';
 import { useBodyScrollLock } from '@/lib/useBodyScrollLock';
+import { CustomSelect, CustomSelectOption } from './CustomSelect';
 import {
   TrendingUp,
   TrendingDown,
@@ -52,6 +53,13 @@ export function InvestmentBoard({
   const [isCustomValuation, setIsCustomValuation] = useState(false);
 
   // Total Portfolio Cost Basis converted to active currency
+  const assetCategoryOptions = useMemo<CustomSelectOption<InvestmentAsset['category']>[]>(() => [
+    { value: 'mutual_fund', label: t.investmentCategories.mutual_fund, icon: TrendingUp },
+    { value: 'stock', label: t.investmentCategories.stock, icon: Building },
+    { value: 'crypto', label: t.investmentCategories.crypto, icon: Sparkles },
+    { value: 'gold', label: t.investmentCategories.gold, icon: Coins },
+    { value: 'deposit', label: t.investmentCategories.deposit, icon: ShieldCheck },
+  ], [t]);
   const totalCostBasis = useMemo(() => {
     return investments.reduce((sum, inv) => {
       return sum + convertCurrency(inv.costBasis, inv.currency, currency, rates);
@@ -427,17 +435,11 @@ export function InvestmentBoard({
                 <label className="text-xs font-semibold text-[var(--text-muted)] uppercase tracking-wider block mb-1">
                   {t.investments.assetCategory}
                 </label>
-                <select
+                <CustomSelect
                   value={category}
-                  onChange={(e) => setCategory(e.target.value as any)}
-                  className="w-full bg-[var(--bg-subtle)] border border-[var(--border-subtle)] focus:border-[var(--border-strong)] rounded-xl px-4 py-2.5 text-xs text-[var(--text-main)] outline-none cursor-pointer"
-                >
-                  <option value="mutual_fund">{t.investmentCategories.mutual_fund}</option>
-                  <option value="stock">{t.investmentCategories.stock}</option>
-                  <option value="crypto">{t.investmentCategories.crypto}</option>
-                  <option value="gold">{t.investmentCategories.gold}</option>
-                  <option value="deposit">{t.investmentCategories.deposit}</option>
-                </select>
+                  onChange={(val) => setCategory(val)}
+                  options={assetCategoryOptions}
+                />
               </div>
 
               {/* Single Primary Amount Input */}

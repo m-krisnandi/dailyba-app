@@ -1,6 +1,7 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
+import { CustomSelect, CustomSelectOption } from './CustomSelect';
 import {
   Currency,
   ExpenseCategory,
@@ -105,6 +106,21 @@ export function AddTransactionModal({
   const expenseCategories = Object.keys(EXPENSE_CATEGORY_ICONS) as ExpenseCategory[];
   const incomeCategories = Object.keys(INCOME_CATEGORY_ICONS) as IncomeCategory[];
   const fundingSources: FundingSource[] = ['cash', 'bank', 'ewallet', 'credit_card'];
+
+  const categoryOptions = useMemo<CustomSelectOption[]>(() => {
+    if (type === 'expense') {
+      return expenseCategories.map((cat) => ({
+        value: cat,
+        label: t.expenseCategories[cat] || cat,
+        icon: EXPENSE_CATEGORY_ICONS[cat],
+      }));
+    }
+    return incomeCategories.map((cat) => ({
+      value: cat,
+      label: t.incomeCategories[cat] || cat,
+      icon: INCOME_CATEGORY_ICONS[cat],
+    }));
+  }, [type, expenseCategories, incomeCategories, t]);
 
   // Currency quick presets
   const presets =
@@ -258,23 +274,11 @@ export function AddTransactionModal({
               <label className="text-xs font-bold text-[var(--text-muted)] uppercase tracking-wider block">
                 {t.record.selectCategory}
               </label>
-              <select
+              <CustomSelect
                 value={category}
-                onChange={(e) => setCategory(e.target.value)}
-                className="w-full bg-[var(--bg-subtle)] border border-[var(--border-subtle)] focus:border-[var(--border-strong)] rounded-2xl px-4 py-2.5 text-xs font-bold text-[var(--text-main)] outline-none cursor-pointer"
-              >
-                {type === 'expense'
-                  ? expenseCategories.map((c) => (
-                      <option key={c} value={c}>
-                        {t.expenseCategories[c] || c}
-                      </option>
-                    ))
-                  : incomeCategories.map((c) => (
-                      <option key={c} value={c}>
-                        {t.incomeCategories[c] || c}
-                      </option>
-                    ))}
-              </select>
+                onChange={(val) => setCategory(val)}
+                options={categoryOptions}
+              />
             </div>
           )}
 
