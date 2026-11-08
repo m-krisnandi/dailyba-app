@@ -182,3 +182,20 @@ input[type="number"] {
   -ms-overflow-style: none;
   scrollbar-width: none;
 }
+
+/* Remove unwanted browser outline / yellow focus rings on charts & SVGs */
+.recharts-wrapper,
+.recharts-wrapper *,
+.recharts-surface,
+.recharts-surface *,
+.recharts-responsive-container,
+.recharts-responsive-container *,
+svg,
+svg *,
+.recharts-bar-rectangle,
+.recharts-layer {
+  outline: none !important;
+  box-shadow: none !important;
+  -webkit-tap-highlight-color: transparent !important;
+  -webkit-focus-ring-color: transparent !important;
+}

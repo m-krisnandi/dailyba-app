@@ -249,15 +249,15 @@ export function YearlySummaryBoard({
           <div className="flex items-center space-x-3 text-xs font-mono">
             <span className="flex items-center space-x-1 text-[var(--accent-emerald)]">
               <span className="w-2.5 h-2.5 rounded-full bg-emerald-500 inline-block" />
-              <span>Income</span>
+              <span>{language === 'ja' ? '収入' : 'Income'}</span>
             </span>
             <span className="flex items-center space-x-1 text-[var(--accent-rose)]">
               <span className="w-2.5 h-2.5 rounded-full bg-rose-500 inline-block" />
-              <span>Expense</span>
+              <span>{language === 'ja' ? '支出' : 'Expense'}</span>
             </span>
             <span className="flex items-center space-x-1 text-[var(--accent-amber)]">
               <span className="w-2.5 h-2.5 rounded-full bg-amber-500 inline-block" />
-              <span>Savings</span>
+              <span>{language === 'ja' ? '貯金' : 'Savings'}</span>
             </span>
           </div>
         </div>
@@ -305,7 +305,13 @@ export function YearlySummaryBoard({
                   fontSize: '11px',
                   marginBottom: '2px',
                 }}
-                formatter={(val, name) => [formatCurrency(Number(val) || 0, currency), String(name)]}
+                formatter={(val, name) => {
+                  const localizedName =
+                    name === 'Income' ? (language === 'ja' ? '収入' : 'Income') :
+                    name === 'Expense' ? (language === 'ja' ? '支出' : 'Expense') :
+                    name === 'Savings' ? (language === 'ja' ? '貯蓄' : 'Savings') : String(name);
+                  return [formatCurrency(Number(val) || 0, currency), localizedName];
+                }}
               />
               <Legend wrapperStyle={{ display: 'none' }} />
               <Bar dataKey="Income" fill="#10b981" radius={[4, 4, 0, 0]} opacity={0.8} />

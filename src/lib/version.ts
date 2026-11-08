@@ -1,6 +1,6 @@
 import { Language } from '@/types/finance';
 
-export const APP_VERSION = '1.3.2';
+export const APP_VERSION = '1.3.3';
 export const APP_BUILD = '20261108';
 
 export interface LocalizedChangelogItem {
@@ -11,6 +11,28 @@ export interface LocalizedChangelogItem {
 }
 
 export const APP_CHANGELOG: LocalizedChangelogItem[] = [
+  {
+    version: '1.3.3',
+    date: '2026-11-08',
+    title: {
+      en: 'Complete Japanese Localization, Chart Focus Outline Fix & Savings Goal Calculation',
+      ja: '日本語翻訳の完全対応・グラフ黄枠の解消・貯金目標計算の適正化',
+    },
+    highlights: {
+      en: [
+        'Complete Japanese Localization: translated all remaining English texts across Savings, Investments, Daily Spend cards, and chart tooltips.',
+        'Mobile Date Display: fixed date truncation in Daily Spend on mobile screens, displaying dates clearly with responsive "Today" badge.',
+        'Removed Chart Yellow Border: eliminated distracting browser focus rings / yellow outlines on touch, maintaining clean interactive tooltips.',
+        'Savings Target Calculation: Emergency Reserve Vault goal now correctly tracks Total Accumulated Savings (e.g. ¥100,000 saved from ¥800,000 target leaves ¥700,000 remaining).',
+      ],
+      ja: [
+        '日本語翻訳の完全対応：貯金管理、資産管理、日次支出カード、およびグラフツールチップの英語表記を全て日本語化。',
+        'スマホ日付表示の改善：日次支出履歴で日付（2026-11-08等）が途切れてしまう問題を解消し、「今日」バッジと合わせて綺麗に表示。',
+        'グラフの黄枠線の解消：グラフや棒をタップした際に表示されていたブラウザ固有の黄色いフォーカス枠線を完全除去。',
+        '生活防衛資金・貯蓄目標計算の適正化：目標額（¥800,000等）に対して累計積立額（¥100,000）を正しく反映し、残り目標（¥700,000）を正確に算出。',
+      ],
+    },
+  },
   {
     version: '1.3.2',
     date: '2026-11-08',

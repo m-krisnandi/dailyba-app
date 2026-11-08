@@ -460,7 +460,7 @@ export function DailySpendBoard({
             {formatCurrency(averageDailySpend, currency)}
           </p>
           <p className="text-[10px] text-[var(--text-faint)]">
-            Based on active days this month
+            {language === 'ja' ? '今月の活動日数に基づく' : 'Based on active days this month'}
           </p>
         </div>
 
@@ -490,7 +490,7 @@ export function DailySpendBoard({
             {formatCurrency(monthlyTotalSpent, currency)}
           </p>
           <p className="text-[10px] text-[var(--text-faint)]">
-            Total expenses in {currentMonthStr}
+            {language === 'ja' ? `${currentMonthStr}の総支出` : `Total expenses in ${currentMonthStr}`}
           </p>
         </div>
       </div>
@@ -504,7 +504,7 @@ export function DailySpendBoard({
               <span>{t.dailySpend.dailyTrendTitle}</span>
             </h3>
             <p className="text-xs text-[var(--text-muted)] mt-0.5">
-              Green = within daily budget • Red = exceeded target
+              {language === 'ja' ? '緑 = 目標内 • 赤 = 目標超過' : 'Green = within daily budget • Red = exceeded target'}
             </p>
           </div>
           <div className="flex items-center space-x-3 text-xs font-mono">
@@ -562,7 +562,7 @@ export function DailySpendBoard({
                   fontSize: '11px',
                   marginBottom: '2px',
                 }}
-                formatter={(val) => [formatCurrency(Number(val) || 0, currency), 'Daily Spend']}
+                formatter={(val) => [formatCurrency(Number(val) || 0, currency), language === 'ja' ? '日次支出' : 'Daily Spend']}
               />
               {/* Daily Target Reference Line */}
               <ReferenceLine
@@ -571,7 +571,7 @@ export function DailySpendBoard({
                 strokeDasharray="4 4"
                 strokeWidth={1.5}
                 label={{
-                  value: `Target: ${formatCurrency(targetInCurrency, currency)}`,
+                  value: `${language === 'ja' ? '目標' : 'Target'}: ${formatCurrency(targetInCurrency, currency)}`,
                   fill: '#f59e0b',
                   fontSize: 10,
                   position: 'insideTopRight',
@@ -600,7 +600,7 @@ export function DailySpendBoard({
               {t.dailySpend.dailyHistoryTitle}
             </h3>
             <p className="text-xs text-[var(--text-muted)]">
-              Detailed list of transactions per day
+              {language === 'ja' ? '日ごとの支出明細一覧' : 'Detailed list of transactions per day'}
             </p>
           </div>
 
@@ -723,14 +723,14 @@ export function DailySpendBoard({
                       >
                         <CalendarDays className="w-4 h-4" />
                       </div>
-                      <div className="min-w-0">
-                        <div className="flex items-center space-x-2">
-                          <h4 className="text-xs sm:text-sm font-bold text-[var(--text-main)] truncate">
+                      <div className="min-w-0 flex-1">
+                        <div className="flex items-center space-x-1.5 flex-wrap">
+                          <h4 className="text-xs sm:text-sm font-bold text-[var(--text-main)] font-mono whitespace-nowrap shrink-0">
                             {dateKey}
                           </h4>
                           {isToday && (
-                            <span className="px-2 py-0.5 rounded-md bg-[var(--accent-emerald)] text-white text-[10px] font-bold">
-                              Today
+                            <span className="px-1.5 py-0.5 rounded-md bg-[var(--accent-emerald)] text-white text-[10px] font-bold shrink-0">
+                              {language === 'ja' ? '今日' : 'Today'}
                             </span>
                           )}
                         </div>
@@ -752,7 +752,7 @@ export function DailySpendBoard({
                           {formatCurrency(dayTotalInCurrency, currency)}
                         </p>
                         <span
-                          className={`text-[10px] font-bold font-mono px-1.5 py-0.5 rounded border inline-block mt-0.5 ${
+                          className={`text-[10px] font-bold font-mono px-1.5 py-0.5 rounded border inline-block mt-0.5 whitespace-nowrap ${
                             dayTotalInCurrency === 0
                               ? 'border-[var(--border-subtle)] text-[var(--text-faint)]'
                               : isOver
@@ -761,10 +761,10 @@ export function DailySpendBoard({
                           }`}
                         >
                           {dayTotalInCurrency === 0
-                            ? '¥0 Spent'
+                            ? (language === 'ja' ? '支出なし' : '0 Spent')
                             : isOver
-                            ? `Over (+${formatCurrency(dayTotalInCurrency - targetInCurrency, currency)})`
-                            : 'Within Target'}
+                            ? (language === 'ja' ? `+${formatCurrency(dayTotalInCurrency - targetInCurrency, currency)} 超過` : `Over +${formatCurrency(dayTotalInCurrency - targetInCurrency, currency)}`)
+                            : (language === 'ja' ? '目標内' : 'Within Target')}
                         </span>
                       </div>
                       <div className="text-[var(--text-muted)]">

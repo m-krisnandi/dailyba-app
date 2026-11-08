@@ -744,10 +744,10 @@ export function MonthlySummaryBoard({
                   </div>
                   <div className="flex items-center justify-between text-[11px] font-mono text-[var(--text-muted)]">
                     <span>
-                      {budgetUsagePercent}% {t.summary.plannedBudget.toLowerCase()} used
+                      {language === 'ja' ? `予算消化率: ${budgetUsagePercent}%` : `${budgetUsagePercent}% ${t.summary.plannedBudget.toLowerCase()} used`}
                     </span>
                     <span>
-                      {daysInMonth} days ({activeCycle.shortLabel})
+                      {daysInMonth} {language === 'ja' ? '日間' : 'days'} ({activeCycle.shortLabel})
                     </span>
                   </div>
                 </div>
@@ -1104,7 +1104,7 @@ export function MonthlySummaryBoard({
                       textTransform: 'uppercase',
                       letterSpacing: '0.05em',
                     }}
-                    formatter={(val) => [formatCurrency(Number(val) || 0, currency), 'Total']}
+                    formatter={(val) => [formatCurrency(Number(val) || 0, currency), language === 'ja' ? '合計' : 'Total']}
                   />
                   <Bar dataKey="amount" radius={[8, 8, 0, 0]}>
                     {chartData.map((entry, index) => (

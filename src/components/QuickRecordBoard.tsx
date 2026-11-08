@@ -629,7 +629,7 @@ export function QuickRecordBoard({
             </button>
           </div>
           <p className="text-[11px] text-[var(--text-muted)]">
-            {t.record.smartTextHint} (e.g. &quot;train 4000 bank&quot; or &quot;lunch 1200 ewallet&quot;)
+            {t.record.smartTextHint} {language === 'ja' ? '（例: "電車 220" や "ランチ 1200 口座"）' : '(e.g. "train 4000 bank" or "lunch 1200 ewallet")'}
           </p>
         </form>
       </div>
@@ -940,13 +940,13 @@ export function QuickRecordBoard({
                           {billLabel}
                         </h4>
                         <p className="text-xs font-bold text-[var(--accent-emerald)] tabular-numbers font-mono mt-0.5 whitespace-nowrap">
-                          {formatCurrency(convertedBillAmount, currency)} <span className="text-[10px] text-[var(--text-muted)] font-normal">/ mo</span>
+                          {formatCurrency(convertedBillAmount, currency)} <span className="text-[10px] text-[var(--text-muted)] font-normal">{language === 'ja' ? '/月' : '/ mo'}</span>
                         </p>
                         <p className="text-[10px] text-[var(--text-muted)] truncate mt-0.5 flex items-center space-x-1">
                           {bill.dayOfMonth && (
                             <span className="flex items-center space-x-0.5 mr-1 shrink-0">
                               <Clock className="w-2.5 h-2.5" />
-                              <span>Day {bill.dayOfMonth}</span>
+                              <span>{language === 'ja' ? `毎月${bill.dayOfMonth}日` : `Day ${bill.dayOfMonth}`}</span>
                             </span>
                           )}
                           <span className="truncate">{t.sources[bill.source]}</span>

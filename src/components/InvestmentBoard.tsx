@@ -172,7 +172,7 @@ export function InvestmentBoard({
               {formatCurrency(totalLiquidSavings, currency)}
             </p>
             <p className="text-[10px] text-[var(--text-muted)] mt-0.5">
-              {'Cash buffer across all time'}
+              {language === 'ja' ? '累計の普通預金・手元資金' : 'Cash buffer across all time'}
             </p>
           </div>
 
@@ -197,7 +197,7 @@ export function InvestmentBoard({
               {formatCurrency(totalCurrentValue, currency)}
             </p>
             <p className="text-[10px] text-[var(--text-muted)] mt-0.5">
-              Cost: {formatCurrency(totalCostBasis, currency)} (
+              {language === 'ja' ? '取得原価' : 'Cost'}: {formatCurrency(totalCostBasis, currency)} (
               {totalGainLoss >= 0 ? '+' : ''}
               {formatCurrency(totalGainLoss, currency)})
             </p>
