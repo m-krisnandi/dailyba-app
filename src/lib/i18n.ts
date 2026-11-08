@@ -227,7 +227,7 @@ export const translations: Record<Language, Translations> = {
       export: 'Backup & Export',
       import: 'Import Data',
       reset: 'Load Sample Data',
-      confirmPay: '1-Click Confirm Pay',
+      confirmPay: 'Mark as Paid',
       paidThisMonth: 'Paid for this month',
     },
     record: {
@@ -252,7 +252,7 @@ export const translations: Record<Language, Translations> = {
       items: 'items',
       noTransactions: 'No transactions recorded yet.',
       recurringBillsTitle: 'Monthly Recurring Bills',
-      recurringBillsDesc: 'Fixed monthly obligations (1-Click confirm when paid)',
+      recurringBillsDesc: 'Fixed monthly obligations (mark when paid)',
       today: 'Today',
       manageCategories: 'Manage Categories',
       categoriesSettingsTitle: 'Category Visibility',
@@ -453,7 +453,7 @@ export const translations: Record<Language, Translations> = {
       export: 'データ出力・バックアップ',
       import: 'データ復元',
       reset: 'サンプルデータを読込',
-      confirmPay: '1タップ確定',
+      confirmPay: '支払済みにする',
       paidThisMonth: '今月分支払い済み',
     },
     record: {

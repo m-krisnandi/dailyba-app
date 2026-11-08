@@ -78,4 +78,5 @@ export interface FinanceState {
   currency: Currency;
   language: Language;
   monthlyBudgets?: Record<string, MonthlyBudgetPlan>; // Keyed by "YYYY-MM"
+  monthStartDay?: number; // 1 to 31, default 1
 }

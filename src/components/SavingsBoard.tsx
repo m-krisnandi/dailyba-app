@@ -7,7 +7,7 @@ import { EditTransactionModal } from '@/components/EditTransactionModal';
 import { Edit3 } from 'lucide-react';
 import { convertCurrency, DEFAULT_RATES, ExchangeRates, formatNumberWithCommas, parseRawNumber } from '@/lib/currency';
 import {
-  Vault,
+  Wallet,
   ShieldCheck,
   Check,
   Sparkles,
@@ -448,7 +448,7 @@ export function SavingsBoard({
       <div className="rounded-3xl border border-[var(--border-subtle)] bg-[var(--bg-surface)]  p-6 sm:p-7 shadow-[var(--card-shadow)] space-y-3 transition-all duration-200">
         <div className="flex items-center justify-between">
           <h3 className="text-sm font-bold text-[var(--text-main)] flex items-center space-x-2">
-            <Vault className="w-4 h-4 text-[var(--accent-amber)]" />
+            <Wallet className="w-4 h-4 text-[var(--accent-amber)]" />
             <span>{t.savings.activityFeed}</span>
           </h3>
           <span className="text-xs text-[var(--text-muted)] font-mono">
@@ -479,7 +479,7 @@ export function SavingsBoard({
                   >
                     <div className="flex items-center space-x-3">
                       <div className="w-8 h-8 rounded-xl bg-[var(--accent-amber-soft)] border border-[var(--accent-amber-soft)] text-[var(--accent-amber)] flex items-center justify-center shrink-0">
-                        <Vault className="w-4 h-4" />
+                        <Wallet className="w-4 h-4" />
                       </div>
                       <div>
                         <p className="font-semibold text-[var(--text-main)]">

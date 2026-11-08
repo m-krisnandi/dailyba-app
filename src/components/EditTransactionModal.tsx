@@ -22,7 +22,7 @@ import {
   Check,
   TrendingDown,
   TrendingUp,
-  Vault,
+  Wallet,
   Calendar,
   CreditCard,
   FileText,
@@ -164,7 +164,7 @@ export function EditTransactionModal({
                   : 'text-[var(--text-muted)] hover:text-[var(--text-main)]'
               }`}
             >
-              <Vault className="w-3.5 h-3.5" />
+              <Wallet className="w-3.5 h-3.5" />
               <span>{t.record.typeSavings}</span>
             </button>
           </div>

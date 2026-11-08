@@ -8,7 +8,7 @@ import {
   CalendarDays,
   Calendar,
   BarChart3,
-  Vault,
+  Wallet,
   TrendingUp,
 } from 'lucide-react';
 
@@ -30,7 +30,7 @@ export function TabsNav({ activeTab, onTabChange, language, isMounted = true }: 
     { key: 'daily', label: t.nav.daily, icon: CalendarDays },
     { key: 'monthly', label: t.nav.monthly, icon: Calendar },
     { key: 'yearly', label: t.nav.yearly, icon: BarChart3 },
-    { key: 'savings', label: t.nav.savings, icon: Vault },
+    { key: 'savings', label: t.nav.savings, icon: Wallet },
     { key: 'investments', label: t.nav.investments, icon: TrendingUp },
   ];
 

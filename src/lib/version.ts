@@ -1,6 +1,6 @@
 import { Language } from '@/types/finance';
 
-export const APP_VERSION = '1.3.1';
+export const APP_VERSION = '1.3.2';
 export const APP_BUILD = '20261108';
 
 export interface LocalizedChangelogItem {
@@ -11,6 +11,34 @@ export interface LocalizedChangelogItem {
 }
 
 export const APP_CHANGELOG: LocalizedChangelogItem[] = [
+  {
+    version: '1.3.2',
+    date: '2026-11-08',
+    title: {
+      en: 'Custom Payday Billing Cycle, Refined Budget UI & Wallet Icon Best Practice',
+      ja: '給料日起算日設定・月間予算UI整理・貯金アイコン刷新',
+    },
+    highlights: {
+      en: [
+        'Custom Month Cycle (Payday Setting): set your billing or salary start day (1–31) so monthly tracking aligns with your income cycle (e.g. Day 20 to 19 of next month).',
+        'Streamlined Monthly Budgeting: removed redundant buttons, displaying only a single clear CTA when no plan is set and "Edit Plan" when configured.',
+        'Standard Wallet Icon: replaced safe vault with the recognized Wallet icon across navigation, cards, and modal dialogs.',
+        'Clear Annual Performance Navigator: intuitive Year selector with contextual "Back to 2026" shortcut.',
+        'Concise Action Labels: shortened "1-Click Confirm Pay" to "Mark as Paid" for monthly recurring bills.',
+        'Modal Touch Optimization: tap anywhere outside any modal backdrop to dismiss seamlessly.',
+        'Custom Date Range Filter: filter Daily Spend by any "From - To" custom date range.',
+      ],
+      ja: [
+        '集計起算日（給料日）設定：1〜31日の任意の日付から1ヶ月の集計を開始可能（例：20日支給の場合、20日〜翌月19日で集計）。',
+        '月間予算UIの最適化：未設定時の重複ボタンを排除し、設定後はシンプルな「計画を編集」ボタンに統一。',
+        '貯金アイコンの刷新：金庫アイコンから業界標準のウォレット（財布）アイコンに変更。',
+        '年間ナビゲーターのUX改善：「今年へ戻る」ボタンと分かりやすい年度切り替え。',
+        '定期支払いの操作ボタン簡素化：「1クリック確認」から「支払済みにする」に表記短縮。',
+        'モーダルの操作性向上：背景タップでどこでもスムーズに閉じられるよう改善。',
+        '日次支出の期間指定フィルター：任意の日付（開始日〜終了日）で支出を絞り込み。',
+      ],
+    },
+  },
   {
     version: '1.3.1',
     date: '2026-11-08',

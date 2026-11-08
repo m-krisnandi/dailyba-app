@@ -27,7 +27,7 @@ import {
   Sparkles,
   ArrowDownRight,
   ArrowUpRight,
-  Vault,
+  Wallet,
   CornerDownLeft,
   AlertCircle,
   SlidersHorizontal,
@@ -586,7 +586,7 @@ export function QuickRecordBoard({
               <div className="flex items-center space-x-2">
                 <span className="w-5 h-5 rounded-full bg-emerald-500/20 text-emerald-400 font-mono font-bold text-[11px] flex items-center justify-center">3</span>
                 <span className="text-xs font-bold text-[var(--text-main)]">
-                  {language === 'ja' ? '3. 月次計画 & 貯金' : '3. Budget & Vault'}
+                  {language === 'ja' ? '3. 月次計画 & 貯金' : '3. Budget & Wallet'}
                 </span>
               </div>
               <p className="text-[11px] text-[var(--text-muted)] leading-relaxed">
@@ -670,7 +670,7 @@ export function QuickRecordBoard({
                 : 'text-[var(--text-muted)] hover:text-[var(--text-main)]'
             }`}
           >
-            <Vault className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-amber-500 shrink-0" />
+            <Wallet className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-amber-500 shrink-0" />
             <span className="truncate sm:hidden">{language === 'en' ? 'Savings' : t.record.typeSavings}</span>
             <span className="hidden sm:inline truncate">{t.record.typeSavings}</span>
           </button>
@@ -1182,7 +1182,7 @@ export function QuickRecordBoard({
                 ? EXPENSE_CATEGORY_ICONS[tx.category as ExpenseCategory] || AlertCircle
                 : isIncome
                 ? INCOME_CATEGORY_ICONS[tx.category as IncomeCategory] || ArrowUpRight
-                : Vault;
+                : Wallet;
 
               const convertedAmount = convertCurrency(
                 tx.amount,

@@ -8,9 +8,10 @@ import { convertCurrency, DEFAULT_RATES, ExchangeRates } from '@/lib/currency';
 import {
   ArrowDownRight,
   ArrowUpRight,
-  Vault,
+  Wallet,
   ChevronLeft,
   ChevronRight,
+  RotateCcw,
   TrendingUp,
 } from 'lucide-react';
 import {
@@ -41,6 +42,8 @@ export function YearlySummaryBoard({
   const t = translations[language];
 
   const [selectedYear, setSelectedYear] = useState<number>(2026);
+  const currentActualYear = useMemo(() => new Date().getFullYear(), []);
+  const isCurrentYear = selectedYear === currentActualYear;
 
   useEffect(() => {
     setSelectedYear(new Date().getFullYear());
@@ -141,28 +144,40 @@ export function YearlySummaryBoard({
           </h2>
         </div>
 
-        <div className="flex items-center space-x-1.5">
-          <button
-            type="button"
-            onClick={() => setSelectedYear((y) => y - 1)}
-            className="p-2.5 rounded-xl border border-[var(--border-subtle)] bg-[var(--bg-subtle)] hover:bg-[var(--bg-subtle-hover)] text-[var(--text-main)] transition-all cursor-pointer"
-          >
-            <ChevronLeft className="w-4 h-4" />
-          </button>
-          <button
-            type="button"
-            onClick={() => setSelectedYear(new Date().getFullYear())}
-            className="px-3.5 py-2 rounded-xl border border-[var(--border-subtle)] bg-[var(--bg-subtle)] hover:bg-[var(--bg-subtle-hover)] text-xs font-bold text-[var(--text-main)] transition-all cursor-pointer"
-          >
-            {t.summary.thisYear}
-          </button>
-          <button
-            type="button"
-            onClick={() => setSelectedYear((y) => y + 1)}
-            className="p-2.5 rounded-xl border border-[var(--border-subtle)] bg-[var(--bg-subtle)] hover:bg-[var(--bg-subtle-hover)] text-[var(--text-main)] transition-all cursor-pointer"
-          >
-            <ChevronRight className="w-4 h-4" />
-          </button>
+        <div className="flex items-center space-x-2">
+          {!isCurrentYear && (
+            <button
+              type="button"
+              onClick={() => setSelectedYear(currentActualYear)}
+              className="flex items-center space-x-1 px-3 py-2 rounded-xl border border-emerald-500/30 bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-600 dark:text-emerald-400 text-xs font-bold transition-all cursor-pointer animate-fade-in"
+              title={`Return to ${currentActualYear}`}
+            >
+              <RotateCcw className="w-3.5 h-3.5" />
+              <span>{language === 'ja' ? '今年へ戻る' : `Back to ${currentActualYear}`}</span>
+            </button>
+          )}
+
+          <div className="flex items-center space-x-1 p-1 rounded-2xl border border-[var(--border-subtle)] bg-[var(--bg-subtle)]">
+            <button
+              type="button"
+              onClick={() => setSelectedYear((y) => y - 1)}
+              className="p-2 rounded-xl text-[var(--text-muted)] hover:text-[var(--text-main)] hover:bg-[var(--bg-surface-solid)] transition-all cursor-pointer"
+              title="Previous Year"
+            >
+              <ChevronLeft className="w-4 h-4" />
+            </button>
+            <span className="px-2.5 py-1 text-xs font-bold font-mono text-[var(--text-main)] select-none">
+              {selectedYear}
+            </span>
+            <button
+              type="button"
+              onClick={() => setSelectedYear((y) => y + 1)}
+              className="p-2 rounded-xl text-[var(--text-muted)] hover:text-[var(--text-main)] hover:bg-[var(--bg-surface-solid)] transition-all cursor-pointer"
+              title="Next Year"
+            >
+              <ChevronRight className="w-4 h-4" />
+            </button>
+          </div>
         </div>
       </div>
 
@@ -199,7 +214,7 @@ export function YearlySummaryBoard({
           <div className="flex items-center justify-between text-xs font-semibold text-[var(--text-muted)]">
             <span>{t.summary.annualSavings}</span>
             <div className="w-8 h-8 rounded-xl bg-amber-500/10 border border-amber-500/20 text-amber-500 flex items-center justify-center">
-              <Vault className="w-4 h-4" />
+              <Wallet className="w-4 h-4" />
             </div>
           </div>
           <p className="text-lg sm:text-2xl font-extrabold tracking-tight truncate text-[var(--accent-amber)] tabular-numbers font-mono">

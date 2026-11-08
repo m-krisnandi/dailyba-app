@@ -17,6 +17,7 @@ export const DEFAULT_STATE: FinanceState = {
   hiddenCategories: [],
   recurringBills: [],
   monthlyBudgets: {},
+  monthStartDay: 1,
 };
 
 // Known mock identifiers to purge permanently
@@ -64,6 +65,7 @@ export function getStoredState(): FinanceState {
         hiddenCategories: Array.isArray(parsed.hiddenCategories) ? parsed.hiddenCategories : [],
         recurringBills: cleaned.recurringBills || [],
         monthlyBudgets: parsed.monthlyBudgets && typeof parsed.monthlyBudgets === 'object' ? parsed.monthlyBudgets : {},
+        monthStartDay: typeof parsed.monthStartDay === 'number' && parsed.monthStartDay >= 1 && parsed.monthStartDay <= 31 ? parsed.monthStartDay : 1,
       };
     }
   } catch (e) {
@@ -258,6 +260,14 @@ export function useFinanceStore() {
     }));
   }, [updateState]);
 
+  const updateMonthStartDay = useCallback((day: number) => {
+    const safeDay = Math.max(1, Math.min(31, Math.round(day) || 1));
+    updateState((prev) => ({
+      ...prev,
+      monthStartDay: safeDay,
+    }));
+  }, [updateState]);
+
   const resetToSampleData = useCallback(() => {
     const next: FinanceState = {
       transactions: [],
@@ -308,6 +318,7 @@ export function useFinanceStore() {
       hiddenCategories: Array.isArray(importedState.hiddenCategories) ? importedState.hiddenCategories : (prev.hiddenCategories || []),
       recurringBills: Array.isArray(cleaned.recurringBills) ? cleaned.recurringBills : (Array.isArray(prev.recurringBills) ? prev.recurringBills : []),
       monthlyBudgets: importedState.monthlyBudgets && typeof importedState.monthlyBudgets === 'object' ? importedState.monthlyBudgets : (prev.monthlyBudgets || {}),
+      monthStartDay: typeof importedState.monthStartDay === 'number' ? importedState.monthStartDay : (prev.monthStartDay || 1),
     }));
   }, [updateState]);
 
@@ -329,6 +340,7 @@ export function useFinanceStore() {
     setSavingsGoal,
     setDailySpendTarget,
     updateMonthlyBudget,
+    updateMonthStartDay,
     resetToSampleData,
     clearAllData,
     importData,

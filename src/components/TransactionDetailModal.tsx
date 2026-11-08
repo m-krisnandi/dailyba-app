@@ -25,7 +25,7 @@ import {
   Edit3,
   TrendingDown,
   TrendingUp,
-  Vault,
+  Wallet,
   Tag,
   Clock,
   ArrowRightLeft,
@@ -71,7 +71,7 @@ export function TransactionDetailModal({
     ? EXPENSE_CATEGORY_ICONS[transaction.category as ExpenseCategory] || Tag
     : isIncome
     ? INCOME_CATEGORY_ICONS[transaction.category as IncomeCategory] || TrendingUp
-    : Vault;
+    : Wallet;
 
   const SourceIcon = FUNDING_SOURCE_ICONS[transaction.source as FundingSource] || CreditCard;
 
@@ -141,7 +141,7 @@ export function TransactionDetailModal({
                 </>
               ) : (
                 <>
-                  <Vault className="w-3 h-3" />
+                  <Wallet className="w-3 h-3" />
                   <span>{t.record.typeSavings}</span>
                 </>
               )}
