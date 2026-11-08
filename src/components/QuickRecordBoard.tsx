@@ -112,6 +112,7 @@ export function QuickRecordBoard({
     'freelance',
     'bonus',
     'dividend',
+    'carryover',
     'others',
   ];
 

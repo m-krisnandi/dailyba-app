@@ -309,6 +309,7 @@ export const translations: Record<Language, Translations> = {
       freelance: 'Freelance & Side Gig',
       bonus: 'Bonus',
       dividend: 'Dividends & Yield',
+      carryover: 'Carryover (Previous Leftover)',
       others: 'Other Income',
     },
     investmentCategories: {
@@ -535,6 +536,7 @@ export const translations: Record<Language, Translations> = {
       freelance: '副業・業務委託',
       bonus: '賞与',
       dividend: '配当・利息',
+      carryover: '前月繰越金・残り',
       others: 'その他収入',
     },
     investmentCategories: {

@@ -18,6 +18,7 @@ export type IncomeCategory =
   | 'freelance'
   | 'bonus'
   | 'dividend'
+  | 'carryover'
   | 'others';
 
 export type FundingSource = 'cash' | 'bank' | 'ewallet' | 'credit_card';

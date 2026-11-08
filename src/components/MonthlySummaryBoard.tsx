@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useMemo, useState, useEffect, useRef } from 'react';
-import { Currency, ExpenseCategory, Language, MonthlyBudgetPlan, Transaction } from '@/types/finance';
+import { Currency, ExpenseCategory, Language, MonthlyBudgetPlan, Transaction, TransactionType } from '@/types/finance';
 import { formatCurrency, translations } from '@/lib/i18n';
 import { EXPENSE_CATEGORY_ICONS } from '@/lib/constants';
 import { getMonthDateRange, isDateInMonthCycle } from '@/lib/dateUtils';
@@ -26,6 +26,7 @@ import {
   AlertCircle,
   Plus,
   SlidersHorizontal,
+  History,
 } from 'lucide-react';
 import {
   ResponsiveContainer,
@@ -100,6 +101,10 @@ export function MonthlySummaryBoard({
   // Budget Modal State
   const [isBudgetModalOpen, setIsBudgetModalOpen] = useState(false);
   const [isAddTxModalOpen, setIsAddTxModalOpen] = useState(false);
+  const [addTxInitialType, setAddTxInitialType] = useState<TransactionType>('expense');
+  const [addTxInitialCategory, setAddTxInitialCategory] = useState<string | undefined>(undefined);
+  const [addTxInitialAmount, setAddTxInitialAmount] = useState<number | undefined>(undefined);
+  const [addTxInitialNote, setAddTxInitialNote] = useState<string | undefined>(undefined);
   const [modalTotalTarget, setModalTotalTarget] = useState<string>('');
   const [modalCategoryTargets, setModalCategoryTargets] = useState<Record<string, string>>({});
 
@@ -179,28 +184,46 @@ export function MonthlySummaryBoard({
     return transactions.filter((tx) => isDateInMonthCycle(tx.date, prevMonthStr, monthStartDay));
   }, [transactions, prevMonthStr, monthStartDay]);
 
-  // Totals converted to active currency
-  const { totalIncome, totalExpense, totalSaved } = useMemo(() => {
+  // Totals converted to active currency (including carryover breakdown)
+  const { totalIncome, totalExpense, totalSaved, totalCarryover } = useMemo(() => {
     let inc = 0;
     let exp = 0;
     let sav = 0;
+    let carry = 0;
 
     monthTransactions.forEach((tx) => {
       const converted = convertCurrency(tx.amount, tx.currency || 'JPY', currency, rates);
-      if (tx.type === 'income') inc += converted;
+      if (tx.type === 'income') {
+        inc += converted;
+        if (tx.category === 'carryover') {
+          carry += converted;
+        }
+      }
       else if (tx.type === 'expense') exp += converted;
       else if (tx.type === 'savings') sav += converted;
     });
 
-    return { totalIncome: inc, totalExpense: exp, totalSaved: sav };
+    return { totalIncome: inc, totalExpense: exp, totalSaved: sav, totalCarryover: carry };
   }, [monthTransactions, currency, rates]);
 
-  const prevTotalExpense = useMemo(() => {
-    return prevMonthTransactions
-      .filter((tx) => tx.type === 'expense')
-      .reduce((acc, curr) => {
-        return acc + convertCurrency(curr.amount, curr.currency || 'JPY', currency, rates);
-      }, 0);
+  // Previous month summary for comparison & 1-tap rollover calculation
+  const { prevTotalExpense, prevNetCashflow } = useMemo(() => {
+    let pInc = 0;
+    let pExp = 0;
+    let pSav = 0;
+
+    prevMonthTransactions.forEach((tx) => {
+      const converted = convertCurrency(tx.amount, tx.currency || 'JPY', currency, rates);
+      if (tx.type === 'income') pInc += converted;
+      else if (tx.type === 'expense') pExp += converted;
+      else if (tx.type === 'savings') pSav += converted;
+    });
+
+    const net = pInc - pExp - pSav;
+    return {
+      prevTotalExpense: pExp,
+      prevNetCashflow: net > 0 ? net : 0,
+    };
   }, [prevMonthTransactions, currency, rates]);
 
   const netFreeCashFlow = totalIncome - totalExpense - totalSaved;
@@ -620,7 +643,13 @@ export function MonthlySummaryBoard({
             {onAddTransaction && (
               <button
                 type="button"
-                onClick={() => setIsAddTxModalOpen(true)}
+                onClick={() => {
+                  setAddTxInitialType('expense');
+                  setAddTxInitialCategory(undefined);
+                  setAddTxInitialAmount(undefined);
+                  setAddTxInitialNote(undefined);
+                  setIsAddTxModalOpen(true);
+                }}
                 className="flex items-center space-x-1.5 px-3.5 sm:px-4 py-2 rounded-2xl bg-[var(--btn-primary-bg)] text-[var(--btn-primary-text)] border border-[var(--btn-primary-border)] shadow-[var(--btn-primary-shadow)] hover:opacity-90 active:scale-95 text-xs font-bold transition-all cursor-pointer shrink-0"
                 title="Record Transaction for this Month"
               >
@@ -794,6 +823,42 @@ export function MonthlySummaryBoard({
         )}
       </div>
 
+      {/* 1-Tap Rollover Banner if previous month had unspent cash and not yet rolled over */}
+      {prevNetCashflow > 0 && totalCarryover === 0 && onAddTransaction && (
+        <div className="p-3.5 sm:p-4 rounded-3xl bg-emerald-500/10 border border-emerald-500/20 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 animate-fade-in shadow-xs">
+          <div className="flex items-center space-x-3 min-w-0">
+            <div className="w-9 h-9 rounded-2xl bg-emerald-500/20 text-emerald-400 flex items-center justify-center shrink-0">
+              <History className="w-4 h-4" />
+            </div>
+            <div className="min-w-0">
+              <p className="text-xs sm:text-sm font-bold text-[var(--text-main)] truncate">
+                {language === 'ja' ? '前月の未消化残高（余剰金）があります' : 'Unspent Cash from Previous Month'}
+              </p>
+              <p className="text-[11px] text-[var(--text-muted)] mt-0.5 leading-relaxed">
+                {language === 'ja'
+                  ? `前月の余剰金 ${formatCurrency(prevNetCashflow, currency)} を今月の活動資金（繰越金）として計上できます。`
+                  : `You have ${formatCurrency(prevNetCashflow, currency)} leftover from last month. Tap to bring it into this month's budget.`}
+              </p>
+            </div>
+          </div>
+          <button
+            type="button"
+            onClick={() => {
+              setAddTxInitialType('income');
+              setAddTxInitialCategory('carryover');
+              setAddTxInitialAmount(prevNetCashflow);
+              setAddTxInitialNote(
+                language === 'ja' ? `前月(${prevMonthStr})からの繰越金` : `Carryover from ${prevMonthStr}`
+              );
+              setIsAddTxModalOpen(true);
+            }}
+            className="w-full sm:w-auto px-4 py-2 rounded-2xl bg-[var(--btn-primary-bg)] text-[var(--btn-primary-text)] border border-[var(--btn-primary-border)] shadow-xs hover:opacity-90 active:scale-95 text-xs font-bold transition-all cursor-pointer whitespace-nowrap text-center shrink-0"
+          >
+            + {language === 'ja' ? '今月に繰り越す' : 'Rollover to this Month'}
+          </button>
+        </div>
+      )}
+
       {/* 4 Big Metrics Grid (iOS Liquid Glass Cards) */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
         {/* Income */}
@@ -807,6 +872,13 @@ export function MonthlySummaryBoard({
           <p className="text-lg sm:text-2xl font-extrabold tracking-tight truncate text-[var(--accent-emerald)] tabular-numbers font-mono">
             {formatCurrency(totalIncome, currency)}
           </p>
+          {totalCarryover > 0 && (
+            <p className="text-[10px] font-mono font-medium text-[var(--text-muted)] truncate">
+              {language === 'ja'
+                ? `内 繰越金: ${formatCurrency(totalCarryover, currency)}`
+                : `incl. ${formatCurrency(totalCarryover, currency)} carryover`}
+            </p>
+          )}
         </div>
 
         {/* Expenses */}
@@ -1229,13 +1301,20 @@ export function MonthlySummaryBoard({
       {onAddTransaction && (
         <AddTransactionModal
           isOpen={isAddTxModalOpen}
-          initialType="expense"
+          initialType={addTxInitialType}
+          initialCategory={addTxInitialCategory}
+          initialAmount={addTxInitialAmount}
+          initialNote={addTxInitialNote}
           initialDate={isDateInMonthCycle(new Date().toISOString().split('T')[0], selectedMonth, monthStartDay) ? new Date().toISOString().split('T')[0] : activeCycle.startDate}
           currency={currency}
           language={language}
           onClose={() => setIsAddTxModalOpen(false)}
           onAddTransaction={onAddTransaction}
-          title={`Record Transaction (${selectedMonth})`}
+          title={
+            addTxInitialCategory === 'carryover'
+              ? (language === 'ja' ? '前月繰越金を計上' : 'Record Previous Month Carryover')
+              : `Record Transaction (${selectedMonth})`
+          }
         />
       )}
     </div>

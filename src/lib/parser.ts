@@ -79,6 +79,9 @@ export function parseSmartText(text: string): ParsedInput | null {
   if (/^(freelance|side-gig|fukugyou|project|client)/i.test(keyword)) {
     return { amount, category: 'freelance', type: 'income', note: remainingTokens.join(' ') || 'Freelance' };
   }
+  if (/^(sisa|leftover|carryover|rollover|saldo lalu|sisa uang|sisa saldo|kurikoshi|繰越)/i.test(keyword)) {
+    return { amount, category: 'carryover', type: 'income', note: remainingTokens.join(' ') || 'Leftover Carryover' };
+  }
 
   // Default fallback
   return {

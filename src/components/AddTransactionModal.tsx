@@ -38,6 +38,8 @@ interface AddTransactionModalProps {
   initialType?: TransactionType;
   initialDate?: string;
   initialCategory?: string;
+  initialAmount?: number;
+  initialNote?: string;
   title?: string;
 }
 
@@ -50,6 +52,8 @@ export function AddTransactionModal({
   initialType = 'expense',
   initialDate,
   initialCategory,
+  initialAmount,
+  initialNote,
   title,
 }: AddTransactionModalProps) {
   const t = translations[language];
@@ -71,10 +75,10 @@ export function AddTransactionModal({
       } else {
         setCategory(initialType === 'income' ? 'salary' : initialType === 'savings' ? 'savings' : 'food_drinks');
       }
-      setAmountStr('');
-      setNote('');
+      setAmountStr(initialAmount ? formatNumberWithCommas(initialAmount) : '');
+      setNote(initialNote || '');
     }
-  }, [isOpen, initialType, initialDate, initialCategory]);
+  }, [isOpen, initialType, initialDate, initialCategory, initialAmount, initialNote]);
 
   if (!isOpen) return null;
 

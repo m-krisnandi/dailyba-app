@@ -19,6 +19,7 @@ import {
   Laptop,
   Award,
   TrendingUp,
+  History,
   LucideIcon,
 } from 'lucide-react';
 
@@ -41,6 +42,7 @@ export const INCOME_CATEGORY_ICONS: Record<IncomeCategory, LucideIcon> = {
   freelance: Laptop,
   bonus: Award,
   dividend: TrendingUp,
+  carryover: History,
   others: MoreHorizontal,
 };
 
