@@ -342,6 +342,7 @@ export default function Home() {
       <AuthModal
         isOpen={isAuthModalOpen}
         onClose={() => setIsAuthModalOpen(false)}
+        language={state.language}
         onSuccess={() => {
           handleManualSync();
         }}

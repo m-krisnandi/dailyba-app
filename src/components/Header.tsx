@@ -154,7 +154,7 @@ export function Header({
           {/* Live Rate Pill (Desktop) */}
           <div
             className="hidden lg:flex items-center space-x-1.5 px-3 py-1.5 rounded-xl border border-[var(--border-subtle)] bg-[var(--bg-subtle)] text-[11px] text-[var(--text-muted)] tabular-numbers font-mono shadow-[inset_0_1px_0_0_rgba(255,255,255,0.1)] shrink-0"
-            title="Live Exchange Rate"
+            title={language === "ja" ? "リアルタイム為替レート" : "Live Exchange Rate"}
           >
             <span className="w-1.5 h-1.5 rounded-full bg-[var(--accent-emerald)] shadow-[0_0_8px_var(--accent-emerald)]" />
             <ArrowRightLeft className="w-3 h-3 text-[var(--text-faint)]" />
@@ -167,10 +167,10 @@ export function Header({
               href="/dailyba.apk"
               download={`dailyba-v${APP_VERSION}.apk`}
               className="flex items-center space-x-1 sm:space-x-1.5 px-1.5 sm:px-2.5 py-1.5 rounded-xl border border-emerald-500/35 bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-400 hover:text-emerald-300 text-xs font-bold transition-all shadow-xs shrink-0 cursor-pointer"
-              title={`Download Android APK (v${APP_VERSION})`}
+              title={language === "ja" ? `Android APKをダウンロード (v${APP_VERSION})` : `Download Android APK (v${APP_VERSION})`}
             >
               <Smartphone className="w-3.5 h-3.5 shrink-0" />
-              <span className="hidden sm:inline">Get APK</span>
+              <span className="hidden sm:inline">{language === "ja" ? "APK入手" : "Get APK"}</span>
               <span className="sm:hidden font-mono text-[10px]">APK</span>
               <Download className="w-3 h-3 hidden md:inline shrink-0 opacity-80" />
             </a>
@@ -182,7 +182,7 @@ export function Header({
               type="button"
               onClick={() => setIsCurrencyDropdownOpen(!isCurrencyDropdownOpen)}
               className="flex items-center space-x-1 sm:space-x-1.5 px-2 sm:px-3 py-1.5 rounded-xl border border-[var(--border-subtle)] bg-[var(--bg-subtle)] hover:bg-[var(--bg-subtle-hover)] text-xs font-bold text-[var(--text-main)] transition-all cursor-pointer font-mono shadow-xs whitespace-nowrap"
-              title="Select Active Currency"
+              title={language === "ja" ? "通貨を選択" : "Select Active Currency"}
             >
               <span className="font-mono text-xs">{currentCurrencyItem.label}</span>
               <ChevronDown
@@ -233,7 +233,7 @@ export function Header({
             type="button"
             onClick={() => onLanguageChange(language === 'en' ? 'ja' : 'en')}
             className="flex items-center space-x-1 px-1.5 sm:px-2.5 py-1.5 rounded-xl border border-[var(--border-subtle)] bg-[var(--bg-subtle)] hover:bg-[var(--bg-subtle-hover)] text-xs font-medium text-[var(--text-main)] transition-all cursor-pointer whitespace-nowrap shrink-0"
-            title="Toggle Language (English / Japanese)"
+            title={language === "ja" ? "言語切替 (日本語 / 英語)" : "Toggle Language (English / Japanese)"}
           >
             <Globe className="w-3.5 h-3.5 text-[var(--text-muted)] shrink-0" />
             <span className="hidden sm:inline">{language === 'en' ? 'EN' : '日本語'}</span>
@@ -248,7 +248,7 @@ export function Header({
                 type="button"
                 onClick={() => setIsUserMenuOpen(!isUserMenuOpen)}
                 className="flex items-center space-x-1.5 sm:space-x-2 px-2 sm:px-2.5 py-1.5 rounded-xl border border-emerald-500/30 bg-emerald-500/10 hover:bg-emerald-500/20 text-xs font-bold text-[var(--text-main)] transition-all cursor-pointer shadow-xs whitespace-nowrap"
-                title="Account & Cloud Sync"
+                title={language === "ja" ? "アカウント・クラウド同期" : "Account & Cloud Sync"}
               >
                 <div className="w-5 h-5 rounded-full bg-gradient-to-tr from-emerald-500 to-teal-400 text-slate-950 flex items-center justify-center text-[10px] font-black shrink-0">
                   {userInitial}
@@ -293,13 +293,13 @@ export function Header({
                     <span className="w-2 h-2 rounded-full bg-emerald-400" />
                     <span className="text-[10px] text-emerald-400 font-medium">
                       {syncStatus === 'syncing'
-                        ? 'Syncing to Cloud...'
-                        : 'Cloud Backup Active'}
+                        ? (language === "ja" ? "クラウド同期中..." : "Syncing to Cloud...")
+                        : (language === "ja" ? "クラウド同期有効" : "Cloud Backup Active")}
                     </span>
                   </div>
                   {lastSyncedAt && (
                     <p className="text-[10px] text-[var(--text-faint)] font-mono mt-0.5">
-                      Synced: {new Date(lastSyncedAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                      {language === "ja" ? "同期完了:" : "Synced:"} {new Date(lastSyncedAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                     </p>
                   )}
                 </div>
@@ -315,7 +315,7 @@ export function Header({
                       className="w-full flex items-center space-x-2 px-2.5 py-2 rounded-xl text-xs text-[var(--text-muted)] hover:text-[var(--text-main)] hover:bg-[var(--bg-subtle)] transition-all cursor-pointer"
                     >
                       <RefreshCw className="w-3.5 h-3.5 text-emerald-400" />
-                      <span>Sync Vault Now</span>
+                      <span>{language === "ja" ? "今すぐクラウド同期" : "Sync Vault Now"}</span>
                     </button>
                   )}
 
@@ -328,7 +328,7 @@ export function Header({
                     className="w-full flex items-center space-x-2 px-2.5 py-2 rounded-xl text-xs text-[var(--text-muted)] hover:text-[var(--text-main)] hover:bg-[var(--bg-subtle)] transition-all cursor-pointer"
                   >
                     <Database className="w-3.5 h-3.5" />
-                    <span>Backup & Restore Data</span>
+                    <span>{language === "ja" ? "データ出力・復元" : "Backup & Restore Data"}</span>
                   </button>
 
                   <button
@@ -340,7 +340,7 @@ export function Header({
                     className="w-full flex items-center space-x-2 px-2.5 py-2 rounded-xl text-xs text-[var(--text-muted)] hover:text-[var(--text-main)] hover:bg-[var(--bg-subtle)] transition-all cursor-pointer"
                   >
                     <UserIcon className="w-3.5 h-3.5" />
-                    <span>Account & Server Settings</span>
+                    <span>{language === "ja" ? "アカウント・設定" : "Account & Server Settings"}</span>
                   </button>
 
                   <button
@@ -352,7 +352,7 @@ export function Header({
                     className="w-full flex items-center space-x-2 px-2.5 py-2 rounded-xl text-xs text-rose-400 hover:text-rose-300 hover:bg-rose-500/10 transition-all cursor-pointer"
                   >
                     <LogOut className="w-3.5 h-3.5" />
-                    <span>Log Out</span>
+                    <span>{language === "ja" ? "ログアウト" : "Log Out"}</span>
                   </button>
 
                   <div className="pt-2 border-t border-[var(--border-subtle)] px-2.5 flex items-center justify-between text-[10px] font-mono text-[var(--text-faint)]">

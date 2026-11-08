@@ -1,7 +1,7 @@
 import { Language } from '@/types/finance';
 
-export const APP_VERSION = '1.3.5';
-export const APP_BUILD = '20261108';
+export const APP_VERSION = '1.3.6';
+export const APP_BUILD = '20261109';
 
 export interface LocalizedChangelogItem {
   version: string;
@@ -11,6 +11,28 @@ export interface LocalizedChangelogItem {
 }
 
 export const APP_CHANGELOG: LocalizedChangelogItem[] = [
+  {
+    version: '1.3.6',
+    date: '2026-11-09',
+    title: {
+      en: 'Comprehensive 100% Japanese Localization across all Modals & Boards',
+      ja: '月間予算・各種モーダル・プリセット表示の完全日本語化対応',
+    },
+    highlights: {
+      en: [
+        'Monthly Budget & Spending Plan: translated modal header "Target for YYYY-MM", "Max overall spending", "Optional per-category limits", and "Presets:".',
+        'Transaction Entry Modal: localized modal title "Record Transaction (YYYY-MM)" and subtitle "Today • Fast Entry" (今日 • クイック入力).',
+        'Daily Spend & Savings Presets: translated quick amount labels "Presets:" (プリセット:) across daily spend and savings goal forms.',
+        'Data Backup & Cloud Modals: fully localized Backup & Restore modal and Dailyba Cloud authentication dialogs into Japanese.',
+      ],
+      ja: [
+        '月間予算・支出計画モーダル：「Target for YYYY-MM」を「YYYY-MM の支出目標」、「Max overall spending」を「月間の支出上限額」、「Optional per-category limits」を「カテゴリー別の配分（任意）」、「Presets:」を「プリセット:」に日本語化。',
+        '取引記録モーダル：月次サマリーからの記録タイトル「取引を記録 (YYYY-MM)」、サブタイトル「今日 • クイック入力」、クリアボタンを日本語化。',
+        '日次支出・貯金管理のプリセット：各目標設定フォームの「Presets:」を「プリセット:」に日本語化。',
+        'バックアップ・クラウド同期モーダル：データ出力・復元モーダルおよびクラウドログイン・新規登録画面の各種ラベル・説明文を完全日本語対応。',
+      ],
+    },
+  },
   {
     version: '1.3.5',
     date: '2026-11-08',

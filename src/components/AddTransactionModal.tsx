@@ -116,7 +116,8 @@ export function AddTransactionModal({
       ? [3000, 5000, 10000, 20000, 50000]
       : [500, 1000, 2000, 5000, 10000];
 
-  const modalTitle = title || (type === 'expense' ? 'Record Expense' : type === 'income' ? 'Record Income' : 'Save to Reserves');
+  const defaultTitle = language === "ja" ? (type === "expense" ? "支出を記録" : type === "income" ? "収入を記録" : "貯金・積立に振替") : (type === "expense" ? "Record Expense" : type === "income" ? "Record Income" : "Save to Reserves");
+  const modalTitle = title || defaultTitle;
 
   return (
     <div
@@ -138,7 +139,7 @@ export function AddTransactionModal({
                 {modalTitle}
               </h3>
               <p className="text-[11px] text-[var(--text-muted)] font-medium">
-                {date === todayStr ? 'Today • Fast Entry' : date}
+                {date === todayStr ? (language === "ja" ? "今日 • クイック入力" : "Today • Fast Entry") : date}
               </p>
             </div>
           </div>
@@ -213,7 +214,7 @@ export function AddTransactionModal({
                   onClick={() => setAmountStr('')}
                   className="text-xs text-[var(--text-muted)] hover:text-rose-500 transition-colors font-mono cursor-pointer"
                 >
-                  Clear
+                  {t.actions.clear}
                 </button>
               )}
             </div>

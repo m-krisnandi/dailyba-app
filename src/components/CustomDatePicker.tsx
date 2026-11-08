@@ -178,7 +178,7 @@ export function CustomDatePicker({ value, onChange, language }: CustomDatePicker
           type="button"
           onClick={handleSetToday}
           className="px-3 py-2.5 rounded-xl border border-[var(--border-subtle)] bg-[var(--bg-subtle)] hover:bg-[var(--bg-subtle-hover)] text-xs font-semibold text-[var(--text-muted)] hover:text-[var(--text-main)] cursor-pointer transition-all shrink-0"
-          title="Set to today"
+          title={language === "ja" ? "今日に設定" : "Set to today"}
         >
           {language === 'ja' ? '今日' : 'Today'}
         </button>

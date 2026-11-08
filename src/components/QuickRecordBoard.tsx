@@ -550,7 +550,7 @@ export function QuickRecordBoard({
               type="button"
               onClick={handleDismissOnboarding}
               className="p-1.5 rounded-xl text-[var(--text-muted)] hover:text-[var(--text-main)] hover:bg-[var(--bg-subtle)] transition-all cursor-pointer"
-              title="Dismiss guide"
+              title={language === "ja" ? "案内を閉じる" : "Dismiss guide"}
             >
               <X className="w-4 h-4" />
             </button>
@@ -988,7 +988,7 @@ export function QuickRecordBoard({
                           ? 'bg-emerald-500/15 border-emerald-500/40 text-emerald-700 dark:text-emerald-300 shadow-xs'
                           : 'border-[var(--border-subtle)] bg-[var(--bg-surface-solid)] text-[var(--text-muted)] hover:border-[var(--border-strong)] hover:text-[var(--text-main)]'
                       }`}
-                      title={bill.isPaid ? 'Click to unmark as paid' : 'Click to mark as paid'}
+                      title={bill.isPaid ? (language === "ja" ? "クリックして未払いに戻す" : "Click to unmark as paid") : (language === "ja" ? "クリックして支払済みにする" : "Click to mark as paid")}
                     >
                       <div
                         className={`w-4 h-4 rounded-md border flex items-center justify-center transition-all shrink-0 ${
@@ -1199,7 +1199,7 @@ export function QuickRecordBoard({
                   key={tx.id}
                   onClick={() => setSelectedDetailTx(tx)}
                   className="p-3 sm:p-3.5 rounded-2xl bg-[var(--bg-subtle)] border border-[var(--border-subtle)] hover:border-[var(--border-strong)] flex items-center justify-between space-x-2.5 sm:space-x-3 group transition-all min-w-0 cursor-pointer hover:bg-[var(--bg-surface-solid)] active:scale-[0.99]"
-                  title="Click to view full transaction details"
+                  title={language === "ja" ? "クリックして取引明細を表示" : "Click to view full transaction details"}
                 >
                   <div className="flex items-center space-x-2.5 sm:space-x-3 min-w-0">
                     <div
@@ -1518,7 +1518,7 @@ export function QuickRecordBoard({
 
               <div className="space-y-1.5">
                 <label className="text-xs font-semibold text-[var(--text-muted)]">
-                  Currency
+                  {language === "ja" ? "通貨" : "Currency"}
                 </label>
                 <select
                   value={billCurrency}

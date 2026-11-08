@@ -162,7 +162,7 @@ export function YearlySummaryBoard({
               type="button"
               onClick={() => setSelectedYear((y) => y - 1)}
               className="p-2 rounded-xl text-[var(--text-muted)] hover:text-[var(--text-main)] hover:bg-[var(--bg-surface-solid)] transition-all cursor-pointer"
-              title="Previous Year"
+              title={language === "ja" ? "前年" : "Previous Year"}
             >
               <ChevronLeft className="w-4 h-4" />
             </button>
@@ -173,7 +173,7 @@ export function YearlySummaryBoard({
               type="button"
               onClick={() => setSelectedYear((y) => y + 1)}
               className="p-2 rounded-xl text-[var(--text-muted)] hover:text-[var(--text-main)] hover:bg-[var(--bg-surface-solid)] transition-all cursor-pointer"
-              title="Next Year"
+              title={language === "ja" ? "翌年" : "Next Year"}
             >
               <ChevronRight className="w-4 h-4" />
             </button>

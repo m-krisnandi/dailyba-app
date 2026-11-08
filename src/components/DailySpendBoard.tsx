@@ -376,7 +376,7 @@ export function DailySpendBoard({
             {/* Quick Preset Buttons */}
             <div className="flex flex-wrap items-center gap-2 pt-1">
               <span className="text-xs text-[var(--text-muted)] mr-1 font-mono">
-                Presets:
+                {language === "ja" ? "プリセット:" : "Presets:"}
               </span>
               {targetPresets.map((val) => (
                 <button
@@ -795,7 +795,7 @@ export function DailySpendBoard({
                               className="inline-flex items-center space-x-1.5 px-3 py-1.5 rounded-xl bg-[var(--bg-surface-solid)] border border-[var(--border-strong)] text-xs font-bold text-[var(--text-main)] hover:border-[var(--border-specular)] transition-all cursor-pointer"
                             >
                               <Plus className="w-3.5 h-3.5 text-emerald-400" />
-                              <span>{isToday ? (t.record.recordTodayExpense || "Record Today's Spend") : 'Add Expense for this Day'}</span>
+                              <span>{isToday ? (t.record.recordTodayExpense || (language === "ja" ? "今日の支出を記録" : "Record Today's Spend")) : (language === "ja" ? "この日の支出を追加" : "Add Expense for this Day")}</span>
                             </button>
                           )}
                         </div>

@@ -50,7 +50,7 @@ export function BackupModal({
     document.body.appendChild(downloadAnchor);
     downloadAnchor.click();
     downloadAnchor.remove();
-    setFeedback('Backup JSON exported successfully!');
+    setFeedback(language === "ja" ? "JSONバックアップを出力しました！" : "Backup JSON exported successfully!");
     setTimeout(() => setFeedback(null), 2500);
   };
 
@@ -79,7 +79,7 @@ export function BackupModal({
     document.body.appendChild(downloadAnchor);
     downloadAnchor.click();
     downloadAnchor.remove();
-    setFeedback('Transactions CSV exported successfully!');
+    setFeedback(language === "ja" ? "CSVレポートを出力しました！" : "Transactions CSV exported successfully!");
     setTimeout(() => setFeedback(null), 2500);
   };
 
@@ -95,14 +95,14 @@ export function BackupModal({
         const parsed = JSON.parse(content);
         if (parsed && (Array.isArray(parsed.transactions) || Array.isArray(parsed.investments))) {
           onImportData(parsed);
-          setFeedback('Data imported successfully!');
+          setFeedback(language === "ja" ? "データを正常に復元しました！" : "Data imported successfully!");
           setTimeout(() => setFeedback(null), 2500);
         } else {
-          setFeedback('Invalid JSON backup file structure.');
+          setFeedback(language === "ja" ? "バックアップファイルの形式が無効です。" : "Invalid JSON backup file structure.");
           setTimeout(() => setFeedback(null), 3000);
         }
       } catch (err) {
-        setFeedback('Error parsing JSON backup file.');
+        setFeedback(language === "ja" ? "バックアップファイルの読み込みに失敗しました。" : "Error parsing JSON backup file.");
         setTimeout(() => setFeedback(null), 3000);
       }
     };
@@ -148,7 +148,7 @@ export function BackupModal({
           {/* Export Options */}
           <div className="space-y-2">
             <p className="text-xs font-bold text-[var(--text-muted)] uppercase tracking-wider">
-              Export Data
+              {language === "ja" ? "データ出力" : "Export Data"}
             </p>
             <div className="grid grid-cols-2 gap-2.5">
               <button
@@ -157,7 +157,7 @@ export function BackupModal({
                 className="p-3 rounded-2xl border border-[var(--border-subtle)] bg-[var(--bg-subtle)] hover:bg-[var(--bg-subtle-hover)] flex items-center justify-center space-x-2 text-xs font-bold text-[var(--text-main)] transition-all shadow-xs cursor-pointer"
               >
                 <FileJson className="w-4 h-4 text-amber-500" />
-                <span>Backup JSON</span>
+                <span>{language === "ja" ? "JSONバックアップ" : "Backup JSON"}</span>
               </button>
               <button
                 type="button"
@@ -165,7 +165,7 @@ export function BackupModal({
                 className="p-3 rounded-2xl border border-[var(--border-subtle)] bg-[var(--bg-subtle)] hover:bg-[var(--bg-subtle-hover)] flex items-center justify-center space-x-2 text-xs font-bold text-[var(--text-main)] transition-all shadow-xs cursor-pointer"
               >
                 <FileSpreadsheet className="w-4 h-4 text-emerald-500" />
-                <span>Export CSV</span>
+                <span>{language === "ja" ? "CSVレポート出力" : "Export CSV"}</span>
               </button>
             </div>
           </div>
@@ -173,7 +173,7 @@ export function BackupModal({
           {/* Import JSON */}
           <div className="space-y-2 pt-1">
             <p className="text-xs font-bold text-[var(--text-muted)] uppercase tracking-wider">
-              Restore Data
+              {language === "ja" ? "データ復元" : "Restore Data"}
             </p>
             <input
               type="file"
@@ -188,28 +188,28 @@ export function BackupModal({
               className="w-full p-3 rounded-2xl border border-[var(--border-subtle)] bg-[var(--bg-subtle)] hover:bg-[var(--bg-subtle-hover)] flex items-center justify-center space-x-2 text-xs font-bold text-[var(--text-main)] transition-all shadow-xs cursor-pointer"
             >
               <Upload className="w-4 h-4 text-indigo-400" />
-              <span>Import JSON Backup</span>
+              <span>{language === "ja" ? "JSONからデータを復元" : "Import JSON Backup"}</span>
             </button>
           </div>
 
           {/* Danger Zone */}
           <div className="pt-2 border-t border-[var(--border-subtle)] space-y-2">
             <p className="text-xs font-bold text-[var(--text-muted)] uppercase tracking-wider">
-              Management
+              {language === "ja" ? "データ初期化・管理" : "Management"}
             </p>
             <button
               type="button"
               onClick={() => {
-                if (confirm('Are you sure you want to delete ALL data? This action cannot be undone.')) {
+                if (confirm(language === "ja" ? "本当にすべてのデータを削除しますか？この操作は元に戻せません。" : "Are you sure you want to delete ALL data? This action cannot be undone.")) {
                   onClearAll();
-                  setFeedback('All local data cleared.');
+                  setFeedback(language === "ja" ? "すべてのローカルデータを削除しました。" : "All local data cleared.");
                   setTimeout(() => setFeedback(null), 2500);
                 }
               }}
               className="w-full p-2.5 rounded-xl border border-rose-500/20 bg-rose-500/10 hover:bg-rose-500/20 text-rose-500 flex items-center justify-center space-x-1.5 text-xs font-semibold transition-all cursor-pointer"
             >
               <Trash2 className="w-3.5 h-3.5" />
-              <span>Delete All Data</span>
+              <span>{language === "ja" ? "すべてのデータを削除" : "Delete All Data"}</span>
             </button>
           </div>
         </div>

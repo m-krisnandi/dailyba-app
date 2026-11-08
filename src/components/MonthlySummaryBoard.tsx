@@ -488,7 +488,7 @@ export function MonthlySummaryBoard({
               type="button"
               onClick={() => setIsCyclePickerOpen(!isCyclePickerOpen)}
               className="group flex items-center space-x-1.5 px-3 py-1.5 rounded-2xl bg-[var(--bg-subtle)] hover:bg-[var(--bg-subtle-hover)] border border-[var(--border-subtle)] hover:border-[var(--border-strong)] transition-all cursor-pointer shadow-xs text-xs font-semibold text-[var(--text-main)]"
-              title="Set billing / payday cycle start day"
+              title={language === "ja" ? "集計起算日・給料日の設定" : "Set billing / payday cycle start day"}
             >
               <SlidersHorizontal className="w-3.5 h-3.5 text-[var(--accent-emerald)] shrink-0" />
               <span className="font-mono text-xs font-bold">
@@ -517,7 +517,7 @@ export function MonthlySummaryBoard({
                     }}
                     className="px-2 py-0.5 rounded-lg bg-[var(--bg-subtle)] hover:bg-[var(--bg-subtle-hover)] text-[10px] font-bold text-[var(--text-muted)] hover:text-[var(--text-main)] border border-[var(--border-subtle)] transition-all cursor-pointer font-mono"
                   >
-                    Reset (Day 1)
+                    {language === "ja" ? "リセット (1日)" : "Reset (Day 1)"}
                   </button>
                 </div>
 
@@ -609,7 +609,7 @@ export function MonthlySummaryBoard({
             type="button"
             onClick={handlePrevMonth}
             className="w-9 h-9 sm:w-10 sm:h-10 flex items-center justify-center rounded-2xl border border-[var(--border-subtle)] bg-[var(--bg-subtle)] hover:bg-[var(--bg-subtle-hover)] text-[var(--text-main)] transition-all cursor-pointer shadow-xs active:scale-95"
-            title="Previous Month"
+            title={language === "ja" ? "前月" : "Previous Month"}
           >
             <ChevronLeft className="w-4 h-4" />
           </button>
@@ -617,7 +617,7 @@ export function MonthlySummaryBoard({
             type="button"
             onClick={handleNextMonth}
             className="w-9 h-9 sm:w-10 sm:h-10 flex items-center justify-center rounded-2xl border border-[var(--border-subtle)] bg-[var(--bg-subtle)] hover:bg-[var(--bg-subtle-hover)] text-[var(--text-main)] transition-all cursor-pointer shadow-xs active:scale-95"
-            title="Next Month"
+            title={language === "ja" ? "翌月" : "Next Month"}
           >
             <ChevronRight className="w-4 h-4" />
           </button>
@@ -653,10 +653,10 @@ export function MonthlySummaryBoard({
                   setIsAddTxModalOpen(true);
                 }}
                 className="flex items-center space-x-1.5 px-3.5 sm:px-4 py-2 rounded-2xl bg-[var(--btn-primary-bg)] text-[var(--btn-primary-text)] border border-[var(--btn-primary-border)] shadow-[var(--btn-primary-shadow)] hover:opacity-90 active:scale-95 text-xs font-bold transition-all cursor-pointer shrink-0"
-                title="Record Transaction for this Month"
+                title={language === "ja" ? "この月の取引を記録" : "Record Transaction for this Month"}
               >
                 <Plus className="w-3.5 h-3.5" />
-                <span>{t.record.addTransaction || "Record Transaction"}</span>
+                <span>{t.record.addTransaction || (language === "ja" ? "取引を記録" : "Record Transaction")}</span>
               </button>
             )}
 
@@ -1166,7 +1166,7 @@ export function MonthlySummaryBoard({
                     {t.summary.monthlyBudgetPlan}
                   </h3>
                   <p className="text-[11px] font-mono text-[var(--text-muted)]">
-                    Target for {selectedMonth} ({currency})
+                    {language === "ja" ? `${selectedMonth} の支出目標 (${currency})` : `Target for ${selectedMonth} (${currency})`}
                   </p>
                 </div>
               </div>
@@ -1187,7 +1187,7 @@ export function MonthlySummaryBoard({
                     {t.summary.totalMonthlyBudget} ({currency})
                   </label>
                   <span className="text-[11px] text-[var(--text-faint)] font-mono">
-                    Max overall spending
+                    {language === "ja" ? "月間の支出上限額" : "Max overall spending"}
                   </span>
                 </div>
                 <div className="relative">
@@ -1210,7 +1210,7 @@ export function MonthlySummaryBoard({
                 {/* Presets */}
                 <div className="flex flex-wrap items-center gap-1.5 pt-1">
                   <span className="text-[11px] text-[var(--text-muted)] mr-1 font-mono">
-                    Presets:
+                    {language === "ja" ? "プリセット:" : "Presets:"}
                   </span>
                   {totalBudgetPresets.map((val) => (
                     <button
@@ -1232,7 +1232,7 @@ export function MonthlySummaryBoard({
                     {t.summary.categoryBudgets}
                   </span>
                   <span className="text-[11px] text-[var(--text-faint)] font-mono">
-                    Optional per-category limits
+                    {language === "ja" ? "カテゴリー別の配分（任意）" : "Optional per-category limits"}
                   </span>
                 </div>
 
@@ -1315,7 +1315,7 @@ export function MonthlySummaryBoard({
           title={
             addTxInitialCategory === 'carryover'
               ? (language === 'ja' ? '前月繰越金を計上' : 'Record Previous Month Carryover')
-              : `Record Transaction (${selectedMonth})`
+              : (language === "ja" ? `取引を記録 (${selectedMonth})` : `Record Transaction (${selectedMonth})`)
           }
         />
       )}

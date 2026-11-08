@@ -113,8 +113,8 @@ export function SavingsBoard({
   const isGoalAchieved = currentGoalInCurrency > 0 && totalAccumulatedSavings >= currentGoalInCurrency;
 
   const handleSaveQuick = (amount: number) => {
-    onAddSavings(amount, 'Quick Savings Allocation');
-    setStatusMessage(`Saved ${formatCurrency(amount, currency)} to reserves! (Can be deleted below if clicked by mistake)`);
+    onAddSavings(amount, language === "ja" ? "クイック貯金振替" : "Quick Savings Allocation");
+    setStatusMessage(language === "ja" ? `${formatCurrency(amount, currency)} を貯蓄へ振替しました！` : `Saved ${formatCurrency(amount, currency)} to reserves! (Can be deleted below if clicked by mistake)`);
     setTimeout(() => setStatusMessage(null), 3000);
   };
 
@@ -125,7 +125,7 @@ export function SavingsBoard({
     onAddSavings(val, savingsNote.trim() || undefined);
     setCustomAmountStr('');
     setSavingsNote('');
-    setStatusMessage(`Saved ${formatCurrency(val, currency)} to reserves!`);
+    setStatusMessage(language === "ja" ? `${formatCurrency(val, currency)} を貯蓄へ振替しました！` : `Saved ${formatCurrency(val, currency)} to reserves!`);
     setTimeout(() => setStatusMessage(null), 2500);
   };
 
@@ -265,7 +265,7 @@ export function SavingsBoard({
             {/* Quick Preset Buttons */}
             <div className="flex flex-wrap items-center gap-2 pt-1">
               <span className="text-xs text-[var(--text-muted)] mr-1 font-mono">
-                Presets:
+                {language === "ja" ? "プリセット:" : "Presets:"}
               </span>
               {goalPresets.map((val) => (
                 <button
