@@ -3,7 +3,7 @@
 import React, { useState, useRef, useMemo } from 'react';
 import { Currency, ExpenseCategory, FundingSource, Language, Transaction } from '@/types/finance';
 import { translations, formatCurrency } from '@/lib/i18n';
-import { formatNumberWithCommas, parseRawNumber } from '@/lib/currency';
+import { formatNumberWithCommas, parseRawNumber, convertCurrency, useExchangeRates } from '@/lib/currency';
 import { EXPENSE_CATEGORY_ICONS, FUNDING_SOURCE_ICONS, getCategoryBadgeStyle, getFundingSourceBadgeStyle } from '@/lib/constants';
 import { CustomDatePicker } from './CustomDatePicker';
 import { CustomSelect, CustomSelectOption } from './CustomSelect';
@@ -42,6 +42,7 @@ export function ReceiptScannerModal({
 }: ReceiptScannerModalProps) {
   useBodyScrollLock(isOpen);
   const t = translations[language];
+  const rates = useExchangeRates();
 
   const cameraInputRef = useRef<HTMLInputElement>(null);
   const galleryInputRef = useRef<HTMLInputElement>(null);
@@ -362,11 +363,36 @@ export function ReceiptScannerModal({
               </div>
             )}
 
-            {/* Amount & Currency */}
+            {/* Amount & Currency with Live Conversion */}
             <div className="space-y-1.5">
-              <label className="text-xs font-bold text-[var(--text-muted)] uppercase tracking-wider block">
-                {t.record.amountLabel} ({txCurrency})
-              </label>
+              <div className="flex items-center justify-between">
+                <label className="text-xs font-bold text-[var(--text-muted)] uppercase tracking-wider block">
+                  {t.record.amountLabel}
+                </label>
+                {/* Currency Switcher Buttons */}
+                <div className="flex items-center space-x-1">
+                  {(['IDR', 'JPY', 'USD', 'MMK'] as Currency[]).map((cur) => (
+                    <button
+                      key={cur}
+                      type="button"
+                      onClick={() => {
+                        if (cur !== txCurrency) {
+                          const currentVal = parseRawNumber(amountStr);
+                          if (currentVal > 0) {
+                            const converted = convertCurrency(currentVal, txCurrency, cur, rates);
+                            setAmountStr(formatNumberWithCommas(converted));
+                          }
+                          setTxCurrency(cur);
+                        }
+                      }}
+                      className={`px-2 py-0.5 rounded-lg text-[10px] font-mono font-bold transition-all cursor-pointer ${txCurrency === cur ? "bg-emerald-500 text-white shadow-xs" : "bg-[var(--bg-subtle)] text-[var(--text-muted)] hover:text-[var(--text-main)] border border-[var(--border-subtle)]"}`}
+                    >
+                      {cur}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
               <div className="relative">
                 <input
                   type="text"
@@ -380,10 +406,20 @@ export function ReceiptScannerModal({
                   placeholder="0"
                   className="w-full bg-[var(--bg-subtle)] border border-[var(--border-subtle)] focus:border-[var(--border-strong)] rounded-2xl pl-4 pr-16 py-2.5 text-base font-extrabold text-[var(--text-main)] tabular-numbers font-mono outline-none"
                 />
-                <span className="absolute right-3.5 top-1/2 -translate-y-1/2 text-xs font-mono font-bold text-[var(--text-muted)] pointer-events-none select-none">
+                <span className="absolute right-3.5 top-1/2 -translate-y-1/2 text-xs font-mono font-bold text-emerald-500 select-none">
                   {txCurrency}
                 </span>
               </div>
+
+              {/* Multi-Currency Auto-Conversion Hint */}
+              {txCurrency !== activeCurrency && (
+                <div className="flex items-center justify-between px-1 text-[11px] text-[var(--text-muted)] font-mono bg-emerald-500/10 border border-emerald-500/20 rounded-xl p-2">
+                  <span>{language === 'ja' ? '換算目安 (自動反映):' : 'Converted into your active currency:'}</span>
+                  <span className="text-emerald-500 font-bold">
+                    ≈ {formatCurrency(convertCurrency(parseRawNumber(amountStr), txCurrency, activeCurrency, rates), activeCurrency)}
+                  </span>
+                </div>
+              )}
             </div>
 
             {/* Category Selector */}
