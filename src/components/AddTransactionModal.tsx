@@ -192,10 +192,10 @@ export function AddTransactionModal({
               type="button"
               onClick={() => setIsReceiptScannerOpen(true)}
               className="px-2.5 py-1.5 rounded-xl text-emerald-500 hover:text-emerald-400 bg-emerald-500/10 hover:bg-emerald-500/20 border border-emerald-500/20 text-xs font-bold transition-all cursor-pointer flex items-center space-x-1.5"
-              title="AI Scan Receipt"
+              title={language === "ja" ? "レシート読取" : "Scan Receipt"}
             >
               <Camera className="w-3.5 h-3.5" />
-              <span className="hidden sm:inline">{language === "ja" ? "AI読取" : "AI Scan"}</span>
+              <span className="hidden sm:inline">{language === "ja" ? "レシート読取" : "Scan Receipt"}</span>
             </button>
             <button
               type="button"

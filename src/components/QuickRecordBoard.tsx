@@ -739,15 +739,6 @@ export function QuickRecordBoard({
               <span>{t.record.smartEntryTitle}</span>
             </label>
             <div className="flex items-center space-x-2">
-              <button
-                type="button"
-                onClick={() => setIsReceiptScannerOpen(true)}
-                className="px-2.5 py-1 rounded-xl bg-emerald-500/15 text-emerald-500 dark:text-emerald-400 border border-emerald-500/30 hover:bg-emerald-500/25 transition-all text-xs font-bold flex items-center space-x-1.5 cursor-pointer shadow-xs active:scale-[0.98]"
-                title="AI Receipt / Invoice Scanner"
-              >
-                <Camera className="w-3.5 h-3.5" />
-                <span>{language === 'ja' ? 'レシートAI読取' : 'AI Scan Receipt'}</span>
-              </button>
               <span className="text-[11px] text-[var(--text-faint)] font-mono hidden sm:inline">
                 {t.record.pressEnterToSave}
               </span>
@@ -761,14 +752,15 @@ export function QuickRecordBoard({
               placeholder={t.record.smartTextPlaceholder}
               className="flex-1 min-w-0 bg-[var(--bg-subtle)] border border-[var(--border-subtle)] focus:border-[var(--border-strong)] rounded-2xl px-3.5 sm:px-4 py-2.5 sm:py-3 text-xs sm:text-sm text-[var(--text-main)] placeholder-[var(--text-faint)] outline-none transition-all"
             />
-            {/* Quick Camera Action Button */}
+            {/* Scan Receipt Button */}
             <button
               type="button"
               onClick={() => setIsReceiptScannerOpen(true)}
-              className="p-2.5 sm:p-3 rounded-2xl border border-[var(--border-subtle)] bg-[var(--bg-subtle)] hover:bg-[var(--bg-subtle-hover)] text-emerald-500 hover:text-emerald-400 flex items-center justify-center shrink-0 cursor-pointer transition-all active:scale-[0.98]"
-              title={language === 'ja' ? 'レシートをカメラ/画像で解析' : 'Scan receipt with Camera/Upload'}
+              className="px-3 sm:px-3.5 py-2.5 sm:py-3 rounded-2xl border border-[var(--border-subtle)] bg-[var(--bg-subtle)] hover:bg-[var(--bg-subtle-hover)] hover:border-emerald-500/40 text-emerald-500 flex items-center justify-center space-x-1.5 shrink-0 cursor-pointer transition-all active:scale-[0.98] shadow-xs"
+              title={language === 'ja' ? 'レシート・請求書読取' : 'Scan Receipt / Bill'}
             >
               <Camera className="w-4 h-4" />
+              <span className="text-xs font-bold hidden sm:inline">{language === 'ja' ? 'レシート読取' : 'Scan Receipt'}</span>
             </button>
             {/* Executive Monochrome Button */}
             <button

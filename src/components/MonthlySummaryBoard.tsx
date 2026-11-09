@@ -6,6 +6,7 @@ import { formatCurrency, translations } from '@/lib/i18n';
 import { EXPENSE_CATEGORY_ICONS, getCategoryBadgeStyle } from '@/lib/constants';
 import { getMonthDateRange, isDateInMonthCycle, getTodayLocalDate } from '@/lib/dateUtils';
 import { AddTransactionModal } from '@/components/AddTransactionModal';
+import { ReceiptScannerModal } from '@/components/ReceiptScannerModal';
 import { useBodyScrollLock } from '@/lib/useBodyScrollLock';
 import { convertCurrency, DEFAULT_RATES, ExchangeRates, formatNumberWithCommas, parseRawNumber } from '@/lib/currency';
 import {
@@ -26,6 +27,7 @@ import {
   ChevronDown,
   AlertCircle,
   Plus,
+  Camera,
   SlidersHorizontal,
   History,
 } from 'lucide-react';
@@ -103,6 +105,7 @@ export function MonthlySummaryBoard({
   const [isBudgetModalOpen, setIsBudgetModalOpen] = useState(false);
   useBodyScrollLock(isBudgetModalOpen);
   const [isAddTxModalOpen, setIsAddTxModalOpen] = useState(false);
+  const [isReceiptScannerOpen, setIsReceiptScannerOpen] = useState(false);
   const [addTxInitialType, setAddTxInitialType] = useState<TransactionType>('expense');
   const [addTxInitialCategory, setAddTxInitialCategory] = useState<string | undefined>(undefined);
   const [addTxInitialAmount, setAddTxInitialAmount] = useState<number | undefined>(undefined);
@@ -657,6 +660,18 @@ export function MonthlySummaryBoard({
               >
                 <Plus className="w-3.5 h-3.5" />
                 <span>{t.record.addTransaction || (language === "ja" ? "取引を記録" : "Record Transaction")}</span>
+              </button>
+            )}
+
+            {onAddTransaction && (
+              <button
+                type="button"
+                onClick={() => setIsReceiptScannerOpen(true)}
+                className="flex items-center space-x-1.5 px-3.5 sm:px-4 py-2 rounded-2xl border border-[var(--border-subtle)] bg-[var(--bg-subtle)] hover:bg-[var(--bg-subtle-hover)] hover:border-emerald-500/40 text-emerald-500 text-xs font-bold transition-all shadow-xs cursor-pointer shrink-0 active:scale-95"
+                title={language === "ja" ? "レシート・領収書読取" : "Scan Receipt"}
+              >
+                <Camera className="w-3.5 h-3.5" />
+                <span>{language === "ja" ? "レシート読取" : "Scan Receipt"}</span>
               </button>
             )}
 
@@ -1324,6 +1339,17 @@ export function MonthlySummaryBoard({
               ? (language === 'ja' ? '前月繰越金を計上' : 'Record Previous Month Carryover')
               : (language === "ja" ? `取引を記録 (${selectedMonth})` : `Record Transaction (${selectedMonth})`)
           }
+        />
+      )}
+
+      {/* Receipt Scanner Modal */}
+      {onAddTransaction && (
+        <ReceiptScannerModal
+          isOpen={isReceiptScannerOpen}
+          onClose={() => setIsReceiptScannerOpen(false)}
+          language={language}
+          currency={currency}
+          onAddTransaction={onAddTransaction}
         />
       )}
     </div>

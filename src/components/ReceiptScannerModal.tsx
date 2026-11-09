@@ -176,9 +176,9 @@ export function ReceiptScannerModal({
             </div>
             <div>
               <h3 className="text-base font-extrabold text-[var(--text-main)] flex items-center space-x-1.5">
-                <span>{language === 'ja' ? 'レシート・請求書 AIスキャン' : 'AI Receipt & Invoice Scanner'}</span>
+                <span>{language === 'ja' ? 'レシート・請求書スキャナー' : 'Receipt & Invoice Scanner'}</span>
 <span className="text-[10px] font-mono px-1.5 py-0.5 rounded bg-emerald-500/15 text-emerald-500 border border-emerald-500/30">
-                  AI Vision
+                  Auto Scan
                 </span>
               </h3>
               <p className="text-[11px] text-[var(--text-muted)]">
@@ -243,7 +243,7 @@ export function ReceiptScannerModal({
             {/* Smart Capability Badges */}
             <div className="p-3.5 rounded-2xl border border-[var(--border-subtle)] bg-[var(--bg-subtle)] space-y-2">
               <span className="text-[10px] font-bold text-[var(--text-muted)] uppercase tracking-wider block">
-                {language === 'ja' ? 'AI自動認識できる情報' : 'Automatic AI Extraction'}
+                {language === 'ja' ? '自動認識される情報' : 'Auto-Extracted Details'}
               </span>
               <div className="grid grid-cols-2 gap-2 text-[11px] text-[var(--text-muted)]">
                 <div className="flex items-center space-x-1.5">

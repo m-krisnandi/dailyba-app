@@ -5,6 +5,7 @@ import { Currency, ExpenseCategory, Language, Transaction } from '@/types/financ
 import { formatCurrency, translations } from '@/lib/i18n';
 import { EditTransactionModal } from '@/components/EditTransactionModal';
 import { AddTransactionModal } from '@/components/AddTransactionModal';
+import { ReceiptScannerModal } from '@/components/ReceiptScannerModal';
 import { TransactionDetailModal } from '@/components/TransactionDetailModal';
 import { ConfirmDeleteModal } from './ConfirmDeleteModal';
 import { CustomDatePicker } from '@/components/CustomDatePicker';
@@ -14,6 +15,7 @@ import { EXPENSE_CATEGORY_ICONS, getCategoryBadgeStyle } from '@/lib/constants';
 import { getTodayLocalDate, formatLocalDate } from '@/lib/dateUtils';
 import {
   Plus,
+  Camera,
   CalendarDays,
   SlidersHorizontal,
   Check,
@@ -68,6 +70,7 @@ export function DailySpendBoard({
   const [deletingTx, setDeletingTx] = useState<Transaction | null>(null);
   const [selectedDetailTx, setSelectedDetailTx] = useState<Transaction | null>(null);
   const [isAddExpenseModalOpen, setIsAddExpenseModalOpen] = useState(false);
+  const [isReceiptScannerOpen, setIsReceiptScannerOpen] = useState(false);
   const [addExpenseDate, setAddExpenseDate] = useState<string>('');
   const t = translations[language];
 
@@ -291,8 +294,8 @@ export function DailySpendBoard({
             </p>
           </div>
 
-          {/* Action Buttons: Responsive 2-column on mobile, inline on desktop */}
-          <div className="grid grid-cols-2 gap-2 w-full sm:w-auto sm:flex sm:items-center sm:space-x-2 shrink-0 mt-1 sm:mt-0">
+          {/* Action Buttons: Responsive flex row */}
+          <div className="flex items-center gap-2 w-full sm:w-auto shrink-0 mt-1 sm:mt-0 flex-wrap">
             {onAddTransaction && (
               <button
                 type="button"
@@ -300,7 +303,7 @@ export function DailySpendBoard({
                   setAddExpenseDate(todayStr);
                   setIsAddExpenseModalOpen(true);
                 }}
-                className="flex items-center justify-center space-x-1.5 px-3 sm:px-4 py-2.5 rounded-2xl bg-[var(--btn-primary-bg)] text-[var(--btn-primary-text)] border border-[var(--btn-primary-border)] shadow-[var(--btn-primary-shadow)] hover:opacity-90 active:scale-95 text-xs sm:text-sm font-bold transition-all cursor-pointer min-w-0"
+                className="flex-1 sm:flex-initial flex items-center justify-center space-x-1.5 px-3 sm:px-4 py-2.5 rounded-2xl bg-[var(--btn-primary-bg)] text-[var(--btn-primary-text)] border border-[var(--btn-primary-border)] shadow-[var(--btn-primary-shadow)] hover:opacity-90 active:scale-95 text-xs sm:text-sm font-bold transition-all cursor-pointer min-w-0"
                 title={language === "ja" ? "今日の支出を記録" : "Record Today's Spend"}
               >
                 <Plus className="w-4 h-4 shrink-0" />
@@ -308,6 +311,18 @@ export function DailySpendBoard({
                   <span className="sm:hidden">{t.dailySpend.addSpend}</span>
                   <span className="hidden sm:inline">{t.record.recordTodayExpense || "Record Today's Spend"}</span>
                 </span>
+              </button>
+            )}
+
+            {onAddTransaction && (
+              <button
+                type="button"
+                onClick={() => setIsReceiptScannerOpen(true)}
+                className="flex items-center justify-center space-x-1.5 px-3 sm:px-4 py-2.5 rounded-2xl border border-[var(--border-subtle)] bg-[var(--bg-subtle)] hover:bg-[var(--bg-subtle-hover)] hover:border-emerald-500/40 text-emerald-500 text-xs sm:text-sm font-bold transition-all shadow-xs cursor-pointer active:scale-95"
+                title={language === "ja" ? "レシート・領収書読取" : "Scan Receipt"}
+              >
+                <Camera className="w-4 h-4 shrink-0" />
+                <span className="truncate">{language === "ja" ? "レシート読取" : "Scan Receipt"}</span>
               </button>
             )}
 
@@ -933,6 +948,17 @@ export function DailySpendBoard({
         }}
         onClose={() => setDeletingTx(null)}
       />
+
+      {/* Receipt Scanner Modal */}
+      {onAddTransaction && (
+        <ReceiptScannerModal
+          isOpen={isReceiptScannerOpen}
+          onClose={() => setIsReceiptScannerOpen(false)}
+          language={language}
+          currency={currency}
+          onAddTransaction={onAddTransaction}
+        />
+      )}
     </div>
   );
 }

@@ -382,7 +382,7 @@ export function AuthModal({ isOpen, onClose, onSuccess, language = 'en' }: AuthM
                 <div className="flex items-center justify-between">
                   <span className="text-xs font-bold text-[var(--text-main)] flex items-center space-x-1.5">
                     <Sparkles className="w-3.5 h-3.5 text-emerald-400" />
-                    <span>{isJa ? 'AI レシート解析エンジン設定' : 'AI Vision Scanner Engine'}</span>
+                    <span>{isJa ? 'レシート自動解析エンジン設定' : 'Receipt Scanner Engine'}</span>
                   </span>
                   <button
                     type="button"
