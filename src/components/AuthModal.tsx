@@ -6,7 +6,6 @@ import { useBodyScrollLock } from '@/lib/useBodyScrollLock';
 import { Language } from '@/types/finance';
 import { ConfirmDeleteModal } from './ConfirmDeleteModal';
 import { LegalModal } from './LegalModal';
-import { getAIEngineApiKey, setAIEngineApiKey, getDefaultAIEngineKey } from '@/lib/aiReceiptScanner';
 import {
   Mail,
   Lock,
@@ -54,8 +53,7 @@ export function AuthModal({ isOpen, onClose, onSuccess, language = 'en' }: AuthM
     resetPassword,
     logout,
     deleteAccount,
-    serverUrl,
-    setServerUrl,
+
   } = useAuth();
 
   const [tab, setTab] = useState<AuthTab>('login');
@@ -78,13 +76,7 @@ export function AuthModal({ isOpen, onClose, onSuccess, language = 'en' }: AuthM
   const [resetCode, setResetCode] = useState('');
   const [newPassword, setNewPassword] = useState('');
 
-  // Server URL editor state
-  const [isEditingServer, setIsEditingServer] = useState(false);
-  const [serverUrlInput, setServerUrlInput] = useState(serverUrl);
 
-  // AI Vision API key state
-  const [aiKeyInput, setAiKeyInput] = useState(getAIEngineApiKey());
-  const [isEditingAiKey, setIsEditingAiKey] = useState(false);
 
   // Modals
   const [isConfirmDeleteOpen, setIsConfirmDeleteOpen] = useState(false);
@@ -237,10 +229,7 @@ export function AuthModal({ isOpen, onClose, onSuccess, language = 'en' }: AuthM
     }
   };
 
-  const handleSaveAiKey = () => {
-    setAIEngineApiKey(aiKeyInput.trim() || getDefaultAIEngineKey());
-    setIsEditingAiKey(false);
-  };
+
 
   return (
     <>
@@ -340,94 +329,6 @@ export function AuthModal({ isOpen, onClose, onSuccess, language = 'en' }: AuthM
                   </div>
                 </div>
               </div>
-
-              {/* Server URL Config */}
-              <div className="p-3.5 rounded-2xl border border-[var(--border-subtle)] bg-[var(--bg-subtle)] space-y-2">
-                <div className="flex items-center justify-between">
-                  <span className="text-xs font-bold text-[var(--text-main)] flex items-center space-x-1.5">
-                    <Server className="w-3.5 h-3.5 text-blue-400" />
-                    <span>{isJa ? '同期サーバー URL' : 'Cloud Server URL'}</span>
-                  </span>
-                  <button
-                    type="button"
-                    onClick={() => {
-                      if (isEditingServer) {
-                        setServerUrl(serverUrlInput.trim());
-                        setIsEditingServer(false);
-                      } else {
-                        setIsEditingServer(true);
-                      }
-                    }}
-                    className="text-[11px] font-bold text-blue-400 hover:underline cursor-pointer"
-                  >
-                    {isEditingServer ? (isJa ? '保存' : 'Save') : (isJa ? '変更' : 'Edit')}
-                  </button>
-                </div>
-                {isEditingServer ? (
-                  <input
-                    type="text"
-                    value={serverUrlInput}
-                    onChange={(e) => setServerUrlInput(e.target.value)}
-                    className="w-full bg-[var(--bg-surface-solid)] border border-[var(--border-subtle)] rounded-xl px-3 py-2 text-xs font-mono text-[var(--text-main)] outline-none"
-                  />
-                ) : (
-                  <p className="text-[11px] font-mono text-[var(--text-muted)] truncate">
-                    {serverUrl}
-                  </p>
-                )}
-              </div>
-
-              {/* AI Vision OCR Settings */}
-              <div className="p-3.5 rounded-2xl border border-[var(--border-subtle)] bg-[var(--bg-subtle)] space-y-2">
-                <div className="flex items-center justify-between">
-                  <span className="text-xs font-bold text-[var(--text-main)] flex items-center space-x-1.5">
-                    <Sparkles className="w-3.5 h-3.5 text-emerald-400" />
-                    <span>{isJa ? 'レシート自動解析エンジン設定' : 'Receipt Scanner Engine'}</span>
-                  </span>
-                  <button
-                    type="button"
-                    onClick={() => {
-                      if (isEditingAiKey) {
-                        handleSaveAiKey();
-                      } else {
-                        setIsEditingAiKey(true);
-                      }
-                    }}
-                    className="text-[11px] font-bold text-emerald-400 hover:underline cursor-pointer"
-                  >
-                    {isEditingAiKey ? (isJa ? '保存' : 'Save') : (isJa ? 'カスタムKey' : 'Customize')}
-                  </button>
-                </div>
-                {isEditingAiKey ? (
-                  <div className="space-y-1.5">
-                    <input
-                      type="text"
-                      value={aiKeyInput}
-                      onChange={(e) => setAiKeyInput(e.target.value)}
-                      placeholder="Enter AI Engine API Key..."
-                      className="w-full bg-[var(--bg-surface-solid)] border border-[var(--border-subtle)] rounded-xl px-3 py-2 text-xs font-mono text-[var(--text-main)] outline-none"
-                    />
-                    <div className="flex justify-between items-center text-[10px]">
-                      <button
-                        type="button"
-                        onClick={() => {
-                          setAiKeyInput(getDefaultAIEngineKey());
-                          setAIEngineApiKey(getDefaultAIEngineKey());
-                          setIsEditingAiKey(false);
-                        }}
-                        className="text-[var(--text-muted)] hover:underline cursor-pointer"
-                      >
-                        {isJa ? '標準設定に戻す' : 'Reset to Default Engine'}
-                      </button>
-                    </div>
-                  </div>
-                ) : (
-                  <p className="text-[11px] font-mono text-[var(--text-muted)]">
-                    Engine Status: Active (Proprietary AI Vision)
-                  </p>
-                )}
-              </div>
-
               {/* Log Out Button */}
               <button
                 type="button"
