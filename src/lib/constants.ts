@@ -59,6 +59,23 @@ export interface CategoryStyle {
   border: string;
 }
 
+export function getInvestmentAssetBadgeStyle(category: InvestmentAsset["category"] | string): CategoryStyle {
+  switch (category) {
+    case "gold":
+      return { bg: "bg-amber-500/15", text: "text-amber-500 dark:text-amber-400", border: "border-amber-500/30" };
+    case "crypto":
+      return { bg: "bg-violet-500/15", text: "text-violet-500 dark:text-violet-400", border: "border-violet-500/30" };
+    case "stock":
+      return { bg: "bg-blue-500/15", text: "text-blue-500 dark:text-blue-400", border: "border-blue-500/30" };
+    case "mutual_fund":
+      return { bg: "bg-cyan-500/15", text: "text-cyan-500 dark:text-cyan-400", border: "border-cyan-500/30" };
+    case "deposit":
+      return { bg: "bg-emerald-500/15", text: "text-emerald-500 dark:text-emerald-400", border: "border-emerald-500/30" };
+    default:
+      return { bg: "bg-zinc-500/15", text: "text-zinc-400 dark:text-zinc-400", border: "border-zinc-500/30" };
+  }
+}
+
 export function getFundingSourceBadgeStyle(source: FundingSource | string): CategoryStyle {
   switch (source) {
     case "cash":

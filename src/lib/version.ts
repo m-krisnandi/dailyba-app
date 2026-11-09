@@ -1,6 +1,6 @@
 import { Language } from '@/types/finance';
 
-export const APP_VERSION = '1.4.5';
+export const APP_VERSION = '1.4.6';
 export const APP_BUILD = '20261109';
 
 export interface LocalizedChangelogItem {
@@ -11,6 +11,24 @@ export interface LocalizedChangelogItem {
 }
 
 export const APP_CHANGELOG: LocalizedChangelogItem[] = [
+  {
+    version: '1.4.6',
+    date: '2026-11-09',
+    title: {
+      en: 'Vibrant Color Badges for Asset Classes & Portfolio Holdings in Investment Board',
+      ja: '投資資産クラスおよび保有資産カードのカラーバッジ完全対応',
+    },
+    highlights: {
+      en: [
+        'Asset Class Dropdown Badges: eliminated grey icons in Add/Edit Asset modal dropdown (Mutual Funds: Cyan, Stocks: Blue, Crypto: Violet, Gold: Warm Amber, Deposits: Emerald).',
+        'Holdings Cards Branding: individual investment asset cards and category pills now display their vibrant themed glass badge instead of generic green/grey.',
+      ],
+      ja: [
+        '資産クラス選択のカラー化：投資資産の追加・編集モーダルの「資産クラス」ドロップダウンに残っていたグレーアイコンを完全刷新（投資信託: シアン、個別株: ブルー、暗号資産: バイオレット、金: アンバー、定期預金: エメラルド）。',
+        '保有資産カードのビジュアル刷新：各保有資産カードおよびカテゴリーバッジに固有のテーマカラーを適用し、ポートフォリオの視認性を向上。',
+      ],
+    },
+  },
   {
     version: '1.4.5',
     date: '2026-11-09',

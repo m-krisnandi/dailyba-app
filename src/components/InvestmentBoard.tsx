@@ -7,6 +7,7 @@ import { convertCurrency, DEFAULT_RATES, ExchangeRates, formatNumberWithCommas, 
 import { useBodyScrollLock } from '@/lib/useBodyScrollLock';
 import { CustomSelect, CustomSelectOption } from './CustomSelect';
 import { ConfirmDeleteModal } from './ConfirmDeleteModal';
+import { getInvestmentAssetBadgeStyle } from '@/lib/constants';
 import {
   TrendingUp,
   TrendingDown,
@@ -55,13 +56,18 @@ export function InvestmentBoard({
   const [isCustomValuation, setIsCustomValuation] = useState(false);
 
   // Total Portfolio Cost Basis converted to active currency
-  const assetCategoryOptions = useMemo<CustomSelectOption<InvestmentAsset['category']>[]>(() => [
-    { value: 'mutual_fund', label: t.investmentCategories.mutual_fund, icon: TrendingUp },
-    { value: 'stock', label: t.investmentCategories.stock, icon: Building },
-    { value: 'crypto', label: t.investmentCategories.crypto, icon: Sparkles },
-    { value: 'gold', label: t.investmentCategories.gold, icon: Coins },
-    { value: 'deposit', label: t.investmentCategories.deposit, icon: ShieldCheck },
-  ], [t]);
+  const assetCategoryOptions = useMemo<CustomSelectOption<InvestmentAsset['category']>[]>(() => {
+    return (['mutual_fund', 'stock', 'crypto', 'gold', 'deposit'] as InvestmentAsset['category'][]).map((cat) => {
+      const s = getInvestmentAssetBadgeStyle(cat);
+      const icon = getCategoryIcon(cat);
+      return {
+        value: cat,
+        label: t.investmentCategories[cat],
+        icon,
+        badgeClass: `${s.border} ${s.bg} ${s.text}`,
+      };
+    });
+  }, [t]);
   const totalCostBasis = useMemo(() => {
     return investments.reduce((sum, inv) => {
       return sum + convertCurrency(inv.costBasis, inv.currency, currency, rates);
@@ -291,6 +297,7 @@ export function InvestmentBoard({
           <div className="space-y-2.5">
             {investments.map((inv) => {
               const Icon = getCategoryIcon(inv.category);
+              const assetStyle = getInvestmentAssetBadgeStyle(inv.category);
               const costInCur = convertCurrency(inv.costBasis, inv.currency, currency, rates);
               const valInCur = convertCurrency(inv.currentValue, inv.currency, currency, rates);
               const gain = valInCur - costInCur;
@@ -305,15 +312,15 @@ export function InvestmentBoard({
                   {/* Top Bar: Icon + Name & Category Pill + Action Buttons */}
                   <div className="flex items-start justify-between gap-3">
                     <div className="flex items-center space-x-3 min-w-0 flex-1">
-                      <div className="w-10 h-10 rounded-xl bg-[var(--bg-subtle)] border border-[var(--border-subtle)] flex items-center justify-center text-[var(--text-main)] shadow-xs shrink-0">
-                        <Icon className="w-5 h-5 text-emerald-500" />
+                      <div className={`w-10 h-10 rounded-xl border flex items-center justify-center shadow-xs shrink-0 ${assetStyle.border} ${assetStyle.bg} ${assetStyle.text}`}>
+                        <Icon className="w-5 h-5" />
                       </div>
                       <div className="min-w-0 flex-1">
                         <h4 className="text-sm font-bold text-[var(--text-main)] truncate">
                           {inv.name}
                         </h4>
                         <div className="flex items-center space-x-2 mt-0.5">
-                          <span className="inline-block px-2 py-0.5 rounded-md bg-[var(--bg-subtle)] text-[10px] font-semibold text-[var(--text-muted)] border border-[var(--border-subtle)]">
+                          <span className={`inline-block px-2 py-0.5 rounded-md text-[10px] font-semibold border ${assetStyle.border} ${assetStyle.bg} ${assetStyle.text}`}>
                             {t.investmentCategories[inv.category]}
                           </span>
                         </div>
