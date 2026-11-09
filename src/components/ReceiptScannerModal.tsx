@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useRef, useMemo } from 'react';
+import React, { useState, useRef, useMemo, useEffect } from 'react';
 import { Currency, ExpenseCategory, FundingSource, Language, Transaction } from '@/types/finance';
 import { translations, formatCurrency } from '@/lib/i18n';
 import { formatNumberWithCommas, parseRawNumber, convertCurrency, useExchangeRates } from '@/lib/currency';
@@ -47,7 +47,10 @@ export function ReceiptScannerModal({
   const cameraInputRef = useRef<HTMLInputElement>(null);
   const galleryInputRef = useRef<HTMLInputElement>(null);
 
-  const [step, setStep] = useState<'idle' | 'scanning' | 'review' | 'error'>('idle');
+  const [step, setStep] = useState<'idle' | 'camera' | 'scanning' | 'review' | 'error'>('idle');
+  const videoRef = useRef<HTMLVideoElement>(null);
+  const streamRef = useRef<MediaStream | null>(null);
+  const [cameraError, setCameraError] = useState<string | null>(null);
   const [imagePreview, setImagePreview] = useState<string | null>(null);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
@@ -75,7 +78,92 @@ export function ReceiptScannerModal({
     });
   }, [expenseCategories, t]);
 
+  const stopCameraStream = () => {
+    if (streamRef.current) {
+      streamRef.current.getTracks().forEach((track) => track.stop());
+      streamRef.current = null;
+    }
+  };
+
+  const handleStartCamera = async () => {
+    setCameraError(null);
+    try {
+      if (typeof navigator !== 'undefined' && navigator.mediaDevices?.getUserMedia) {
+        const stream = await navigator.mediaDevices.getUserMedia({
+          video: {
+            facingMode: { ideal: 'environment' },
+            width: { ideal: 1920 },
+            height: { ideal: 1080 },
+          },
+          audio: false,
+        });
+        streamRef.current = stream;
+        setStep('camera');
+        return;
+      }
+    } catch (err: any) {
+      console.warn('getUserMedia failed or rejected, falling back to file input:', err);
+      stopCameraStream();
+      if (err?.name === 'NotAllowedError' || err?.name === 'PermissionDeniedError') {
+        setCameraError(
+          language === 'ja'
+            ? 'カメラへのアクセスが拒否されました。ブラウザの設定でカメラを許可してください。'
+            : 'Camera permission denied. Please allow camera access in your browser or choose Upload Image.'
+        );
+        return;
+      }
+    }
+    // Fallback for devices without webcam API support
+    cameraInputRef.current?.click();
+  };
+
+  const handleCapturePhoto = () => {
+    if (!videoRef.current) return;
+    const video = videoRef.current;
+    const canvas = document.createElement('canvas');
+    canvas.width = video.videoWidth || 1280;
+    canvas.height = video.videoHeight || 720;
+    const ctx = canvas.getContext('2d');
+    if (ctx) {
+      ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+      canvas.toBlob(
+        (blob) => {
+          if (blob) {
+            const file = new File([blob], "receipt_" + Date.now() + ".jpg", { type: "image/jpeg" });
+            stopCameraStream();
+            handleProcessImage(file);
+          }
+        },
+        'image/jpeg',
+        0.92
+      );
+    }
+  };
+
+  useEffect(() => {
+    if (step === 'camera' && streamRef.current && videoRef.current) {
+      videoRef.current.srcObject = streamRef.current;
+      videoRef.current.play().catch(console.error);
+    }
+  }, [step]);
+
+  useEffect(() => {
+    if (!isOpen) {
+      stopCameraStream();
+    }
+    return () => {
+      stopCameraStream();
+    };
+  }, [isOpen]);
+
+  const handleClose = () => {
+    stopCameraStream();
+    resetAll();
+    onClose();
+  };
+
   const resetAll = () => {
+    stopCameraStream();
     setStep('idle');
     setImagePreview(null);
     setErrorMessage(null);
@@ -145,7 +233,7 @@ export function ReceiptScannerModal({
 
   return (
     <div
-      onClick={onClose}
+      onClick={handleClose}
       className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-slate-950/80 backdrop-blur-md animate-fade-in cursor-pointer"
     >
       <div
@@ -191,7 +279,7 @@ export function ReceiptScannerModal({
           </div>
           <button
             type="button"
-            onClick={onClose}
+            onClick={handleClose}
             className="p-1.5 rounded-xl text-[var(--text-muted)] hover:text-[var(--text-main)] hover:bg-[var(--bg-subtle-hover)] transition-all cursor-pointer"
           >
             <X className="w-4 h-4" />
@@ -205,7 +293,7 @@ export function ReceiptScannerModal({
               {/* Take Photo Card */}
               <button
                 type="button"
-                onClick={() => cameraInputRef.current?.click()}
+                onClick={handleStartCamera}
                 className="group flex flex-col items-center justify-center p-6 rounded-2xl border border-[var(--border-subtle)] bg-[var(--bg-subtle)] hover:bg-[var(--bg-subtle-hover)] hover:border-emerald-500/40 transition-all duration-200 cursor-pointer space-y-3 text-center"
               >
                 <div className="w-14 h-14 rounded-2xl bg-emerald-500/15 border border-emerald-500/30 flex items-center justify-center text-emerald-500 group-hover:scale-105 transition-transform shadow-xs">
@@ -264,6 +352,71 @@ export function ReceiptScannerModal({
                   <span>{language === 'ja' ? '支出カテゴリーの自動分類' : 'Expense Category Matching'}</span>
                 </div>
               </div>
+            </div>
+          </div>
+        )}
+
+        {/* 1.5 LIVE WEBCAM / CAMERA VIEWFINDER */}
+        {step === 'camera' && (
+          <div className="space-y-4 py-2">
+            <div className="relative w-full aspect-[4/3] rounded-2xl overflow-hidden bg-black border-2 border-emerald-500/50 shadow-xl flex items-center justify-center">
+              <video
+                ref={videoRef}
+                autoPlay
+                playsInline
+                muted
+                className="w-full h-full object-cover"
+              />
+
+              {/* Viewfinder Receipt Overlay */}
+              <div className="absolute inset-4 sm:inset-8 border-2 border-dashed border-emerald-400/70 rounded-2xl pointer-events-none flex flex-col justify-between p-3">
+                <div className="flex justify-between items-center text-[10px] text-emerald-400 font-mono bg-black/60 px-2.5 py-1 rounded-full backdrop-blur-sm self-center shadow-xs">
+                  <span>{language === 'ja' ? '枠内にレシートを収めてください' : 'Align receipt inside frame'}</span>
+                </div>
+                {/* Center laser pulse */}
+                <div className="w-full h-0.5 bg-gradient-to-r from-transparent via-emerald-400 to-transparent shadow-[0_0_12px_#10b981] animate-pulse" />
+                <div className="text-[10px] text-emerald-400 font-mono self-center bg-black/60 px-2 py-0.5 rounded backdrop-blur-sm">
+                  <span>Dailyba Scanner</span>
+                </div>
+              </div>
+            </div>
+
+            {/* Camera Controls */}
+            <div className="flex items-center justify-between pt-1">
+              <button
+                type="button"
+                onClick={() => {
+                  stopCameraStream();
+                  setStep('idle');
+                }}
+                className="px-4 py-2.5 rounded-xl border border-[var(--border-subtle)] bg-[var(--bg-subtle)] hover:bg-[var(--bg-subtle-hover)] text-xs font-bold text-[var(--text-muted)] hover:text-[var(--text-main)] transition-all cursor-pointer"
+              >
+                {language === 'ja' ? 'キャンセル' : 'Cancel'}
+              </button>
+
+              {/* Big Shutter Button */}
+              <button
+                type="button"
+                onClick={handleCapturePhoto}
+                className="px-6 py-3 rounded-2xl bg-emerald-500 hover:bg-emerald-400 text-white font-extrabold text-xs sm:text-sm shadow-lg shadow-emerald-500/30 active:scale-95 transition-all flex items-center space-x-2 cursor-pointer"
+              >
+                <div className="w-3 h-3 rounded-full bg-white animate-ping mr-0.5" />
+                <Camera className="w-4 h-4" />
+                <span>{language === 'ja' ? '撮影する' : 'Capture Receipt'}</span>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => {
+                  stopCameraStream();
+                  galleryInputRef.current?.click();
+                }}
+                className="px-3.5 py-2.5 rounded-xl border border-[var(--border-subtle)] bg-[var(--bg-subtle)] hover:bg-[var(--bg-subtle-hover)] text-xs font-bold text-[var(--text-muted)] hover:text-[var(--text-main)] transition-all cursor-pointer flex items-center space-x-1"
+                title="Upload from disk instead"
+              >
+                <Upload className="w-3.5 h-3.5" />
+                <span className="hidden sm:inline">{language === 'ja' ? '画像選択' : 'Upload'}</span>
+              </button>
             </div>
           </div>
         )}
@@ -505,7 +658,7 @@ export function ReceiptScannerModal({
               <div className="flex items-center space-x-2">
                 <button
                   type="button"
-                  onClick={onClose}
+                  onClick={handleClose}
                   className="px-4 py-2.5 rounded-2xl border border-[var(--border-subtle)] bg-[var(--bg-subtle)] hover:bg-[var(--bg-subtle-hover)] text-xs font-bold text-[var(--text-muted)] hover:text-[var(--text-main)] transition-all cursor-pointer"
                 >
                   {t.actions.cancel}
