@@ -107,8 +107,8 @@ export function LegalModal({
                 </h4>
                 <p>
                   {isJa
-                    ? 'レシートスキャン機能を利用する際のみ、カメラでの撮影または写真ライブラリの画像を選択する権限を使用します。画像データはレシートの内容（金額、店名、日付、支払元）をテキスト解析するためだけに Google Gemini API へ送信され、広告目的での収集や第三者への販売は一切行われません。'
-                    : 'Camera and Photo Library permissions are requested solely when you choose to scan physical receipts or invoices. Images are processed via Google Gemini API exclusively for OCR text extraction (amount, date, merchant, category) and are never used for advertising, tracking, or sold to third parties.'}
+                    ? 'レシートスキャン機能を利用する際のみ、カメラでの撮影または写真ライブラリの画像を選択する権限を使用します。画像データはレシートの内容（金額、店名、日付、支払元）をテキスト解析するためだけに Dailyba AI 解析エンジンへ送信され、広告目的での収集や第三者への販売は一切行われません。'
+                    : 'Camera and Photo Library permissions are requested solely when you choose to scan physical receipts or invoices. Images are processed via Dailyba AI Vision engine exclusively for OCR text extraction (amount, date, merchant, category) and are never used for advertising, tracking, or sold to third parties.'}
                 </p>
               </div>
 

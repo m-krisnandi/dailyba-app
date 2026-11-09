@@ -7,7 +7,7 @@ import { formatNumberWithCommas, parseRawNumber } from '@/lib/currency';
 import { EXPENSE_CATEGORY_ICONS, FUNDING_SOURCE_ICONS, getCategoryBadgeStyle, getFundingSourceBadgeStyle } from '@/lib/constants';
 import { CustomDatePicker } from './CustomDatePicker';
 import { CustomSelect, CustomSelectOption } from './CustomSelect';
-import { prepareImageForAI, parseReceiptWithGemini, ParsedReceiptResult } from '@/lib/geminiScanner';
+import { prepareImageForAI, parseReceiptWithAI, ParsedReceiptResult } from '@/lib/aiReceiptScanner';
 import { useBodyScrollLock } from '@/lib/useBodyScrollLock';
 import {
   Camera,
@@ -88,12 +88,12 @@ export function ReceiptScannerModal({
       setStep('scanning');
       setErrorMessage(null);
 
-      // 1. Resize & prepare image client-side for rapid Gemini analysis
+      // 1. Resize & prepare image client-side for rapid AI analysis
       const { base64, mimeType, previewUrl } = await prepareImageForAI(file);
       setImagePreview(previewUrl);
 
-      // 2. Call Gemini Vision API
-      const result: ParsedReceiptResult = await parseReceiptWithGemini(base64, mimeType, activeCurrency);
+      // 2. Call AI Vision API
+      const result: ParsedReceiptResult = await parseReceiptWithAI(base64, mimeType, activeCurrency);
 
       // 3. Pre-fill review form
       setAmountStr(formatNumberWithCommas(result.amount));
@@ -107,7 +107,7 @@ export function ReceiptScannerModal({
       setStep('review');
     } catch (err: any) {
       console.error('Receipt parse error:', err);
-      setErrorMessage(err?.message || (language === 'ja' ? 'レシートの解析に失敗しました。もう一度お試しください。' : 'Failed to scan receipt with Gemini AI. Please try another angle or image.'));
+      setErrorMessage(err?.message || (language === 'ja' ? 'レシートの解析に失敗しました。もう一度お試しください。' : 'Failed to scan receipt. Please ensure the total amount is clearly visible.'));
       setStep('error');
     }
   };
@@ -177,8 +177,8 @@ export function ReceiptScannerModal({
             <div>
               <h3 className="text-base font-extrabold text-[var(--text-main)] flex items-center space-x-1.5">
                 <span>{language === 'ja' ? 'レシート・請求書 AIスキャン' : 'AI Receipt & Invoice Scanner'}</span>
-                <span className="text-[10px] font-mono px-1.5 py-0.5 rounded bg-emerald-500/15 text-emerald-500 border border-emerald-500/30">
-                  Gemini
+<span className="text-[10px] font-mono px-1.5 py-0.5 rounded bg-emerald-500/15 text-emerald-500 border border-emerald-500/30">
+                  AI Vision
                 </span>
               </h3>
               <p className="text-[11px] text-[var(--text-muted)]">
@@ -286,10 +286,10 @@ export function ReceiptScannerModal({
             <div className="space-y-1.5">
               <h4 className="text-sm font-bold text-[var(--text-main)] flex items-center justify-center space-x-2">
                 <Sparkles className="w-4 h-4 text-emerald-500 animate-spin" />
-                <span>
+<span>
                   {language === 'ja'
-                    ? 'Gemini AI がレシートを解析中...'
-                    : 'Gemini AI is parsing receipt...'}
+                    ? 'スマートAIがレシートを解析中...'
+                    : 'Smart AI is analyzing your receipt...'}
                 </span>
               </h4>
               <p className="text-xs text-[var(--text-muted)]">

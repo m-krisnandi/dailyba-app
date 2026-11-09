@@ -6,7 +6,7 @@ import { useBodyScrollLock } from '@/lib/useBodyScrollLock';
 import { Language } from '@/types/finance';
 import { ConfirmDeleteModal } from './ConfirmDeleteModal';
 import { LegalModal } from './LegalModal';
-import { getGeminiApiKey, setGeminiApiKey, getDefaultGeminiKey } from '@/lib/geminiScanner';
+import { getAIEngineApiKey, setAIEngineApiKey, getDefaultAIEngineKey } from '@/lib/aiReceiptScanner';
 import {
   Mail,
   Lock,
@@ -82,9 +82,9 @@ export function AuthModal({ isOpen, onClose, onSuccess, language = 'en' }: AuthM
   const [isEditingServer, setIsEditingServer] = useState(false);
   const [serverUrlInput, setServerUrlInput] = useState(serverUrl);
 
-  // Gemini API key state
-  const [geminiKeyInput, setGeminiKeyInput] = useState(getGeminiApiKey());
-  const [isEditingGeminiKey, setIsEditingGeminiKey] = useState(false);
+  // AI Vision API key state
+  const [aiKeyInput, setAiKeyInput] = useState(getAIEngineApiKey());
+  const [isEditingAiKey, setIsEditingAiKey] = useState(false);
 
   // Modals
   const [isConfirmDeleteOpen, setIsConfirmDeleteOpen] = useState(false);
@@ -237,9 +237,9 @@ export function AuthModal({ isOpen, onClose, onSuccess, language = 'en' }: AuthM
     }
   };
 
-  const handleSaveGeminiKey = () => {
-    setGeminiApiKey(geminiKeyInput.trim() || getDefaultGeminiKey());
-    setIsEditingGeminiKey(false);
+  const handleSaveAiKey = () => {
+    setAIEngineApiKey(aiKeyInput.trim() || getDefaultAIEngineKey());
+    setIsEditingAiKey(false);
   };
 
   return (
@@ -300,7 +300,7 @@ export function AuthModal({ isOpen, onClose, onSuccess, language = 'en' }: AuthM
           )}
 
           {/* =============================================================== */}
-          {/* LOGGED IN VIEW: Profile, Server, Gemini AI & Delete Account      */}
+          {/* LOGGED IN VIEW: Profile, Server, AI Engine & Delete Account      */}
           {/* =============================================================== */}
           {isAuthenticated && user ? (
             <div className="space-y-4 relative z-10">
@@ -377,53 +377,53 @@ export function AuthModal({ isOpen, onClose, onSuccess, language = 'en' }: AuthM
                 )}
               </div>
 
-              {/* Gemini AI OCR Settings */}
+              {/* AI Vision OCR Settings */}
               <div className="p-3.5 rounded-2xl border border-[var(--border-subtle)] bg-[var(--bg-subtle)] space-y-2">
                 <div className="flex items-center justify-between">
                   <span className="text-xs font-bold text-[var(--text-main)] flex items-center space-x-1.5">
                     <Sparkles className="w-3.5 h-3.5 text-emerald-400" />
-                    <span>{isJa ? 'レシートAI (Gemini) 設定' : 'AI Receipt Scanner (Gemini)'}</span>
+                    <span>{isJa ? 'AI レシート解析エンジン設定' : 'AI Vision Scanner Engine'}</span>
                   </span>
                   <button
                     type="button"
                     onClick={() => {
-                      if (isEditingGeminiKey) {
-                        handleSaveGeminiKey();
+                      if (isEditingAiKey) {
+                        handleSaveAiKey();
                       } else {
-                        setIsEditingGeminiKey(true);
+                        setIsEditingAiKey(true);
                       }
                     }}
                     className="text-[11px] font-bold text-emerald-400 hover:underline cursor-pointer"
                   >
-                    {isEditingGeminiKey ? (isJa ? '保存' : 'Save') : (isJa ? 'カスタムKey' : 'Customize')}
+                    {isEditingAiKey ? (isJa ? '保存' : 'Save') : (isJa ? 'カスタムKey' : 'Customize')}
                   </button>
                 </div>
-                {isEditingGeminiKey ? (
+                {isEditingAiKey ? (
                   <div className="space-y-1.5">
                     <input
                       type="text"
-                      value={geminiKeyInput}
-                      onChange={(e) => setGeminiKeyInput(e.target.value)}
-                      placeholder="Enter Gemini API Key..."
+                      value={aiKeyInput}
+                      onChange={(e) => setAiKeyInput(e.target.value)}
+                      placeholder="Enter AI Engine API Key..."
                       className="w-full bg-[var(--bg-surface-solid)] border border-[var(--border-subtle)] rounded-xl px-3 py-2 text-xs font-mono text-[var(--text-main)] outline-none"
                     />
                     <div className="flex justify-between items-center text-[10px]">
                       <button
                         type="button"
                         onClick={() => {
-                          setGeminiKeyInput(getDefaultGeminiKey());
-                          setGeminiApiKey(getDefaultGeminiKey());
-                          setIsEditingGeminiKey(false);
+                          setAiKeyInput(getDefaultAIEngineKey());
+                          setAIEngineApiKey(getDefaultAIEngineKey());
+                          setIsEditingAiKey(false);
                         }}
                         className="text-[var(--text-muted)] hover:underline cursor-pointer"
                       >
-                        {isJa ? 'デフォルトKeyに戻す' : 'Reset to Default Key'}
+                        {isJa ? '標準設定に戻す' : 'Reset to Default Engine'}
                       </button>
                     </div>
                   </div>
                 ) : (
                   <p className="text-[11px] font-mono text-[var(--text-muted)]">
-                    API Key: {geminiKeyInput.slice(0, 10)}••••••••••••••••{geminiKeyInput.slice(-4)} (Active)
+                    Engine Status: Active (Proprietary AI Vision)
                   </p>
                 )}
               </div>
