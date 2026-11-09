@@ -121,8 +121,8 @@ export function ReceiptScannerModal({
     if (!videoRef.current) return;
     const video = videoRef.current;
     const canvas = document.createElement('canvas');
-    canvas.width = video.videoWidth || 1280;
-    canvas.height = video.videoHeight || 720;
+    canvas.width = video.videoWidth || 1920;
+    canvas.height = video.videoHeight || 1080;
     const ctx = canvas.getContext('2d');
     if (ctx) {
       ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
@@ -135,7 +135,7 @@ export function ReceiptScannerModal({
           }
         },
         'image/jpeg',
-        0.92
+        0.95
       );
     }
   };
@@ -266,8 +266,8 @@ export function ReceiptScannerModal({
             <div>
               <h3 className="text-base font-extrabold text-[var(--text-main)] flex items-center space-x-1.5">
                 <span>{language === 'ja' ? 'レシート・請求書スキャナー' : 'Receipt & Invoice Scanner'}</span>
-<span className="text-[10px] font-mono px-1.5 py-0.5 rounded bg-emerald-500/15 text-emerald-500 border border-emerald-500/30">
-                  {language === 'ja' ? '自動読取' : 'Auto Scan'}
+                <span className="text-[10px] font-mono px-1.5 py-0.5 rounded bg-emerald-500/15 text-emerald-500 border border-emerald-500/30">
+                  {language === 'ja' ? '自動解析' : 'Auto Scan'}
                 </span>
               </h3>
               <p className="text-[11px] text-[var(--text-muted)]">
@@ -289,6 +289,13 @@ export function ReceiptScannerModal({
         {/* 1. IDLE STATE: Choose Camera or Upload */}
         {step === 'idle' && (
           <div className="space-y-4 py-2">
+            {cameraError && (
+              <div className="p-3 rounded-2xl border border-rose-500/30 bg-rose-500/10 text-xs text-rose-500 flex items-start space-x-2">
+                <AlertCircle className="w-4 h-4 shrink-0 mt-0.5" />
+                <span>{cameraError}</span>
+              </div>
+            )}
+
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               {/* Take Photo Card */}
               <button
@@ -356,10 +363,10 @@ export function ReceiptScannerModal({
           </div>
         )}
 
-        {/* 1.5 LIVE WEBCAM / CAMERA VIEWFINDER */}
+        {/* 1.5 LIVE WEBCAM / CAMERA VIEWFINDER (PORTRAIT RECEIPT DESIGN) */}
         {step === 'camera' && (
-          <div className="space-y-4 py-2">
-            <div className="relative w-full aspect-[4/3] rounded-2xl overflow-hidden bg-black border-2 border-emerald-500/50 shadow-xl flex items-center justify-center">
+          <div className="space-y-3.5 py-1">
+            <div className="relative w-full h-[430px] sm:h-[480px] rounded-2xl overflow-hidden bg-black border border-emerald-500/40 shadow-2xl flex items-center justify-center">
               <video
                 ref={videoRef}
                 autoPlay
@@ -368,17 +375,37 @@ export function ReceiptScannerModal({
                 className="w-full h-full object-cover"
               />
 
-              {/* Viewfinder Receipt Overlay */}
-              <div className="absolute inset-4 sm:inset-8 border-2 border-dashed border-emerald-400/70 rounded-2xl pointer-events-none flex flex-col justify-between p-3">
-                <div className="flex justify-between items-center text-[10px] text-emerald-400 font-mono bg-black/60 px-2.5 py-1 rounded-full backdrop-blur-sm self-center shadow-xs">
+              {/* Viewfinder Receipt Overlay: Tall portrait format tailored for long & short receipts */}
+              <div className="w-[72%] sm:w-[65%] h-[88%] border-2 border-dashed border-emerald-400/80 rounded-2xl pointer-events-none flex flex-col justify-between p-3 relative shadow-[0_0_25px_rgba(16,185,129,0.2)]">
+                {/* Scanner corner brackets */}
+                <div className="absolute -top-1 -left-1 w-4 h-4 border-t-2 border-l-2 border-emerald-400 rounded-tl-sm" />
+                <div className="absolute -top-1 -right-1 w-4 h-4 border-t-2 border-r-2 border-emerald-400 rounded-tr-sm" />
+                <div className="absolute -bottom-1 -left-1 w-4 h-4 border-b-2 border-l-2 border-emerald-400 rounded-bl-sm" />
+                <div className="absolute -bottom-1 -right-1 w-4 h-4 border-b-2 border-r-2 border-emerald-400 rounded-br-sm" />
+
+                {/* Top Alignment Guide */}
+                <div className="text-[10px] text-emerald-300 font-mono bg-black/65 px-2.5 py-1 rounded-full backdrop-blur-sm self-center shadow-xs border border-emerald-500/20">
                   <span>{language === 'ja' ? '枠内にレシートを収めてください' : 'Align receipt inside frame'}</span>
                 </div>
-                {/* Center laser pulse */}
+
+                {/* Center Dynamic Scanning Laser */}
                 <div className="w-full h-0.5 bg-gradient-to-r from-transparent via-emerald-400 to-transparent shadow-[0_0_12px_#10b981] animate-pulse" />
-                <div className="text-[10px] text-emerald-400 font-mono self-center bg-black/60 px-2 py-0.5 rounded backdrop-blur-sm">
+
+                {/* Bottom Branding / Guide */}
+                <div className="text-[10px] text-emerald-300 font-mono self-center bg-black/65 px-2.5 py-0.5 rounded backdrop-blur-sm border border-emerald-500/20">
                   <span>{language === 'ja' ? 'Dailyba レシート読取' : 'Dailyba Scanner'}</span>
                 </div>
               </div>
+            </div>
+
+            {/* Smart Long-Receipt Guide Tip */}
+            <div className="flex items-start space-x-2.5 px-3.5 py-2.5 rounded-xl bg-emerald-500/10 border border-emerald-500/20 text-[11px] text-[var(--text-muted)] leading-relaxed">
+              <Sparkles className="w-4 h-4 text-emerald-500 shrink-0 mt-0.5" />
+              <span>
+                {language === 'ja'
+                  ? '💡 長いレシートは「店名（上部）」と「合計金額（下部）」が枠内に収まるように撮影してください。AIが自動認識します。'
+                  : '💡 For long receipts, make sure Store Name (top) and Grand Total (bottom) are visible inside the frame. AI will auto-detect the rest.'}
+              </span>
             </div>
 
             {/* Camera Controls */}
@@ -440,7 +467,7 @@ export function ReceiptScannerModal({
             <div className="space-y-1.5">
               <h4 className="text-sm font-bold text-[var(--text-main)] flex items-center justify-center space-x-2">
                 <Sparkles className="w-4 h-4 text-emerald-500 animate-spin" />
-<span>
+                <span>
                   {language === 'ja'
                     ? 'スマートAIがレシートを解析中...'
                     : 'Smart AI is analyzing your receipt...'}

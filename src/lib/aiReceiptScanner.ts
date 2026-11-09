@@ -52,7 +52,7 @@ export interface ParsedReceiptResult {
 }
 
 /**
- * Resizes and compresses image to max 1280px for optimal OCR recognition,
+ * Resizes and compresses image to max 1800px for optimal OCR recognition on long receipts,
  * minimal memory footprint, and high-speed analysis across all mobile devices.
  */
 export async function prepareImageForAI(
@@ -65,7 +65,7 @@ export async function prepareImageForAI(
       const img = new Image();
       img.onerror = () => reject(new Error('Failed to load image element'));
       img.onload = () => {
-        const MAX_DIM = 1280;
+        const MAX_DIM = 1800;
         let width = img.width;
         let height = img.height;
 
@@ -93,7 +93,7 @@ export async function prepareImageForAI(
         ctx.fillRect(0, 0, width, height);
         ctx.drawImage(img, 0, 0, width, height);
 
-        const dataUrl = canvas.toDataURL('image/jpeg', 0.85);
+        const dataUrl = canvas.toDataURL('image/jpeg', 0.88);
         const base64Data = dataUrl.split(',')[1];
         resolve({
           base64: base64Data,
@@ -123,6 +123,10 @@ export async function parseReceiptWithAI(
 
   const prompt = `You are a universal international receipt, invoice, and bill financial parser for Dailyba.
 Analyze the provided document or receipt image. It can be from ANY country (Japan, Indonesia, USA, Europe, Singapore, Malaysia, etc.) and in ANY format (thermal register slip, restaurant bill, utility invoice, supermarket itemized slip, ride-hailing receipt, e-commerce bill, handwritten or digital screenshot).
+
+Special handling for long or itemized receipts:
+- For long slips (such as supermarkets, drugstores, or restaurants): look for the Store/Merchant name at the very top, and find the final paid amount (Grand Total, 合計, 総合計, 請求額, Total Pembayaran, Total) near the bottom.
+- Disregard intermediate line items, subtotals, tax subtotals, change given (お釣り/kembalian), or loyalty points unless needed to identify the main items.
 
 Your task: Extract financial transaction details into strictly valid JSON with no markdown wrapping, no explanation, no backticks.
 
