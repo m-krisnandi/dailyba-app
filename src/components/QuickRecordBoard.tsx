@@ -65,6 +65,29 @@ interface QuickRecordBoardProps {
   onDeleteRecurringBill?: (id: string) => void;
 }
 
+const ALL_EXPENSE_CATEGORIES: ExpenseCategory[] = [
+  'food_drinks',
+  'shopping',
+  'train',
+  'ride',
+  'laundry',
+  'rent',
+  'family',
+  'gifts',
+  'vps',
+  'mobile',
+  'others',
+];
+
+const ALL_INCOME_CATEGORIES: IncomeCategory[] = [
+  'salary',
+  'freelance',
+  'bonus',
+  'dividend',
+  'carryover',
+  'others',
+];
+
 export function QuickRecordBoard({
   language,
   currency,
@@ -101,37 +124,14 @@ export function QuickRecordBoard({
     }
   };
 
-  const allExpenseCategories: ExpenseCategory[] = [
-    'food_drinks',
-    'shopping',
-    'train',
-    'ride',
-    'laundry',
-    'rent',
-    'family',
-    'gifts',
-    'vps',
-    'mobile',
-    'others',
-  ];
-
-  const allIncomeCategories: IncomeCategory[] = [
-    'salary',
-    'freelance',
-    'bonus',
-    'dividend',
-    'carryover',
-    'others',
-  ];
-
   // Active (visible) categories
   const visibleExpenseCategories = useMemo(() => {
-    return allExpenseCategories.filter((c) => !hiddenCategories.includes(c));
-  }, [allExpenseCategories, hiddenCategories]);
+    return ALL_EXPENSE_CATEGORIES.filter((c) => !hiddenCategories.includes(c));
+  }, [hiddenCategories]);
 
   const visibleIncomeCategories = useMemo(() => {
-    return allIncomeCategories.filter((c) => !hiddenCategories.includes(c));
-  }, [allIncomeCategories, hiddenCategories]);
+    return ALL_INCOME_CATEGORIES.filter((c) => !hiddenCategories.includes(c));
+  }, [hiddenCategories]);
 
   const filterSourceOptions = useMemo<CustomSelectOption<FundingSource | 'all'>[]>(
     () => [
@@ -393,9 +393,8 @@ export function QuickRecordBoard({
   };
 
   // Check recurring bills status for current month
-  const activeRecurringBills = Array.isArray(recurringBills) ? recurringBills : [];
-
   const recurringStatus = useMemo(() => {
+    const activeRecurringBills = Array.isArray(recurringBills) ? recurringBills : [];
     if (!currentMonthPrefix) return activeRecurringBills.map((b) => ({ ...b, isPaid: false, paidTxId: undefined, isAdvancePayment: false, paidDate: undefined }));
 
     // Previous month prefix for advance payments (e.g. 2026-10 when current is 2026-11)
@@ -465,7 +464,7 @@ export function QuickRecordBoard({
         isAdvancePayment: false,
       };
     });
-  }, [transactions, currentMonthPrefix, activeRecurringBills, t.expenseCategories]);
+  }, [transactions, currentMonthPrefix, recurringBills, t.expenseCategories]);
 
   const handleConfirmRecurring = (bill: RecurringBill) => {
     const converted = convertCurrency(bill.defaultAmount, bill.currency, currency, rates);
@@ -1342,7 +1341,6 @@ export function QuickRecordBoard({
           <div className="space-y-2">
             {paginatedTransactions.map((tx) => {
               const isExpense = tx.type === 'expense';
-              const isSavings = tx.type === 'savings';
               const isIncome = tx.type === 'income';
 
               const catLabel = isExpense
@@ -1514,10 +1512,10 @@ export function QuickRecordBoard({
             {/* Expense Categories List with Checkbox UI */}
             <div className="space-y-3">
               <h4 className="text-xs font-bold text-[var(--text-muted)] uppercase tracking-wider">
-                {t.record.typeExpense} ({visibleExpenseCategories.length}/{allExpenseCategories.length} {t.record.visible})
+                {t.record.typeExpense} ({visibleExpenseCategories.length}/{ALL_EXPENSE_CATEGORIES.length} {t.record.visible})
               </h4>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                {allExpenseCategories.map((catKey) => {
+                {ALL_EXPENSE_CATEGORIES.map((catKey) => {
                   const Icon = EXPENSE_CATEGORY_ICONS[catKey] || AlertCircle;
                   const isHidden = hiddenCategories.includes(catKey);
                   const catStyle = getCategoryBadgeStyle("expense", catKey);
@@ -1558,10 +1556,10 @@ export function QuickRecordBoard({
             {/* Income Categories List with Checkbox UI */}
             <div className="space-y-3">
               <h4 className="text-xs font-bold text-[var(--text-muted)] uppercase tracking-wider">
-                {t.record.typeIncome} ({visibleIncomeCategories.length}/{allIncomeCategories.length} {t.record.visible})
+                {t.record.typeIncome} ({visibleIncomeCategories.length}/{ALL_INCOME_CATEGORIES.length} {t.record.visible})
               </h4>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                {allIncomeCategories.map((catKey) => {
+                {ALL_INCOME_CATEGORIES.map((catKey) => {
                   const Icon = INCOME_CATEGORY_ICONS[catKey] || ArrowUpRight;
                   const isHidden = hiddenCategories.includes(catKey);
                   const catStyle = getCategoryBadgeStyle("income", catKey);

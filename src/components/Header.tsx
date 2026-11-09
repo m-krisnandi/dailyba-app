@@ -16,7 +16,6 @@ import {
   ArrowRightLeft,
   ChevronDown,
   Check,
-  Cloud,
   LogIn,
   RefreshCw,
   LogOut,

@@ -8,14 +8,12 @@ import { useBodyScrollLock } from '@/lib/useBodyScrollLock';
 import { ConfirmDeleteModal } from './ConfirmDeleteModal';
 import { LegalModal } from './LegalModal';
 import {
-  Download,
   Upload,
   Trash2,
   X,
   FileJson,
   FileSpreadsheet,
   Check,
-  AlertTriangle,
 } from 'lucide-react';
 
 interface BackupModalProps {
@@ -106,7 +104,7 @@ export function BackupModal({
           setFeedback(language === "ja" ? "バックアップファイルの形式が無効です。" : "Invalid JSON backup file structure.");
           setTimeout(() => setFeedback(null), 3000);
         }
-      } catch (err) {
+      } catch {
         setFeedback(language === "ja" ? "バックアップファイルの読み込みに失敗しました。" : "Error parsing JSON backup file.");
         setTimeout(() => setFeedback(null), 3000);
       }

@@ -31,8 +31,6 @@ import {
   TrendingUp,
   Wallet,
   Tag,
-  Clock,
-  ArrowRightLeft,
 } from 'lucide-react';
 
 interface TransactionDetailModalProps {
@@ -66,7 +64,6 @@ export function TransactionDetailModal({
 
   const isExpense = transaction.type === 'expense';
   const isIncome = transaction.type === 'income';
-  const isSavings = transaction.type === 'savings';
 
   const catLabel = isExpense
     ? t.expenseCategories[transaction.category as ExpenseCategory] || transaction.category

@@ -13,8 +13,6 @@ import { YearlySummaryBoard } from '@/components/YearlySummaryBoard';
 import { InvestmentBoard } from '@/components/InvestmentBoard';
 import { SavingsBoard } from '@/components/SavingsBoard';
 import { BackupModal } from '@/components/BackupModal';
-import { AddTransactionModal } from '@/components/AddTransactionModal';
-import { Plus } from 'lucide-react';
 import { ChangelogModal } from '@/components/ChangelogModal';
 import { APP_VERSION } from '@/lib/version';
 import { AuthModal } from '@/components/AuthModal';

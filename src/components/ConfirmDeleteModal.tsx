@@ -1,7 +1,7 @@
 'use client';
 
 import React from 'react';
-import { Trash2, AlertTriangle, X } from 'lucide-react';
+import { Trash2 } from 'lucide-react';
 import { Language } from '@/types/finance';
 import { useBodyScrollLock } from '@/lib/useBodyScrollLock';
 

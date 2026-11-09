@@ -21,14 +21,11 @@ import {
   Check,
   AlertTriangle,
   AlertCircle,
-  TrendingDown,
-  TrendingUp,
   ShieldCheck,
   Trash2,
   ChevronDown,
   ChevronUp,
   X,
-  Sparkles,
 } from 'lucide-react';
 import {
   ResponsiveContainer,

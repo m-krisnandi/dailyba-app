@@ -8,8 +8,6 @@ import {
   setApiBaseUrl,
   getStoredToken,
   getStoredUser,
-  setStoredToken,
-  setStoredUser,
   LAST_SYNCED_KEY,
 } from './api';
 import { FinanceState } from '@/types/finance';

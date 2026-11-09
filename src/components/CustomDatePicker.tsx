@@ -63,7 +63,7 @@ export function CustomDatePicker({
 
   useEffect(() => {
     if (value) {
-      const [y, m, d] = value.split('-').map(Number);
+      const [y, m] = value.split('-').map(Number);
       setViewYear(y);
       setViewMonth(m - 1);
     }

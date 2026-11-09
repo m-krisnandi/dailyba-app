@@ -26,20 +26,16 @@ import { formatNumberWithCommas, parseRawNumber } from '@/lib/currency';
 import { useBodyScrollLock } from '@/lib/useBodyScrollLock';
 import {
   X,
-  Check,
   TrendingDown,
   TrendingUp,
   Wallet,
-  Calendar,
   CreditCard,
   Plus,
-  Sparkles,
   Camera,
 } from 'lucide-react';
 
 const expenseCategories = Object.keys(EXPENSE_CATEGORY_ICONS) as ExpenseCategory[];
 const incomeCategories = Object.keys(INCOME_CATEGORY_ICONS) as IncomeCategory[];
-const fundingSources: FundingSource[] = ['cash', 'bank', 'ewallet', 'credit_card'];
 
 interface AddTransactionModalProps {
   isOpen: boolean;

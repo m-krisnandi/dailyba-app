@@ -15,18 +15,12 @@ import {
   AlertCircle,
   Loader2,
   Cloud,
-  ShieldCheck,
   X,
   ArrowRight,
   Eye,
   EyeOff,
   LogOut,
   Trash2,
-  Sparkles,
-  Server,
-  RefreshCw,
-  FileText,
-  Shield,
 } from 'lucide-react';
 
 interface AuthModalProps {

@@ -32,6 +32,11 @@ interface YearlySummaryBoardProps {
   hiddenCategories?: string[];
 }
 
+const MONTH_NAMES = [
+  'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
+  'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec',
+] as const;
+
 export function YearlySummaryBoard({
   language,
   currency,
@@ -49,10 +54,6 @@ export function YearlySummaryBoard({
     setSelectedYear(new Date().getFullYear());
   }, []);
 
-  const monthNames = [
-    'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
-    'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec',
-  ];
 
   // Filter transactions for selected year
   const yearTransactions = useMemo(() => {
@@ -100,7 +101,7 @@ export function YearlySummaryBoard({
       });
 
       return {
-        month: monthNames[i],
+        month: MONTH_NAMES[i],
         Income: income,
         Expense: expense,
         Savings: savings,

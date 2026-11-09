@@ -17,12 +17,8 @@ import {
   Check,
   RotateCcw,
   AlertCircle,
-  Receipt,
   Eye,
   CreditCard,
-  Building,
-  Wallet,
-  Coins,
 } from 'lucide-react';
 
 interface ReceiptScannerModalProps {
@@ -453,6 +449,7 @@ export function ReceiptScannerModal({
           <div className="py-6 flex flex-col items-center justify-center space-y-4 text-center">
             {imagePreview && (
               <div className="relative w-48 h-56 rounded-2xl overflow-hidden border-2 border-emerald-500/40 shadow-xl bg-black/40">
+                {/* eslint-disable-next-line @next/next/no-img-element */}
                 <img
                   src={imagePreview}
                   alt="Receipt Preview"
@@ -516,8 +513,9 @@ export function ReceiptScannerModal({
             <div className="p-3 rounded-2xl border border-emerald-500/30 bg-emerald-500/10 flex items-center justify-between">
               <div className="flex items-center space-x-2">
                 <Check className="w-4 h-4 text-emerald-500 shrink-0" />
-                <span className="text-xs font-bold text-emerald-600 dark:text-emerald-400">
-                  {language === 'ja' ? 'AI解析完了（内容をご確認ください）' : 'Receipt Parsed (Please review details)'}
+                <span className="text-xs font-bold text-emerald-600 dark:text-emerald-400 flex items-center space-x-1.5">
+                  <span>{language === 'ja' ? 'AI解析完了（内容をご確認ください）' : 'Receipt Parsed (Please review details)'}</span>
+                  <span className="text-[10px] font-mono px-1.5 py-0.5 rounded bg-emerald-500/20 text-emerald-500 font-bold">{Math.round(confidence * 100)}%</span>
                 </span>
               </div>
               {imagePreview && (
@@ -535,6 +533,7 @@ export function ReceiptScannerModal({
             {/* Expanded Receipt Image Preview */}
             {showFullReceipt && imagePreview && (
               <div className="rounded-2xl overflow-hidden border border-[var(--border-subtle)] max-h-48 flex items-center justify-center bg-black/60">
+                {/* eslint-disable-next-line @next/next/no-img-element */}
                 <img
                   src={imagePreview}
                   alt="Receipt Full"

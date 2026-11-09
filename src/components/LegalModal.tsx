@@ -3,7 +3,7 @@
 import React, { useState } from 'react';
 import { Language } from '@/types/finance';
 import { useBodyScrollLock } from '@/lib/useBodyScrollLock';
-import { Shield, FileText, X, Check, Lock, Trash2, Camera } from 'lucide-react';
+import { Shield, FileText, X, Lock } from 'lucide-react';
 
 interface LegalModalProps {
   isOpen: boolean;
