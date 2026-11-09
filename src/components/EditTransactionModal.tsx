@@ -18,6 +18,7 @@ import {
   INCOME_CATEGORY_ICONS,
   FUNDING_SOURCE_ICONS,
   getCategoryBadgeStyle,
+  getFundingSourceBadgeStyle,
 } from '@/lib/constants';
 import { formatNumberWithCommas, parseRawNumber } from '@/lib/currency';
 import { useBodyScrollLock } from '@/lib/useBodyScrollLock';
@@ -245,6 +246,7 @@ export function EditTransactionModal({
               {fundingSources.map((s) => {
                 const Icon = FUNDING_SOURCE_ICONS[s] || CreditCard;
                 const isSelected = source === s;
+                const sourceStyle = getFundingSourceBadgeStyle(s);
                 return (
                   <button
                     key={s}
@@ -256,7 +258,9 @@ export function EditTransactionModal({
                         : 'bg-[var(--bg-subtle)] text-[var(--text-muted)] hover:text-[var(--text-main)] border border-[var(--border-subtle)]'
                     }`}
                   >
-                    <Icon className="w-3.5 h-3.5" />
+                    <div className={`w-5 h-5 rounded-md flex items-center justify-center shrink-0 border ${sourceStyle.border} ${sourceStyle.bg} ${sourceStyle.text}`}>
+                      <Icon className="w-3 h-3" />
+                    </div>
                     <span className="truncate">{t.sources[s]}</span>
                   </button>
                 );

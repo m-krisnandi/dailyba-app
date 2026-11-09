@@ -59,6 +59,21 @@ export interface CategoryStyle {
   border: string;
 }
 
+export function getFundingSourceBadgeStyle(source: FundingSource | string): CategoryStyle {
+  switch (source) {
+    case "cash":
+      return { bg: "bg-emerald-500/15", text: "text-emerald-500 dark:text-emerald-400", border: "border-emerald-500/30" };
+    case "bank":
+      return { bg: "bg-sky-500/15", text: "text-sky-500 dark:text-sky-400", border: "border-sky-500/30" };
+    case "credit_card":
+      return { bg: "bg-indigo-500/15", text: "text-indigo-500 dark:text-indigo-400", border: "border-indigo-500/30" };
+    case "ewallet":
+      return { bg: "bg-amber-500/15", text: "text-amber-500 dark:text-amber-400", border: "border-amber-500/30" };
+    default:
+      return { bg: "bg-zinc-500/15", text: "text-zinc-400 dark:text-zinc-400", border: "border-zinc-500/30" };
+  }
+}
+
 export function getCategoryBadgeStyle(type: TransactionType | string, category?: string): CategoryStyle {
   if (type === 'savings') {
     return {

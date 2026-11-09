@@ -24,6 +24,7 @@ import {
   INCOME_CATEGORY_ICONS,
   FUNDING_SOURCE_ICONS,
   getCategoryBadgeStyle,
+  getFundingSourceBadgeStyle,
 } from '@/lib/constants';
 import {
   Check,
@@ -132,10 +133,15 @@ export function QuickRecordBoard({
   const filterSourceOptions = useMemo<CustomSelectOption<FundingSource | 'all'>[]>(
     () => [
       { value: 'all', label: t.record.allSources, icon: SlidersHorizontal },
-      { value: 'cash', label: t.sources.cash, icon: FUNDING_SOURCE_ICONS.cash },
-      { value: 'bank', label: t.sources.bank, icon: FUNDING_SOURCE_ICONS.bank },
-      { value: 'ewallet', label: t.sources.ewallet, icon: FUNDING_SOURCE_ICONS.ewallet },
-      { value: 'credit_card', label: t.sources.credit_card, icon: FUNDING_SOURCE_ICONS.credit_card },
+      ...((['cash', 'bank', 'ewallet', 'credit_card'] as FundingSource[]).map((src) => {
+        const s = getFundingSourceBadgeStyle(src);
+        return {
+          value: src,
+          label: t.sources[src],
+          icon: FUNDING_SOURCE_ICONS[src],
+          badgeClass: `${s.border} ${s.bg} ${s.text}`,
+        };
+      })),
     ],
     [t]
   );
@@ -164,12 +170,16 @@ export function QuickRecordBoard({
   );
 
   const billSourceOptions = useMemo<CustomSelectOption<FundingSource>[]>(
-    () => [
-      { value: 'bank', label: t.sources.bank, icon: FUNDING_SOURCE_ICONS.bank },
-      { value: 'credit_card', label: t.sources.credit_card, icon: FUNDING_SOURCE_ICONS.credit_card },
-      { value: 'cash', label: t.sources.cash, icon: FUNDING_SOURCE_ICONS.cash },
-      { value: 'ewallet', label: t.sources.ewallet, icon: FUNDING_SOURCE_ICONS.ewallet },
-    ],
+    () =>
+      ((['bank', 'credit_card', 'cash', 'ewallet'] as FundingSource[]).map((src) => {
+        const s = getFundingSourceBadgeStyle(src);
+        return {
+          value: src,
+          label: t.sources[src],
+          icon: FUNDING_SOURCE_ICONS[src],
+          badgeClass: `${s.border} ${s.bg} ${s.text}`,
+        };
+      })),
     [t]
   );
 
@@ -952,6 +962,7 @@ export function QuickRecordBoard({
             {(['cash', 'bank', 'ewallet', 'credit_card'] as FundingSource[]).map((src) => {
               const Icon = FUNDING_SOURCE_ICONS[src];
               const isSelected = source === src;
+              const sourceStyle = getFundingSourceBadgeStyle(src);
               return (
                 <button
                   key={src}
@@ -963,7 +974,9 @@ export function QuickRecordBoard({
                       : 'border-[var(--border-subtle)] bg-[var(--bg-subtle)] hover:bg-[var(--bg-subtle-hover)] text-[var(--text-muted)]'
                   }`}
                 >
-                  <Icon className="w-3.5 h-3.5" />
+                  <div className={`w-5 h-5 rounded-md flex items-center justify-center shrink-0 border ${sourceStyle.border} ${sourceStyle.bg} ${sourceStyle.text}`}>
+                    <Icon className="w-3 h-3" />
+                  </div>
                   <span className="text-xs truncate">{t.sources[src]}</span>
                 </button>
               );

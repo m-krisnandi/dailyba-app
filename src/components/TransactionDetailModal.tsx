@@ -15,6 +15,7 @@ import {
   INCOME_CATEGORY_ICONS,
   FUNDING_SOURCE_ICONS,
   getCategoryBadgeStyle,
+  getFundingSourceBadgeStyle,
 } from '@/lib/constants';
 import { convertCurrency, DEFAULT_RATES, ExchangeRates } from '@/lib/currency';
 import { useBodyScrollLock } from '@/lib/useBodyScrollLock';
@@ -90,6 +91,7 @@ export function TransactionDetailModal({
 
   const isDifferentCurrency = transaction.currency && transaction.currency !== currency;
   const catStyle = getCategoryBadgeStyle(transaction.type, transaction.category);
+  const sourceStyle = getFundingSourceBadgeStyle(transaction.source);
 
   return (
     <div
@@ -216,7 +218,9 @@ export function TransactionDetailModal({
               <span>{isJa ? '支出元・口座' : 'Payment Source'}</span>
             </div>
             <div className="flex items-center space-x-2">
-              <SourceIcon className="w-3.5 h-3.5 text-[var(--text-muted)]" />
+              <div className={`w-6 h-6 rounded-lg border flex items-center justify-center shrink-0 ${sourceStyle.border} ${sourceStyle.bg} ${sourceStyle.text}`}>
+                <SourceIcon className="w-3.5 h-3.5" />
+              </div>
               <span className="text-xs font-bold text-[var(--text-main)]">
                 {t.sources[transaction.source] || transaction.source}
               </span>

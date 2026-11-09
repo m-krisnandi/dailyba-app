@@ -1,6 +1,6 @@
 import { Language } from '@/types/finance';
 
-export const APP_VERSION = '1.4.4';
+export const APP_VERSION = '1.4.5';
 export const APP_BUILD = '20261109';
 
 export interface LocalizedChangelogItem {
@@ -11,6 +11,26 @@ export interface LocalizedChangelogItem {
 }
 
 export const APP_CHANGELOG: LocalizedChangelogItem[] = [
+  {
+    version: '1.4.5',
+    date: '2026-11-09',
+    title: {
+      en: 'Vibrant Funding Source & Category Color Badges Across Dropdowns & Selectors',
+      ja: '支出元・口座およびカテゴリーアイコンのドロップダウン・選択ボタン完全カラー化',
+    },
+    highlights: {
+      en: [
+        'Vibrant Funding Source Badges: introduced color-coded badges for payment methods (Bank: Sky Blue, Cash: Mint Green, Credit Card: Indigo Purple, E-Wallet: Warm Amber).',
+        'Applied to All Selectors & Dropdowns: active across Quick Entry buttons, Transaction Feed filter dropdowns, Add/Edit Transaction dialogs, and Recurring Bills dropdowns.',
+        'Enhanced Transaction Details: payment source row in Transaction Detail modal now renders with its corresponding colored badge matching the category row.',
+      ],
+      ja: [
+        '支出元・口座のカラーバッジ化：決済手段（銀行振込: スカイブルー、現金: ミントグリーン、クレジットカード: インディゴパープル、電子マネー: ウォームアンバー）に専用カラーを導入。',
+        '全選択ボタン・ドロップダウンへの反映：記帳画面の支出元ボタン、取引履歴フィルター、取引追加・編集モーダル、固定費設定ドロップダウンに一括適用。',
+        '取引詳細ビューの調和：取引明細ポップアップ内の支出元行にもカラーバッジをあしらい、カテゴリー行と美しく整列。',
+      ],
+    },
+  },
   {
     version: '1.4.4',
     date: '2026-11-09',
