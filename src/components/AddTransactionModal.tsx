@@ -31,6 +31,10 @@ import {
   Sparkles,
 } from 'lucide-react';
 
+const expenseCategories = Object.keys(EXPENSE_CATEGORY_ICONS) as ExpenseCategory[];
+const incomeCategories = Object.keys(INCOME_CATEGORY_ICONS) as IncomeCategory[];
+const fundingSources: FundingSource[] = ['cash', 'bank', 'ewallet', 'credit_card'];
+
 interface AddTransactionModalProps {
   isOpen: boolean;
   onClose: () => void;
@@ -62,7 +66,7 @@ export function AddTransactionModal({
 
   const t = translations[language];
 
-  const todayStr = new Date().toISOString().split('T')[0];
+  const todayStr = useMemo(() => new Date().toISOString().split('T')[0], []);
   const [type, setType] = useState<TransactionType>(initialType);
   const [amountStr, setAmountStr] = useState<string>('');
   const [category, setCategory] = useState<string>(initialCategory || 'food_drinks');
@@ -84,6 +88,21 @@ export function AddTransactionModal({
     }
   }, [isOpen, initialType, initialDate, initialCategory, initialAmount, initialNote]);
 
+  const categoryOptions = useMemo<CustomSelectOption[]>(() => {
+    if (type === 'expense') {
+      return expenseCategories.map((cat) => ({
+        value: cat,
+        label: t.expenseCategories[cat] || cat,
+        icon: EXPENSE_CATEGORY_ICONS[cat],
+      }));
+    }
+    return incomeCategories.map((cat) => ({
+      value: cat,
+      label: t.incomeCategories[cat] || cat,
+      icon: INCOME_CATEGORY_ICONS[cat],
+    }));
+  }, [type, t]);
+
   if (!isOpen) return null;
 
   const handleSubmit = (e: React.FormEvent) => {
@@ -102,25 +121,6 @@ export function AddTransactionModal({
     });
     onClose();
   };
-
-  const expenseCategories = Object.keys(EXPENSE_CATEGORY_ICONS) as ExpenseCategory[];
-  const incomeCategories = Object.keys(INCOME_CATEGORY_ICONS) as IncomeCategory[];
-  const fundingSources: FundingSource[] = ['cash', 'bank', 'ewallet', 'credit_card'];
-
-  const categoryOptions = useMemo<CustomSelectOption[]>(() => {
-    if (type === 'expense') {
-      return expenseCategories.map((cat) => ({
-        value: cat,
-        label: t.expenseCategories[cat] || cat,
-        icon: EXPENSE_CATEGORY_ICONS[cat],
-      }));
-    }
-    return incomeCategories.map((cat) => ({
-      value: cat,
-      label: t.incomeCategories[cat] || cat,
-      icon: INCOME_CATEGORY_ICONS[cat],
-    }));
-  }, [type, expenseCategories, incomeCategories, t]);
 
   // Currency quick presets
   const presets =

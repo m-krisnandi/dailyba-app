@@ -793,7 +793,7 @@ export function MonthlySummaryBoard({
                                 : 'bg-emerald-500/10 text-emerald-500 border border-emerald-500/20'
                             }`}
                           >
-                            {isCatOver ? `+${formatCurrency(diff, currency)} over` : `${formatCurrency(diff, currency)} left`}
+                            {language === "ja" ? (isCatOver ? `+${formatCurrency(diff, currency)} 超過` : `残り ${formatCurrency(diff, currency)}`) : (isCatOver ? `+${formatCurrency(diff, currency)} over` : `${formatCurrency(diff, currency)} left`)}
                           </span>
                         </div>
 
@@ -802,7 +802,7 @@ export function MonthlySummaryBoard({
                             {formatCurrency(spent, currency)}
                           </span>
                           <span className="text-[var(--text-muted)] text-[11px] tabular-numbers">
-                            target: {formatCurrency(targetVal, currency)} ({percent}%)
+                            {language === "ja" ? "目標: " : "target: "}{formatCurrency(targetVal, currency)} ({percent}%)
                           </span>
                         </div>
 

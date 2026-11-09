@@ -1,6 +1,6 @@
 import { Language } from '@/types/finance';
 
-export const APP_VERSION = '1.3.8';
+export const APP_VERSION = '1.3.9';
 export const APP_BUILD = '20261109';
 
 export interface LocalizedChangelogItem {
@@ -11,6 +11,26 @@ export interface LocalizedChangelogItem {
 }
 
 export const APP_CHANGELOG: LocalizedChangelogItem[] = [
+  {
+    version: '1.3.9',
+    date: '2026-11-09',
+    title: {
+      en: 'Fixed React Error #310 in Transaction Modals & Japanese Localization for "left" / "over"',
+      ja: '取引記録モーダルのReactエラー#310解消および「left/over」の完全日本語化',
+    },
+    highlights: {
+      en: [
+        'Fixed React Error #310 (Hook Order): resolved conditional useMemo call inside Add & Edit Transaction modals, eliminating page crash when opening transaction dialogs from Daily Spend or Monthly tabs.',
+        'Localized "left" Status in Daily Spend: translated residual "(Rp 50,000 left)" into Japanese "(残り Rp 50,000)".',
+        'Localized Monthly Category Limits: translated "over", "left", and "target:" in category budget progress bars.',
+      ],
+      ja: [
+        'Reactエラー#310の解消：取引追加・編集モーダル内でフック（useMemo）の実行順序が条件分岐によって崩れていた不具合を修正し、「取引を記録」タップ時のクラッシュを完全解決。',
+        '日次支出「left」の日本語化：目標内バッジの「(Rp 50.000 left)」を「(残り Rp 50.000)」に翻訳。',
+        '月次カテゴリ別進捗の翻訳：「over」「left」「target:」をそれぞれ「超過」「残り」「目標: 」に日本語化。',
+      ],
+    },
+  },
   {
     version: '1.3.8',
     date: '2026-11-09',

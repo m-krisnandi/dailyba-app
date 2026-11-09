@@ -30,6 +30,10 @@ import {
   FileText,
 } from 'lucide-react';
 
+const expenseCategories = Object.keys(EXPENSE_CATEGORY_ICONS) as ExpenseCategory[];
+const incomeCategories = Object.keys(INCOME_CATEGORY_ICONS) as IncomeCategory[];
+const fundingSources: FundingSource[] = ['cash', 'bank', 'ewallet', 'credit_card'];
+
 interface EditTransactionModalProps {
   isOpen: boolean;
   transaction: Transaction | null;
@@ -71,6 +75,21 @@ export function EditTransactionModal({
     }
   }, [transaction, currency]);
 
+  const categoryOptions = useMemo<CustomSelectOption[]>(() => {
+    if (type === 'expense') {
+      return expenseCategories.map((cat) => ({
+        value: cat,
+        label: t.expenseCategories[cat] || cat,
+        icon: EXPENSE_CATEGORY_ICONS[cat],
+      }));
+    }
+    return incomeCategories.map((cat) => ({
+      value: cat,
+      label: t.incomeCategories[cat] || cat,
+      icon: INCOME_CATEGORY_ICONS[cat],
+    }));
+  }, [type, t]);
+
   if (!isOpen || !transaction) return null;
 
   const handleSubmit = (e: React.FormEvent) => {
@@ -90,26 +109,6 @@ export function EditTransactionModal({
     });
     onClose();
   };
-
-  const expenseCategories = Object.keys(EXPENSE_CATEGORY_ICONS) as ExpenseCategory[];
-  const incomeCategories = Object.keys(INCOME_CATEGORY_ICONS) as IncomeCategory[];
-  const fundingSources: FundingSource[] = ['cash', 'bank', 'ewallet', 'credit_card'];
-
-  const categoryOptions = useMemo<CustomSelectOption[]>(() => {
-    if (type === 'expense') {
-      return expenseCategories.map((cat) => ({
-        value: cat,
-        label: t.expenseCategories[cat] || cat,
-        icon: EXPENSE_CATEGORY_ICONS[cat],
-      }));
-    }
-    return incomeCategories.map((cat) => ({
-      value: cat,
-      label: t.incomeCategories[cat] || cat,
-      icon: INCOME_CATEGORY_ICONS[cat],
-    }));
-  }, [type, expenseCategories, incomeCategories, t]);
-
 
   return (
     <div

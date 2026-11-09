@@ -413,7 +413,7 @@ export function DailySpendBoard({
                 ) : (
                   <>
                     <ShieldCheck className="w-3.5 h-3.5" />
-                    <span>{t.dailySpend.safeStatus} ({formatCurrency(todayRemaining, currency)} left)</span>
+                    <span>{language === "ja" ? `${t.dailySpend.safeStatus} (残り ${formatCurrency(todayRemaining, currency)})` : `${t.dailySpend.safeStatus} (${formatCurrency(todayRemaining, currency)} left)`}</span>
                   </>
                 )}
               </span>
