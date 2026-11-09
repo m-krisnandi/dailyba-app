@@ -1,6 +1,6 @@
 import { Language } from '@/types/finance';
 
-export const APP_VERSION = '1.4.1';
+export const APP_VERSION = '1.4.2';
 export const APP_BUILD = '20261109';
 
 export interface LocalizedChangelogItem {
@@ -11,6 +11,26 @@ export interface LocalizedChangelogItem {
 }
 
 export const APP_CHANGELOG: LocalizedChangelogItem[] = [
+  {
+    version: '1.4.2',
+    date: '2026-11-09',
+    title: {
+      en: 'Category-Based Vibrant Color Palette for Transaction Icons',
+      ja: 'カテゴリー別カラーパレットの導入による視認性とデザイン性の向上',
+    },
+    highlights: {
+      en: [
+        'Category-Based Icon Colors: replaced uniform red expense icons with an expressive, category-specific soft liquid glass palette (Food: Amber, Shopping: Purple, Housing/Rent: Sky Blue, Mobile: Blue, Transit: Teal, etc.).',
+        'Enhanced Visual Hierarchy: immediate distinction between categories during fast scrolling while keeping expense amounts clearly marked in red.',
+        'Synchronized across History & Boards: applied consistently to Recent Transactions feed, Daily Spend lists, Recurring Bills, and Transaction Detail modal.',
+      ],
+      ja: [
+        'カテゴリー別カラーの適用：全支出が画一的な赤色アイコンになっていた仕様を刷新し、カテゴリーごとに固有の美しいソフトリキッドグラスカラー（食費: アンバー、買い物: パープル、住居/寮費: スカイブルー、通信費: ブルー、交通費: ティール等）を割り当て。',
+        '直感的な視認性の向上：高速スクロール時でも何の出費かが一目で判別可能になり、支出額のマイナス赤文字と調和した洗練されたUIを実現。',
+        '全画面での調和：取引履歴リスト、日次支出リスト、毎月の固定費カード、取引詳細モーダルに一括適用。',
+      ],
+    },
+  },
   {
     version: '1.4.1',
     date: '2026-11-09',

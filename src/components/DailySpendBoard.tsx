@@ -10,7 +10,7 @@ import { ConfirmDeleteModal } from './ConfirmDeleteModal';
 import { CustomDatePicker } from '@/components/CustomDatePicker';
 import { Edit3 } from 'lucide-react';
 import { convertCurrency, DEFAULT_RATES, ExchangeRates, formatNumberWithCommas, parseRawNumber } from '@/lib/currency';
-import { EXPENSE_CATEGORY_ICONS } from '@/lib/constants';
+import { EXPENSE_CATEGORY_ICONS, getCategoryBadgeStyle } from '@/lib/constants';
 import {
   Plus,
   CalendarDays,
@@ -812,6 +812,7 @@ export function DailySpendBoard({
                             currency,
                             rates
                           );
+                          const catStyle = getCategoryBadgeStyle("expense", tx.category);
 
                           return (
                             <div
@@ -820,7 +821,7 @@ export function DailySpendBoard({
                               className="p-3 rounded-xl bg-[var(--bg-surface)] border border-[var(--border-subtle)] hover:border-[var(--border-strong)] flex items-center justify-between space-x-2 group transition-all cursor-pointer"
                             >
                               <div className="flex items-center space-x-2.5 min-w-0">
-                                <div className="w-7 h-7 rounded-lg bg-[var(--bg-subtle)] border border-[var(--border-subtle)] flex items-center justify-center text-[var(--text-main)] shrink-0">
+                                <div className={`w-7 h-7 rounded-lg border flex items-center justify-center shrink-0 ${catStyle.border} ${catStyle.bg} ${catStyle.text}`}>
                                   <Icon className="w-3.5 h-3.5" />
                                 </div>
                                 <div className="min-w-0">

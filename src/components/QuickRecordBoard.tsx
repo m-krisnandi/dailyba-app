@@ -23,6 +23,7 @@ import {
   EXPENSE_CATEGORY_ICONS,
   INCOME_CATEGORY_ICONS,
   FUNDING_SOURCE_ICONS,
+  getCategoryBadgeStyle,
 } from '@/lib/constants';
 import {
   Check,
@@ -971,6 +972,7 @@ export function QuickRecordBoard({
                 rates
               );
               const billLabel = bill.name || (bill.titleKey && t.expenseCategories[bill.titleKey as ExpenseCategory]) || bill.category;
+              const billStyle = getCategoryBadgeStyle("expense", bill.category);
 
               return (
                 <div
@@ -979,7 +981,7 @@ export function QuickRecordBoard({
                 >
                   <div className="flex items-center justify-between sm:justify-start space-x-3 min-w-0 w-full sm:w-auto">
                     <div className="flex items-center space-x-3 min-w-0">
-                      <div className="w-10 h-10 rounded-xl bg-[var(--bg-surface-solid)] border border-[var(--border-subtle)] flex items-center justify-center text-[var(--text-main)] shadow-xs shrink-0">
+                      <div className={`w-10 h-10 rounded-xl border flex items-center justify-center shadow-xs shrink-0 ${billStyle.border} ${billStyle.bg} ${billStyle.text}`}>
                         <Icon className="w-4 h-4" />
                       </div>
                       <div className="min-w-0">
@@ -1232,6 +1234,7 @@ export function QuickRecordBoard({
                 currency,
                 rates
               );
+              const catStyle = getCategoryBadgeStyle(tx.type, tx.category);
 
               return (
                 <div
@@ -1242,13 +1245,7 @@ export function QuickRecordBoard({
                 >
                   <div className="flex items-center space-x-2.5 sm:space-x-3 min-w-0">
                     <div
-                      className={`w-9 h-9 rounded-xl flex items-center justify-center shrink-0 border border-[var(--border-subtle)] ${
-                        isExpense
-                          ? 'bg-rose-500/10 text-rose-500'
-                          : isIncome
-                          ? 'bg-emerald-500/10 text-emerald-500'
-                          : 'bg-amber-500/10 text-amber-500'
-                      }`}
+                      className={`w-9 h-9 rounded-xl flex items-center justify-center shrink-0 border ${catStyle.border} ${catStyle.bg} ${catStyle.text}`}
                     >
                       <Icon className="w-4 h-4" />
                     </div>

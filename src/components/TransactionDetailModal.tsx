@@ -14,6 +14,7 @@ import {
   EXPENSE_CATEGORY_ICONS,
   INCOME_CATEGORY_ICONS,
   FUNDING_SOURCE_ICONS,
+  getCategoryBadgeStyle,
 } from '@/lib/constants';
 import { convertCurrency, DEFAULT_RATES, ExchangeRates } from '@/lib/currency';
 import { useBodyScrollLock } from '@/lib/useBodyScrollLock';
@@ -88,6 +89,7 @@ export function TransactionDetailModal({
   );
 
   const isDifferentCurrency = transaction.currency && transaction.currency !== currency;
+  const catStyle = getCategoryBadgeStyle(transaction.type, transaction.category);
 
   return (
     <div
@@ -200,7 +202,7 @@ export function TransactionDetailModal({
               <span>{isJa ? 'カテゴリー' : 'Category'}</span>
             </div>
             <div className="flex items-center space-x-2">
-              <div className="w-6 h-6 rounded-lg bg-[var(--bg-surface)] border border-[var(--border-subtle)] flex items-center justify-center text-[var(--text-main)]">
+              <div className={`w-6 h-6 rounded-lg border flex items-center justify-center shrink-0 ${catStyle.border} ${catStyle.bg} ${catStyle.text}`}>
                 <Icon className="w-3.5 h-3.5" />
               </div>
               <span className="text-xs font-bold text-[var(--text-main)]">{catLabel}</span>
