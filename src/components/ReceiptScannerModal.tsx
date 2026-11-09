@@ -363,20 +363,20 @@ export function ReceiptScannerModal({
           </div>
         )}
 
-        {/* 1.5 LIVE WEBCAM / CAMERA VIEWFINDER (PORTRAIT RECEIPT DESIGN) */}
+        {/* 1.5 LIVE WEBCAM / CAMERA VIEWFINDER (CENTERED PORTRAIT RECEIPT DESIGN) */}
         {step === 'camera' && (
           <div className="space-y-3.5 py-1">
-            <div className="relative w-full h-[430px] sm:h-[480px] rounded-2xl overflow-hidden bg-black border border-emerald-500/40 shadow-2xl flex items-center justify-center">
+            <div className="relative w-full h-[430px] sm:h-[480px] rounded-2xl overflow-hidden bg-black border border-emerald-500/40 shadow-2xl">
               <video
                 ref={videoRef}
                 autoPlay
                 playsInline
                 muted
-                className="w-full h-full object-cover"
+                className="absolute inset-0 w-full h-full object-cover"
               />
 
-              {/* Viewfinder Receipt Overlay: Tall portrait format tailored for long & short receipts */}
-              <div className="w-[72%] sm:w-[65%] h-[88%] border-2 border-dashed border-emerald-400/80 rounded-2xl pointer-events-none flex flex-col justify-between p-3 relative shadow-[0_0_25px_rgba(16,185,129,0.2)]">
+              {/* Viewfinder Receipt Overlay: Centered portrait format tailored for receipts */}
+              <div className="absolute z-10 top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[70%] sm:w-[62%] h-[88%] border-2 border-dashed border-emerald-400/80 rounded-2xl pointer-events-none flex flex-col justify-between p-3.5 shadow-[0_0_25px_rgba(16,185,129,0.2)]">
                 {/* Scanner corner brackets */}
                 <div className="absolute -top-1 -left-1 w-4 h-4 border-t-2 border-l-2 border-emerald-400 rounded-tl-sm" />
                 <div className="absolute -top-1 -right-1 w-4 h-4 border-t-2 border-r-2 border-emerald-400 rounded-tr-sm" />
@@ -384,7 +384,7 @@ export function ReceiptScannerModal({
                 <div className="absolute -bottom-1 -right-1 w-4 h-4 border-b-2 border-r-2 border-emerald-400 rounded-br-sm" />
 
                 {/* Top Alignment Guide */}
-                <div className="text-[10px] text-emerald-300 font-mono bg-black/65 px-2.5 py-1 rounded-full backdrop-blur-sm self-center shadow-xs border border-emerald-500/20">
+                <div className="text-[10px] text-emerald-300 font-mono bg-black/75 px-3 py-1 rounded-full backdrop-blur-md self-center shadow-md border border-emerald-500/30 whitespace-nowrap">
                   <span>{language === 'ja' ? '枠内にレシートを収めてください' : 'Align receipt inside frame'}</span>
                 </div>
 
@@ -392,7 +392,7 @@ export function ReceiptScannerModal({
                 <div className="w-full h-0.5 bg-gradient-to-r from-transparent via-emerald-400 to-transparent shadow-[0_0_12px_#10b981] animate-pulse" />
 
                 {/* Bottom Branding / Guide */}
-                <div className="text-[10px] text-emerald-300 font-mono self-center bg-black/65 px-2.5 py-0.5 rounded backdrop-blur-sm border border-emerald-500/20">
+                <div className="text-[10px] text-emerald-300 font-mono self-center bg-black/75 px-2.5 py-0.5 rounded-full backdrop-blur-md border border-emerald-500/30 whitespace-nowrap">
                   <span>{language === 'ja' ? 'Dailyba レシート読取' : 'Dailyba Scanner'}</span>
                 </div>
               </div>
