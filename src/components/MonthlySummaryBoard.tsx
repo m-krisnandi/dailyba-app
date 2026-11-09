@@ -4,7 +4,7 @@ import React, { useMemo, useState, useEffect, useRef } from 'react';
 import { Currency, ExpenseCategory, Language, MonthlyBudgetPlan, Transaction, TransactionType } from '@/types/finance';
 import { formatCurrency, translations } from '@/lib/i18n';
 import { EXPENSE_CATEGORY_ICONS, getCategoryBadgeStyle } from '@/lib/constants';
-import { getMonthDateRange, isDateInMonthCycle } from '@/lib/dateUtils';
+import { getMonthDateRange, isDateInMonthCycle, getTodayLocalDate } from '@/lib/dateUtils';
 import { AddTransactionModal } from '@/components/AddTransactionModal';
 import { useBodyScrollLock } from '@/lib/useBodyScrollLock';
 import { convertCurrency, DEFAULT_RATES, ExchangeRates, formatNumberWithCommas, parseRawNumber } from '@/lib/currency';
@@ -1314,7 +1314,7 @@ export function MonthlySummaryBoard({
           initialCategory={addTxInitialCategory}
           initialAmount={addTxInitialAmount}
           initialNote={addTxInitialNote}
-          initialDate={isDateInMonthCycle(new Date().toISOString().split('T')[0], selectedMonth, monthStartDay) ? new Date().toISOString().split('T')[0] : activeCycle.startDate}
+          initialDate={isDateInMonthCycle(getTodayLocalDate(), selectedMonth, monthStartDay) ? getTodayLocalDate() : activeCycle.startDate}
           currency={currency}
           language={language}
           onClose={() => setIsAddTxModalOpen(false)}

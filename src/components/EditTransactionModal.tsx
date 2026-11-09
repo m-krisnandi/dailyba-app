@@ -13,6 +13,7 @@ import {
   TransactionType,
 } from '@/types/finance';
 import { translations } from '@/lib/i18n';
+import { getTodayLocalDate } from '@/lib/dateUtils';
 import {
   EXPENSE_CATEGORY_ICONS,
   INCOME_CATEGORY_ICONS,
@@ -72,11 +73,24 @@ export function EditTransactionModal({
       setAmountStr(formatNumberWithCommas(transaction.amount));
       setCategory(transaction.category || 'food_drinks');
       setSource(transaction.source || 'cash');
-      setDate(transaction.date || new Date().toISOString().split('T')[0]);
+      setDate(transaction.date || getTodayLocalDate());
       setNote(transaction.note || '');
       setTxCurrency(transaction.currency || currency);
     }
   }, [transaction, currency]);
+
+  const availableSources = useMemo<FundingSource[]>(() => {
+    if (type === 'expense') {
+      return ['cash', 'bank', 'credit_card', 'ewallet'];
+    }
+    return ['bank', 'cash', 'ewallet'];
+  }, [type]);
+
+  useEffect(() => {
+    if (type !== 'expense' && source === 'credit_card') {
+      setSource('bank');
+    }
+  }, [type, source]);
 
   const categoryOptions = useMemo<CustomSelectOption[]>(() => {
     if (type === 'expense') {
@@ -114,7 +128,7 @@ export function EditTransactionModal({
       amount: parsedAmount,
       category: type === 'savings' ? 'savings' : category,
       source,
-      date: date || new Date().toISOString().split('T')[0],
+      date: date || getTodayLocalDate(),
       note: note.trim() || undefined,
       currency: txCurrency,
     });
@@ -240,10 +254,10 @@ export function EditTransactionModal({
           {/* Funding Source Selector */}
           <div className="space-y-1.5">
             <label className="text-xs font-bold text-[var(--text-muted)] uppercase tracking-wider block">
-              {t.record.fundingSource}
+              {type === 'income' ? (language === 'ja' ? '受取先口座' : 'Deposit Account') : type === 'savings' ? (language === 'ja' ? '積立先口座' : 'Savings Destination') : t.record.fundingSource}
             </label>
-            <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
-              {fundingSources.map((s) => {
+            <div className={`grid gap-2 ${type === 'expense' ? 'grid-cols-2 sm:grid-cols-4' : 'grid-cols-3'}`}>
+              {availableSources.map((s) => {
                 const Icon = FUNDING_SOURCE_ICONS[s] || CreditCard;
                 const isSelected = source === s;
                 const sourceStyle = getFundingSourceBadgeStyle(s);

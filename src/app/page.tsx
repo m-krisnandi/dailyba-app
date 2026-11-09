@@ -18,6 +18,7 @@ import { Plus } from 'lucide-react';
 import { ChangelogModal } from '@/components/ChangelogModal';
 import { APP_VERSION } from '@/lib/version';
 import { AuthModal } from '@/components/AuthModal';
+import { getTodayLocalDate } from '@/lib/dateUtils';
 
 const VALID_TABS: TabKey[] = ['record', 'daily', 'monthly', 'yearly', 'investments', 'savings'];
 
@@ -181,7 +182,7 @@ export default function Home() {
       category: 'savings',
       source: 'bank',
       currency: state.currency,
-      date: new Date().toISOString().split('T')[0],
+      date: getTodayLocalDate(),
       note: note || 'Savings Allocation',
     });
   };

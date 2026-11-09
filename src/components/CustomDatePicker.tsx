@@ -3,6 +3,7 @@
 import React, { useState, useRef, useEffect, useMemo, useLayoutEffect } from 'react';
 import { Calendar as CalendarIcon, ChevronLeft, ChevronRight, ChevronDown } from 'lucide-react';
 import { Language } from '@/types/finance';
+import { getTodayLocalDate, getYesterdayLocalDate } from '@/lib/dateUtils';
 
 interface CustomDatePickerProps {
   value: string; // YYYY-MM-DD
@@ -104,10 +105,8 @@ export function CustomDatePicker({
 
   // Format display text on trigger button
   const displayText = useMemo(() => {
-    const todayStr = new Date().toISOString().split('T')[0];
-    const yesterday = new Date();
-    yesterday.setDate(yesterday.getDate() - 1);
-    const yesterdayStr = yesterday.toISOString().split('T')[0];
+    const todayStr = getTodayLocalDate();
+    const yesterdayStr = getYesterdayLocalDate();
 
     if (value === todayStr) {
       return language === 'ja' ? `今日 (${value})` : `Today (${value})`;
@@ -166,7 +165,7 @@ export function CustomDatePicker({
     const m = today.getMonth();
     setViewYear(y);
     setViewMonth(m);
-    onChange(today.toISOString().split('T')[0]);
+    onChange(getTodayLocalDate());
     setIsOpen(false);
   };
 
@@ -178,7 +177,7 @@ export function CustomDatePicker({
     const m = yest.getMonth();
     setViewYear(y);
     setViewMonth(m);
-    onChange(yest.toISOString().split('T')[0]);
+    onChange(getYesterdayLocalDate());
     setIsOpen(false);
   };
 
@@ -194,7 +193,7 @@ export function CustomDatePicker({
     return `${monthNames[viewMonth]} ${viewYear}`;
   }, [viewYear, viewMonth, language]);
 
-  const todayStr = new Date().toISOString().split('T')[0];
+  const todayStr = getTodayLocalDate();
 
   return (
     <div ref={containerRef} className={`relative w-full ${className}`}>

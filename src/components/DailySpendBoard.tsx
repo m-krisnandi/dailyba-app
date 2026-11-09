@@ -11,6 +11,7 @@ import { CustomDatePicker } from '@/components/CustomDatePicker';
 import { Edit3 } from 'lucide-react';
 import { convertCurrency, DEFAULT_RATES, ExchangeRates, formatNumberWithCommas, parseRawNumber } from '@/lib/currency';
 import { EXPENSE_CATEGORY_ICONS, getCategoryBadgeStyle } from '@/lib/constants';
+import { getTodayLocalDate, formatLocalDate } from '@/lib/dateUtils';
 import {
   Plus,
   CalendarDays,
@@ -70,7 +71,7 @@ export function DailySpendBoard({
   const [addExpenseDate, setAddExpenseDate] = useState<string>('');
   const t = translations[language];
 
-  const todayStr = useMemo(() => new Date().toISOString().split('T')[0], []);
+  const todayStr = useMemo(() => getTodayLocalDate(), []);
   const currentMonthStr = useMemo(() => todayStr.slice(0, 7), [todayStr]);
 
   // Target converted to active currency with exact base-currency preservation
@@ -209,10 +210,10 @@ export function DailySpendBoard({
     if (filterMode === 'month') {
       array = array.filter((d) => d.startsWith(currentMonthStr));
     } else if (filterMode === 'week') {
-      const todayDate = new Date(todayStr);
+      const todayDate = new Date(todayStr + 'T12:00:00');
       const sevenDaysAgo = new Date(todayDate);
       sevenDaysAgo.setDate(todayDate.getDate() - 7);
-      const sevenDaysAgoStr = sevenDaysAgo.toISOString().split('T')[0];
+      const sevenDaysAgoStr = formatLocalDate(sevenDaysAgo);
       array = array.filter((d) => d >= sevenDaysAgoStr && d <= todayStr);
     } else if (filterMode === 'custom') {
       if (customFrom && customTo) {

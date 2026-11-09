@@ -3,6 +3,7 @@
 import React, { useRef, useState } from 'react';
 import { FinanceState, Language } from '@/types/finance';
 import { translations } from '@/lib/i18n';
+import { getTodayLocalDate } from '@/lib/dateUtils';
 import { useBodyScrollLock } from '@/lib/useBodyScrollLock';
 import { ConfirmDeleteModal } from './ConfirmDeleteModal';
 import {
@@ -48,7 +49,7 @@ export function BackupModal({
     const dataStr = 'data:text/json;charset=utf-8,' + encodeURIComponent(JSON.stringify(state, null, 2));
     const downloadAnchor = document.createElement('a');
     downloadAnchor.setAttribute('href', dataStr);
-    downloadAnchor.setAttribute('download', `dailyba_backup_${new Date().toISOString().split('T')[0]}.json`);
+    downloadAnchor.setAttribute('download', `dailyba_backup_${getTodayLocalDate()}.json`);
     document.body.appendChild(downloadAnchor);
     downloadAnchor.click();
     downloadAnchor.remove();
@@ -77,7 +78,7 @@ export function BackupModal({
     const encodedUri = encodeURI(csvContent);
     const downloadAnchor = document.createElement('a');
     downloadAnchor.setAttribute('href', encodedUri);
-    downloadAnchor.setAttribute('download', `dailyba_transactions_${new Date().toISOString().split('T')[0]}.csv`);
+    downloadAnchor.setAttribute('download', `dailyba_transactions_${getTodayLocalDate()}.csv`);
     document.body.appendChild(downloadAnchor);
     downloadAnchor.click();
     downloadAnchor.remove();

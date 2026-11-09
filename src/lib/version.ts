@@ -1,7 +1,7 @@
 import { Language } from '@/types/finance';
 
-export const APP_VERSION = '1.4.7';
-export const APP_BUILD = '20261109';
+export const APP_VERSION = '1.4.8';
+export const APP_BUILD = '20261110';
 
 export interface LocalizedChangelogItem {
   version: string;
@@ -11,6 +11,26 @@ export interface LocalizedChangelogItem {
 }
 
 export const APP_CHANGELOG: LocalizedChangelogItem[] = [
+  {
+    version: '1.4.8',
+    date: '2026-11-10',
+    title: {
+      en: 'Local Device Timezone Sync, Smart Entry Brevity, & Credit Card Funding Restrictions',
+      ja: '端末タイムゾーン同期・スマート入力の簡素化・クレカ支払元の適正化',
+    },
+    highlights: {
+      en: [
+        'Local Timezone Synchronization: All dates and today indicators now dynamically align with the user device local clock (e.g. Asia/Jakarta, Tokyo, London) instead of lagging in UTC.',
+        'Credit Card Filtering: Credit card option is now strictly available only for Expenses. It is cleanly excluded from Income and Savings destination accounts.',
+        'Streamlined Smart Quick Entry: Simplified placeholder and helper hint into a concise, compact single line format.',
+      ],
+      ja: [
+        '端末タイムゾーン完全同期：UTC起因で深夜〜未明に日付が前日になっていた問題を解消。端末のローカル時計（東京・ジャカルタ等）に合わせて「今日」を正確に判定。',
+        'クレジットカード選択の適正化：クレカ支払元を「支出」のみに限定。収入や貯金振替の預入先からは非表示に整理。',
+        'スマート入力の説明を簡潔化：入力欄のヒントとプレースホルダーをスマートでコンパクトな1行表記へリファイン。',
+      ],
+    },
+  },
   {
     version: '1.4.7',
     date: '2026-11-09',

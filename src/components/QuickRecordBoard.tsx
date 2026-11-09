@@ -19,6 +19,7 @@ import { TransactionDetailModal } from '@/components/TransactionDetailModal';
 import { ConfirmDeleteModal } from '@/components/ConfirmDeleteModal';
 import { CustomSelect, CustomSelectOption } from '@/components/CustomSelect';
 import { useBodyScrollLock } from '@/lib/useBodyScrollLock';
+import { getTodayLocalDate } from '@/lib/dateUtils';
 import {
   EXPENSE_CATEGORY_ICONS,
   INCOME_CATEGORY_ICONS,
@@ -222,7 +223,7 @@ export function QuickRecordBoard({
   const TX_PAGE_SIZE = 10;
 
   useEffect(() => {
-    const today = new Date().toISOString().split('T')[0];
+    const today = getTodayLocalDate();
     setDate(today);
     setCurrentMonthPrefix(today.slice(0, 7));
   }, []);
@@ -279,7 +280,7 @@ export function QuickRecordBoard({
       category,
       source,
       currency,
-      date: date || new Date().toISOString().split('T')[0],
+      date: date || getTodayLocalDate(),
       note: note.trim() || undefined,
     });
 
@@ -376,7 +377,7 @@ export function QuickRecordBoard({
       category: parsed.category,
       source: parsed.source,
       currency,
-      date: date || new Date().toISOString().split('T')[0],
+      date: date || getTodayLocalDate(),
       note: parsed.note,
     });
 
@@ -472,7 +473,7 @@ export function QuickRecordBoard({
       category: bill.category,
       source: bill.source,
       currency,
-      date: date || new Date().toISOString().split('T')[0],
+      date: date || getTodayLocalDate(),
       note: language === "ja" ? `毎月の固定費: ${billLabel}` : `Monthly Fixed: ${billLabel}`,
       recurringBillId: bill.id,
       isRecurring: true,
@@ -756,7 +757,7 @@ export function QuickRecordBoard({
             </button>
           </div>
           <p className="text-[11px] text-[var(--text-muted)]">
-            {t.record.smartTextHint} {language === 'ja' ? '（例: "電車 220" や "ランチ 1200 口座"）' : '(e.g. "train 4000 bank" or "lunch 1200 ewallet")'}
+            {t.record.smartTextHint}
           </p>
         </form>
       </div>
@@ -779,7 +780,10 @@ export function QuickRecordBoard({
           </button>
           <button
             type="button"
-            onClick={() => setType('income')}
+            onClick={() => {
+            setType('income');
+            if (source === 'credit_card') setSource('bank');
+          }}
             className={`py-2 px-1.5 sm:py-2.5 sm:px-3 rounded-xl text-xs sm:text-sm font-bold flex items-center justify-center space-x-1 sm:space-x-1.5 transition-all cursor-pointer min-w-0 whitespace-nowrap ${
               type === 'income'
                 ? 'bg-[var(--bg-surface-solid)] text-emerald-500 border border-emerald-500/30 shadow-xs'
@@ -791,7 +795,10 @@ export function QuickRecordBoard({
           </button>
           <button
             type="button"
-            onClick={() => setType('savings')}
+            onClick={() => {
+            setType('savings');
+            if (source === 'credit_card') setSource('bank');
+          }}
             className={`py-2 px-1.5 sm:py-2.5 sm:px-3 rounded-xl text-xs sm:text-sm font-bold flex items-center justify-center space-x-1 sm:space-x-1.5 transition-all cursor-pointer min-w-0 whitespace-nowrap ${
               type === 'savings'
                 ? 'bg-[var(--bg-surface-solid)] text-amber-500 border border-amber-500/30 shadow-xs'
@@ -956,10 +963,13 @@ export function QuickRecordBoard({
         {/* Funding Source Selector */}
         <div className="space-y-2.5">
           <label className="text-xs font-semibold text-[var(--text-muted)] uppercase tracking-wider">
-            {t.record.fundingSource}
+            {type === 'income' ? (language === 'ja' ? '受取先口座' : 'Deposit Account') : type === 'savings' ? (language === 'ja' ? '積立先口座' : 'Savings Destination') : t.record.fundingSource}
           </label>
-          <div className="grid grid-cols-2 sm:grid-cols-4 gap-1.5 sm:gap-2">
-            {(['cash', 'bank', 'ewallet', 'credit_card'] as FundingSource[]).map((src) => {
+          <div className={`grid gap-1.5 sm:gap-2 ${type === 'expense' ? 'grid-cols-2 sm:grid-cols-4' : 'grid-cols-3'}`}>
+            {(type === 'expense'
+              ? (['cash', 'bank', 'credit_card', 'ewallet'] as FundingSource[])
+              : (['bank', 'cash', 'ewallet'] as FundingSource[])
+            ).map((src) => {
               const Icon = FUNDING_SOURCE_ICONS[src];
               const isSelected = source === src;
               const sourceStyle = getFundingSourceBadgeStyle(src);
