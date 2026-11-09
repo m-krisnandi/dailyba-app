@@ -17,6 +17,7 @@ import {
 } from '@/lib/constants';
 import { convertCurrency, DEFAULT_RATES, ExchangeRates } from '@/lib/currency';
 import { useBodyScrollLock } from '@/lib/useBodyScrollLock';
+import { ConfirmDeleteModal } from './ConfirmDeleteModal';
 import {
   X,
   Calendar,
@@ -54,6 +55,7 @@ export function TransactionDetailModal({
   onDelete,
 }: TransactionDetailModalProps) {
   useBodyScrollLock(isOpen && !!transaction);
+  const [isConfirmDeleteOpen, setIsConfirmDeleteOpen] = React.useState(false);
 
   if (!isOpen || !transaction) return null;
 
@@ -244,12 +246,7 @@ export function TransactionDetailModal({
           {onDelete && (
             <button
               type="button"
-              onClick={() => {
-                if (window.confirm(isJa ? 'この取引を削除しますか？' : 'Delete this transaction?')) {
-                  onDelete(transaction.id);
-                  onClose();
-                }
-              }}
+              onClick={() => setIsConfirmDeleteOpen(true)}
               className="flex items-center space-x-1.5 px-3 py-2 rounded-xl text-rose-500 hover:bg-rose-500/10 text-xs font-bold transition-all cursor-pointer"
             >
               <Trash2 className="w-3.5 h-3.5" />
@@ -282,6 +279,21 @@ export function TransactionDetailModal({
           </div>
         </div>
       </div>
+
+      <ConfirmDeleteModal
+        isOpen={isConfirmDeleteOpen}
+        title={isJa ? "取引の削除" : "Delete Transaction"}
+        description={isJa ? "この取引履歴を削除してもよろしいですか？" : "Are you sure you want to delete this transaction?"}
+        itemName={`${catLabel}: ${formatCurrency(convertedAmount, currency)}`}
+        language={language}
+        onConfirm={() => {
+          if (onDelete && transaction) {
+            onDelete(transaction.id);
+            onClose();
+          }
+        }}
+        onClose={() => setIsConfirmDeleteOpen(false)}
+      />
     </div>
   );
 }

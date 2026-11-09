@@ -4,6 +4,7 @@ import React, { useRef, useState } from 'react';
 import { FinanceState, Language } from '@/types/finance';
 import { translations } from '@/lib/i18n';
 import { useBodyScrollLock } from '@/lib/useBodyScrollLock';
+import { ConfirmDeleteModal } from './ConfirmDeleteModal';
 import {
   Download,
   Upload,
@@ -38,6 +39,7 @@ export function BackupModal({
   const t = translations[language];
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [feedback, setFeedback] = useState<string | null>(null);
+  const [isConfirmClearOpen, setIsConfirmClearOpen] = useState(false);
 
   if (!isOpen) return null;
 
@@ -199,13 +201,7 @@ export function BackupModal({
             </p>
             <button
               type="button"
-              onClick={() => {
-                if (confirm(language === "ja" ? "本当にすべてのデータを削除しますか？この操作は元に戻せません。" : "Are you sure you want to delete ALL data? This action cannot be undone.")) {
-                  onClearAll();
-                  setFeedback(language === "ja" ? "すべてのローカルデータを削除しました。" : "All local data cleared.");
-                  setTimeout(() => setFeedback(null), 2500);
-                }
-              }}
+              onClick={() => setIsConfirmClearOpen(true)}
               className="w-full p-2.5 rounded-xl border border-rose-500/20 bg-rose-500/10 hover:bg-rose-500/20 text-rose-500 flex items-center justify-center space-x-1.5 text-xs font-semibold transition-all cursor-pointer"
             >
               <Trash2 className="w-3.5 h-3.5" />
@@ -214,6 +210,21 @@ export function BackupModal({
           </div>
         </div>
       </div>
+
+      <ConfirmDeleteModal
+        isOpen={isConfirmClearOpen}
+        title={language === "ja" ? "全データの初期化" : "Clear All Data"}
+        description={language === "ja" ? "本当にすべての家計簿・資産データを削除しますか？この操作は元に戻せません。" : "Are you sure you want to delete ALL transactions, investments, and settings? This action cannot be undone."}
+        itemName={language === "ja" ? "全データ初期化" : "Factory Reset All Data"}
+        confirmLabel={language === "ja" ? "全データを削除" : "Delete All Data"}
+        language={language}
+        onConfirm={() => {
+          onClearAll();
+          setFeedback(language === "ja" ? "すべてのローカルデータを削除しました。" : "All local data cleared.");
+          setTimeout(() => setFeedback(null), 2500);
+        }}
+        onClose={() => setIsConfirmClearOpen(false)}
+      />
     </div>
   );
 }

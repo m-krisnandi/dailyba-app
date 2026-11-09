@@ -4,6 +4,7 @@ import React, { useMemo, useState, useEffect } from 'react';
 import { Currency, Language, Transaction } from '@/types/finance';
 import { formatCurrency, translations } from '@/lib/i18n';
 import { EditTransactionModal } from '@/components/EditTransactionModal';
+import { ConfirmDeleteModal } from './ConfirmDeleteModal';
 import { Edit3 } from 'lucide-react';
 import { convertCurrency, DEFAULT_RATES, ExchangeRates, formatNumberWithCommas, parseRawNumber } from '@/lib/currency';
 import {
@@ -42,6 +43,7 @@ export function SavingsBoard({
   onUpdateTransaction,
 }: SavingsBoardProps) {
   const [editingTx, setEditingTx] = useState<Transaction | null>(null);
+  const [deletingTx, setDeletingTx] = useState<Transaction | null>(null);
   const t = translations[language];
 
   const [customAmountStr, setCustomAmountStr] = useState('');
@@ -507,7 +509,7 @@ export function SavingsBoard({
                       {onDeleteTransaction && (
                         <button
                           type="button"
-                          onClick={() => handleDeleteItem(tx.id)}
+                          onClick={() => setDeletingTx(tx)}
                           className="p-1.5 rounded-lg text-[var(--text-muted)] hover:text-rose-500 hover:bg-rose-500/10 transition-all cursor-pointer"
                           title={t.actions.delete}
                         >
@@ -531,6 +533,22 @@ export function SavingsBoard({
         onSave={(updated) => {
           if (onUpdateTransaction) onUpdateTransaction(updated);
         }}
+      />
+
+      {/* Confirm Delete Modal */}
+      <ConfirmDeleteModal
+        isOpen={!!deletingTx}
+        title={language === "ja" ? "貯金記録の削除" : "Delete Savings Entry"}
+        description={language === "ja" ? "この貯金振替記録を削除してもよろしいですか？" : "Are you sure you want to delete this savings allocation?"}
+        itemName={deletingTx ? `${formatCurrency(convertCurrency(deletingTx.amount, deletingTx.currency || "JPY", currency, rates), currency)}${deletingTx.note ? ` (${deletingTx.note})` : ""}` : undefined}
+        language={language}
+        onConfirm={() => {
+          if (deletingTx) {
+            handleDeleteItem(deletingTx.id);
+            setDeletingTx(null);
+          }
+        }}
+        onClose={() => setDeletingTx(null)}
       />
     </div>
   );

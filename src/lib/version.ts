@@ -1,6 +1,6 @@
 import { Language } from '@/types/finance';
 
-export const APP_VERSION = '1.4.0';
+export const APP_VERSION = '1.4.1';
 export const APP_BUILD = '20261109';
 
 export interface LocalizedChangelogItem {
@@ -11,6 +11,28 @@ export interface LocalizedChangelogItem {
 }
 
 export const APP_CHANGELOG: LocalizedChangelogItem[] = [
+  {
+    version: '1.4.1',
+    date: '2026-11-09',
+    title: {
+      en: 'Sleek Liquid Glass Confirmation Modal Before Deleting Items & Data Reset',
+      ja: '削除前の洗練された確認モーダル（アラート）の追加と誤削除防止',
+    },
+    highlights: {
+      en: [
+        'Sleek Liquid Glass Delete Modal: replaced instant deletions and native browser alerts with a polished custom confirmation dialog featuring glowing danger badges, item details preview, and smooth animations.',
+        'Comprehensive Deletion Safeguards: prevents accidental removal of transactions, daily expenses, savings transfers, investment assets, and recurring bills.',
+        'Data Backup Reset Protection: fully styled confirmation dialog before wiping database / factory reset with clear warning guidance.',
+        'Multilingual & Accessible: localized titles, item summaries, and action prompts in Japanese and English.',
+      ],
+      ja: [
+        '洗練された削除確認モーダル：即時削除やブラウザ標準の無機質なアラートを廃止し、発光する危険バッジ、品名・金額の確認プレビュー、滑らかなアニメーションを備えた専用モーダルを導入。',
+        '誤削除の徹底防止：日次支出、取引履歴、貯金振替、投資資産、毎月の固定費の削除時に必ずワンステップ確認を挟み、大切なデータの誤操作を防止。',
+        'データ全消去（初期化）の保護：バックアップ画面の「すべてのデータを初期化」にも専用の警告確認モーダルを適用。',
+        '日本語・英語の完全ローカライズ：選択中の言語に応じたタイトル、警告文、ボタンテキスト（「削除する」「キャンセル」）の最適表示。',
+      ],
+    },
+  },
   {
     version: '1.4.0',
     date: '2026-11-09',

@@ -16,6 +16,7 @@ import { convertCurrency, DEFAULT_RATES, ExchangeRates, formatNumberWithCommas, 
 import { CustomDatePicker } from '@/components/CustomDatePicker';
 import { EditTransactionModal } from '@/components/EditTransactionModal';
 import { TransactionDetailModal } from '@/components/TransactionDetailModal';
+import { ConfirmDeleteModal } from '@/components/ConfirmDeleteModal';
 import { CustomSelect, CustomSelectOption } from '@/components/CustomSelect';
 import { useBodyScrollLock } from '@/lib/useBodyScrollLock';
 import {
@@ -186,6 +187,8 @@ export function QuickRecordBoard({
   const [isBillModalOpen, setIsBillModalOpen] = useState(false);
   useBodyScrollLock(isCategoryModalOpen || isBillModalOpen);
   const [editingBill, setEditingBill] = useState<RecurringBill | null>(null);
+  const [deletingTx, setDeletingTx] = useState<Transaction | null>(null);
+  const [deletingBill, setDeletingBill] = useState<RecurringBill | null>(null);
 
   // Bill form state
   const [billName, setBillName] = useState('');
@@ -1011,7 +1014,7 @@ export function QuickRecordBoard({
                       {onDeleteRecurringBill && (
                         <button
                           type="button"
-                          onClick={() => handleDeleteRecurringBill(bill)}
+                          onClick={() => setDeletingBill(bill)}
                           className="p-1.5 rounded-lg text-[var(--text-muted)] hover:text-rose-500 hover:bg-rose-500/10 transition-all cursor-pointer"
                           title={t.actions.delete}
                         >
@@ -1057,7 +1060,7 @@ export function QuickRecordBoard({
                       {onDeleteRecurringBill && (
                         <button
                           type="button"
-                          onClick={() => handleDeleteRecurringBill(bill)}
+                          onClick={() => setDeletingBill(bill)}
                           className="p-1.5 rounded-lg text-[var(--text-muted)] hover:text-rose-500 hover:bg-rose-500/10 transition-all cursor-pointer"
                           title={t.actions.delete}
                         >
@@ -1290,7 +1293,7 @@ export function QuickRecordBoard({
                       type="button"
                       onClick={(e) => {
                         e.stopPropagation();
-                        onDeleteTransaction(tx.id);
+                        setDeletingTx(tx);
                       }}
                       className="opacity-70 sm:opacity-0 sm:group-hover:opacity-100 p-1 text-[var(--text-faint)] hover:text-rose-500 transition-all cursor-pointer shrink-0"
                       title={t.actions.delete}
@@ -1645,6 +1648,37 @@ export function QuickRecordBoard({
         onClose={() => setSelectedDetailTx(null)}
         onEdit={(tx) => setEditingTx(tx)}
         onDelete={(id) => onDeleteTransaction(id)}
+      />
+      {/* Confirm Delete Transaction Modal */}
+      <ConfirmDeleteModal
+        isOpen={!!deletingTx}
+        title={language === "ja" ? "取引履歴の削除" : "Delete Transaction"}
+        description={language === "ja" ? "この取引履歴を削除してもよろしいですか？" : "Are you sure you want to delete this transaction from history?"}
+        itemName={deletingTx ? `${deletingTx.type === "expense" ? (t.expenseCategories[deletingTx.category as ExpenseCategory] || deletingTx.category) : deletingTx.type === "income" ? (t.incomeCategories[deletingTx.category as IncomeCategory] || deletingTx.category) : t.record.typeSavings}: ${formatCurrency(convertCurrency(deletingTx.amount, deletingTx.currency || "JPY", currency, rates), currency)}` : undefined}
+        language={language}
+        onConfirm={() => {
+          if (deletingTx) {
+            onDeleteTransaction(deletingTx.id);
+            setDeletingTx(null);
+          }
+        }}
+        onClose={() => setDeletingTx(null)}
+      />
+
+      {/* Confirm Delete Recurring Bill Modal */}
+      <ConfirmDeleteModal
+        isOpen={!!deletingBill}
+        title={language === "ja" ? "固定費の削除" : "Delete Recurring Bill"}
+        description={language === "ja" ? "この固定費項目を削除してもよろしいですか？（今月記録済みの支払いは履歴から自動クリアされます）" : "Are you sure you want to delete this recurring bill? (Any payment logged this month will also be cleared)"}
+        itemName={deletingBill ? `${deletingBill.name || (deletingBill.titleKey && t.expenseCategories[deletingBill.titleKey as ExpenseCategory]) || deletingBill.category} (${formatCurrency(convertCurrency(deletingBill.defaultAmount, deletingBill.currency, currency, rates), currency)} / 月)` : undefined}
+        language={language}
+        onConfirm={() => {
+          if (deletingBill) {
+            handleDeleteRecurringBill(deletingBill);
+            setDeletingBill(null);
+          }
+        }}
+        onClose={() => setDeletingBill(null)}
       />
     </div>
   );

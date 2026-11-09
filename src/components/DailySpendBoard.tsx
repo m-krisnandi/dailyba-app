@@ -6,6 +6,7 @@ import { formatCurrency, translations } from '@/lib/i18n';
 import { EditTransactionModal } from '@/components/EditTransactionModal';
 import { AddTransactionModal } from '@/components/AddTransactionModal';
 import { TransactionDetailModal } from '@/components/TransactionDetailModal';
+import { ConfirmDeleteModal } from './ConfirmDeleteModal';
 import { CustomDatePicker } from '@/components/CustomDatePicker';
 import { Edit3 } from 'lucide-react';
 import { convertCurrency, DEFAULT_RATES, ExchangeRates, formatNumberWithCommas, parseRawNumber } from '@/lib/currency';
@@ -63,6 +64,7 @@ export function DailySpendBoard({
   onAddTransaction,
 }: DailySpendBoardProps) {
   const [editingTx, setEditingTx] = useState<Transaction | null>(null);
+  const [deletingTx, setDeletingTx] = useState<Transaction | null>(null);
   const [selectedDetailTx, setSelectedDetailTx] = useState<Transaction | null>(null);
   const [isAddExpenseModalOpen, setIsAddExpenseModalOpen] = useState(false);
   const [addExpenseDate, setAddExpenseDate] = useState<string>('');
@@ -849,7 +851,7 @@ export function DailySpendBoard({
                                 {onDeleteTransaction && (
                                   <button
                                     type="button"
-                                    onClick={(e) => { e.stopPropagation(); onDeleteTransaction(tx.id); }}
+                                    onClick={(e) => { e.stopPropagation(); setDeletingTx(tx); }}
                                     className="p-1 rounded text-[var(--text-faint)] hover:text-rose-500 transition-all cursor-pointer opacity-70 hover:opacity-100"
                                     title={t.actions.delete}
                                   >
@@ -914,6 +916,21 @@ export function DailySpendBoard({
           title={addExpenseDate === todayStr ? (t.record.recordTodayExpense || "Record Today's Spend") : `Record Expense (${addExpenseDate})`}
         />
       )}
+      {/* Confirm Delete Modal */}
+      <ConfirmDeleteModal
+        isOpen={!!deletingTx}
+        title={language === "ja" ? "支出の削除" : "Delete Expense"}
+        description={language === "ja" ? "この支出記録を削除してもよろしいですか？" : "Are you sure you want to delete this expense record?"}
+        itemName={deletingTx ? `${t.expenseCategories[deletingTx.category as ExpenseCategory] || deletingTx.category}: ${formatCurrency(convertCurrency(deletingTx.amount, deletingTx.currency || "JPY", currency, rates), currency)}` : undefined}
+        language={language}
+        onConfirm={() => {
+          if (deletingTx && onDeleteTransaction) {
+            onDeleteTransaction(deletingTx.id);
+            setDeletingTx(null);
+          }
+        }}
+        onClose={() => setDeletingTx(null)}
+      />
     </div>
   );
 }

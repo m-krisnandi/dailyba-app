@@ -6,6 +6,7 @@ import { formatCurrency, translations } from '@/lib/i18n';
 import { convertCurrency, DEFAULT_RATES, ExchangeRates, formatNumberWithCommas, parseRawNumber } from '@/lib/currency';
 import { useBodyScrollLock } from '@/lib/useBodyScrollLock';
 import { CustomSelect, CustomSelectOption } from './CustomSelect';
+import { ConfirmDeleteModal } from './ConfirmDeleteModal';
 import {
   TrendingUp,
   TrendingDown,
@@ -44,6 +45,7 @@ export function InvestmentBoard({
   const [isModalOpen, setIsModalOpen] = useState(false);
   useBodyScrollLock(isModalOpen);
   const [editingId, setEditingId] = useState<string | null>(null);
+  const [deletingAsset, setDeletingAsset] = useState<InvestmentAsset | null>(null);
 
   // Form State
   const [name, setName] = useState('');
@@ -329,7 +331,7 @@ export function InvestmentBoard({
                       </button>
                       <button
                         type="button"
-                        onClick={() => onDeleteInvestment(inv.id)}
+                        onClick={() => setDeletingAsset(inv)}
                         className="p-2 rounded-xl text-[var(--text-muted)] hover:text-rose-500 hover:bg-rose-500/10 transition-all cursor-pointer"
                         title={t.actions.delete}
                       >
@@ -535,6 +537,22 @@ export function InvestmentBoard({
           </div>
         </div>
       )}
+
+      {/* Confirm Delete Modal */}
+      <ConfirmDeleteModal
+        isOpen={!!deletingAsset}
+        title={language === "ja" ? "資産の削除" : "Delete Investment Asset"}
+        description={language === "ja" ? "この投資・資産データを削除してもよろしいですか？" : "Are you sure you want to remove this asset from your portfolio?"}
+        itemName={deletingAsset ? `${deletingAsset.name} (${formatCurrency(convertCurrency(deletingAsset.currentValue, deletingAsset.currency || "JPY", currency, rates), currency)})` : undefined}
+        language={language}
+        onConfirm={() => {
+          if (deletingAsset) {
+            onDeleteInvestment(deletingAsset.id);
+            setDeletingAsset(null);
+          }
+        }}
+        onClose={() => setDeletingAsset(null)}
+      />
     </div>
   );
 }
