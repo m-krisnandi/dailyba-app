@@ -1,4 +1,4 @@
-import { Currency, ExpenseCategory, FundingSource } from '@/types/finance';
+import { Currency, ExpenseCategory, FundingSource, Language } from '@/types/finance';
 import { getTodayLocalDate } from './dateUtils';
 
 // Obfuscated client key for Dailyba proprietary AI Vision engine
@@ -115,7 +115,8 @@ export async function prepareImageForAI(
 export async function parseReceiptWithAI(
   base64Data: string,
   mimeType: string,
-  activeCurrency: Currency = 'IDR'
+  activeCurrency: Currency = 'IDR',
+  language: Language = 'ja'
 ): Promise<ParsedReceiptResult> {
   const apiKey = getAIEngineApiKey();
   const candidateModels = ['gemini-2.5-flash', 'gemini-2.5-flash-lite', 'gemini-3.5-flash', 'gemini-3.5-flash-lite'];
@@ -165,11 +166,17 @@ JSON Schema to output:
   "date": "YYYY-MM-DD" | null,
   "category": "food_drinks" | "shopping" | "train" | "ride" | "laundry" | "rent" | "family" | "gifts" | "vps" | "mobile" | "others",
   "source": "cash" | "bank" | "credit_card" | "ewallet",
-  "merchant": string, // Store or vendor name (e.g. "7-Eleven", "Alfamart", "Starbucks", "Tokyo Metro")
+  "merchant": string, // Store or vendor name
   "itemsSummary": string, // 2-4 words summarizing main purchased items
   "note": string, // Format: "[Merchant] - [ItemsSummary]"
   "confidence": number // 0.0 to 1.0 confidence score
-}`;
+}
+
+Language Requirements:
+- The target user interface language is: ${language === 'ja' ? 'Japanese (日本語)' : 'English'}.
+- For "itemsSummary": Must be written in ${language === 'ja' ? 'Japanese (e.g. 「寿司皿」, 「お弁当・お茶」, 「日用品」, 「食料品」, 「カフェ・コーヒー」)' : 'English (e.g. "sushi plates", "groceries", "lunch & coffee")'}.
+- For "merchant": Use the store native name (e.g. ${language === 'ja' ? '「はま寿司」, 「セブン-イレブン」, 「ファミリーマート」, 「吉野家」' : '"Hamazushi", "7-Eleven", "Starbucks"'}).
+- For "note": Must strictly format as "[Merchant] - [ItemsSummary]" in ${language === 'ja' ? 'Japanese (e.g. 「はま寿司 - 寿司皿」, 「セブン-イレブン - お弁当」)' : 'English (e.g. "Hamazushi - sushi plates")'}.`;
 
   let lastError: Error | null = null;
 
@@ -265,7 +272,7 @@ JSON Schema to output:
       const itemsSummary = (parsed.itemsSummary || '').trim();
       const note =
         (parsed.note || '').trim() ||
-        (merchant ? `${merchant}${itemsSummary ? ` - ${itemsSummary}` : ''}` : 'Receipt scan');
+        (merchant ? `${merchant}${itemsSummary ? ` - ${itemsSummary}` : ''}` : (language === 'ja' ? 'レシート読取' : 'Receipt scan'));
 
       return {
         amount,

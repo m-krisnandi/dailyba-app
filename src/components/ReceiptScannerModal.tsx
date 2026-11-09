@@ -182,7 +182,7 @@ export function ReceiptScannerModal({
       setImagePreview(previewUrl);
 
       // 2. Call AI Vision API
-      const result: ParsedReceiptResult = await parseReceiptWithAI(base64, mimeType, activeCurrency);
+      const result: ParsedReceiptResult = await parseReceiptWithAI(base64, mimeType, activeCurrency, language);
 
       // 3. Pre-fill review form
       setAmountStr(formatNumberWithCommas(result.amount));
@@ -267,7 +267,7 @@ export function ReceiptScannerModal({
               <h3 className="text-base font-extrabold text-[var(--text-main)] flex items-center space-x-1.5">
                 <span>{language === 'ja' ? 'レシート・請求書スキャナー' : 'Receipt & Invoice Scanner'}</span>
 <span className="text-[10px] font-mono px-1.5 py-0.5 rounded bg-emerald-500/15 text-emerald-500 border border-emerald-500/30">
-                  Auto Scan
+                  {language === 'ja' ? '自動読取' : 'Auto Scan'}
                 </span>
               </h3>
               <p className="text-[11px] text-[var(--text-muted)]">
@@ -376,7 +376,7 @@ export function ReceiptScannerModal({
                 {/* Center laser pulse */}
                 <div className="w-full h-0.5 bg-gradient-to-r from-transparent via-emerald-400 to-transparent shadow-[0_0_12px_#10b981] animate-pulse" />
                 <div className="text-[10px] text-emerald-400 font-mono self-center bg-black/60 px-2 py-0.5 rounded backdrop-blur-sm">
-                  <span>Dailyba Scanner</span>
+                  <span>{language === 'ja' ? 'Dailyba レシート読取' : 'Dailyba Scanner'}</span>
                 </div>
               </div>
             </div>
@@ -412,7 +412,7 @@ export function ReceiptScannerModal({
                   galleryInputRef.current?.click();
                 }}
                 className="px-3.5 py-2.5 rounded-xl border border-[var(--border-subtle)] bg-[var(--bg-subtle)] hover:bg-[var(--bg-subtle-hover)] text-xs font-bold text-[var(--text-muted)] hover:text-[var(--text-main)] transition-all cursor-pointer flex items-center space-x-1"
-                title="Upload from disk instead"
+                title={language === 'ja' ? '端末の画像を選択' : 'Upload from disk instead'}
               >
                 <Upload className="w-3.5 h-3.5" />
                 <span className="hidden sm:inline">{language === 'ja' ? '画像選択' : 'Upload'}</span>
