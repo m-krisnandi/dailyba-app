@@ -22,11 +22,13 @@ export const APP_CHANGELOG: LocalizedChangelogItem[] = [
       en: [
         'Unified Custom DatePicker: replaced native browser/OS date inputs across Add/Edit Transaction modals and Daily Spend custom range filters with the beautiful custom liquid-glass calendar.',
         '100% Japanese Calendar: displays Japanese month/year headers (e.g. 2026年 11月), Japanese weekday initials (日・月・火・水・木・金・土), and localized today/yesterday buttons.',
+        'Smart Viewport Collision Detection: calendar automatically checks available screen space and opens downwards or upwards dynamically, ensuring it never collides with or hides behind the topbar when scrolled.',
         'Consistent Mobile & Web UX: seamless dark liquid glass aesthetics matching Android, iOS, and Web layouts identically.',
       ],
       ja: [
         'カスタムカレンダーの統一：取引記録モーダル、取引編集モーダル、日次支出の期間指定フィルターに残っていたOS標準の日付入力を廃止し、洗練されたリキッドグラス・カレンダーに完全統一。',
         '完全日本語カレンダー：「2026年 11月」のヘッダー表示、曜日表記（日・月・火・水・木・金・土）、「今日」「昨日」「今日を選択」ショートカットボタンの日本語対応。',
+        '動的コリジョン検知（自動上下開閉）：画面のスクロール位置と余白を自動計測し、上に開いてTopBarやメニューに被らないよう、空いている方向（下または上）へ柔軟に展開。',
         'Web・APK・iOSの一貫性：全プラットフォームで一貫したモダンなデザインと操作性を実現。',
       ],
     },

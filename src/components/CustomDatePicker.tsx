@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useRef, useEffect, useMemo } from 'react';
+import React, { useState, useRef, useEffect, useMemo, useLayoutEffect } from 'react';
 import { Calendar as CalendarIcon, ChevronLeft, ChevronRight, ChevronDown } from 'lucide-react';
 import { Language } from '@/types/finance';
 
@@ -16,11 +16,38 @@ export function CustomDatePicker({
   value,
   onChange,
   language,
-  dropUp = false,
+  dropUp: explicitDropUp,
   className = '',
 }: CustomDatePickerProps) {
   const [isOpen, setIsOpen] = useState(false);
+  const [resolvedDropUp, setResolvedDropUp] = useState<boolean>(false);
   const containerRef = useRef<HTMLDivElement>(null);
+  const popoverRef = useRef<HTMLDivElement>(null);
+
+  // Dynamic collision detection to automatically open down or up based on available viewport space
+  useLayoutEffect(() => {
+    if (!isOpen) return;
+
+    if (explicitDropUp !== undefined) {
+      setResolvedDropUp(explicitDropUp);
+      return;
+    }
+
+    if (containerRef.current) {
+      const rect = containerRef.current.getBoundingClientRect();
+      const calendarHeight = 360; // Estimated max height of calendar popover
+      const spaceBelow = window.innerHeight - rect.bottom;
+      const spaceAbove = rect.top;
+
+      // If opening downwards would clip off screen (< 360px below) AND there's more space above, open up
+      // Otherwise, open downwards (standard and visible when scrolled down)
+      if (spaceBelow < calendarHeight && spaceAbove > spaceBelow && spaceAbove > 280) {
+        setResolvedDropUp(true);
+      } else {
+        setResolvedDropUp(false);
+      }
+    }
+  }, [isOpen, explicitDropUp]);
 
   // Parse current value or fallback
   const parsedValueDate = useMemo(() => {
@@ -41,18 +68,30 @@ export function CustomDatePicker({
     }
   }, [value]);
 
-  // Close when clicking outside
+  // Close when clicking outside or pressing Escape
   useEffect(() => {
-    function handleClickOutside(e: MouseEvent) {
+    if (!isOpen) return;
+
+    function handleClickOutside(e: MouseEvent | TouchEvent) {
       if (containerRef.current && !containerRef.current.contains(e.target as Node)) {
         setIsOpen(false);
       }
     }
-    if (isOpen) {
-      document.addEventListener('mousedown', handleClickOutside);
+
+    function handleKeyDown(e: KeyboardEvent) {
+      if (e.key === 'Escape') {
+        setIsOpen(false);
+      }
     }
+
+    document.addEventListener('mousedown', handleClickOutside);
+    document.addEventListener('touchstart', handleClickOutside);
+    document.addEventListener('keydown', handleKeyDown);
+
     return () => {
       document.removeEventListener('mousedown', handleClickOutside);
+      document.removeEventListener('touchstart', handleClickOutside);
+      document.removeEventListener('keydown', handleKeyDown);
     };
   }, [isOpen]);
 
@@ -195,8 +234,9 @@ export function CustomDatePicker({
       {/* Custom Modern Dropdown Calendar Popover */}
       {isOpen && (
         <div
+          ref={popoverRef}
           className={`absolute left-0 z-50 w-[calc(100vw-2.5rem)] max-w-xs sm:w-80 sm:max-w-none p-4 rounded-3xl border border-[var(--border-strong)] bg-[var(--bg-surface-solid)]/98 backdrop-blur-2xl shadow-2xl space-y-3 animate-in fade-in zoom-in-95 duration-150 ${
-            dropUp ? 'bottom-full mb-2' : 'top-full mt-2'
+            resolvedDropUp ? 'bottom-full mb-2' : 'top-full mt-2'
           }`}
         >
           {/* Calendar Header with Nav Controls */}

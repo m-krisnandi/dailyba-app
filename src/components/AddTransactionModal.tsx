@@ -320,7 +320,7 @@ export function AddTransactionModal({
               value={date}
               onChange={setDate}
               language={language}
-              dropUp={true}
+              
             />
           </div>
 
