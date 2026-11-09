@@ -8,9 +8,17 @@ interface CustomDatePickerProps {
   value: string; // YYYY-MM-DD
   onChange: (date: string) => void;
   language: Language;
+  dropUp?: boolean;
+  className?: string;
 }
 
-export function CustomDatePicker({ value, onChange, language }: CustomDatePickerProps) {
+export function CustomDatePicker({
+  value,
+  onChange,
+  language,
+  dropUp = false,
+  className = '',
+}: CustomDatePickerProps) {
   const [isOpen, setIsOpen] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
 
@@ -150,24 +158,24 @@ export function CustomDatePicker({ value, onChange, language }: CustomDatePicker
   const todayStr = new Date().toISOString().split('T')[0];
 
   return (
-    <div ref={containerRef} className="relative w-full">
+    <div ref={containerRef} className={`relative w-full ${className}`}>
       {/* Trigger Button with Apple Liquid Glass Styling */}
       <div className="flex items-center space-x-1.5 w-full">
         <button
           type="button"
           onClick={() => setIsOpen(!isOpen)}
-          className={`flex-1 flex items-center justify-between px-4 py-2.5 rounded-xl border text-xs sm:text-sm font-semibold transition-all cursor-pointer select-none ${
+          className={`flex-1 flex items-center justify-between px-3.5 py-2.5 rounded-xl border text-xs sm:text-sm font-semibold transition-all cursor-pointer select-none ${
             isOpen
               ? 'border-[var(--text-main)] bg-[var(--bg-subtle-hover)] text-[var(--text-main)] ring-1 ring-[var(--text-main)] shadow-xs'
               : 'border-[var(--border-subtle)] bg-[var(--bg-subtle)] hover:bg-[var(--bg-subtle-hover)] text-[var(--text-main)]'
           }`}
         >
-          <div className="flex items-center space-x-2.5">
+          <div className="flex items-center space-x-2.5 min-w-0 pr-1">
             <CalendarIcon className="w-4 h-4 text-[var(--text-main)] shrink-0" />
             <span className="tabular-numbers truncate font-mono text-xs">{displayText}</span>
           </div>
           <ChevronDown
-            className={`w-3.5 h-3.5 text-[var(--text-muted)] transition-transform duration-200 ${
+            className={`w-3.5 h-3.5 text-[var(--text-muted)] shrink-0 transition-transform duration-200 ${
               isOpen ? 'rotate-180' : ''
             }`}
           />
@@ -186,7 +194,11 @@ export function CustomDatePicker({ value, onChange, language }: CustomDatePicker
 
       {/* Custom Modern Dropdown Calendar Popover */}
       {isOpen && (
-        <div className="absolute left-0 bottom-full mb-2 sm:bottom-auto sm:top-full sm:mt-2 z-50 w-[calc(100vw-2.5rem)] max-w-xs sm:w-80 sm:max-w-none p-4 rounded-3xl border border-[var(--border-strong)] bg-[var(--bg-surface-solid)]/98 backdrop-blur-2xl shadow-[var(--card-shadow)] space-y-3 animate-in fade-in zoom-in-95 duration-150">
+        <div
+          className={`absolute left-0 z-50 w-[calc(100vw-2.5rem)] max-w-xs sm:w-80 sm:max-w-none p-4 rounded-3xl border border-[var(--border-strong)] bg-[var(--bg-surface-solid)]/98 backdrop-blur-2xl shadow-2xl space-y-3 animate-in fade-in zoom-in-95 duration-150 ${
+            dropUp ? 'bottom-full mb-2' : 'top-full mt-2'
+          }`}
+        >
           {/* Calendar Header with Nav Controls */}
           <div className="flex items-center justify-between pb-2 border-b border-[var(--border-subtle)]">
             <h4 className="text-xs sm:text-sm font-bold text-[var(--text-main)] tabular-numbers font-mono">

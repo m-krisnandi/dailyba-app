@@ -1,6 +1,6 @@
 import { Language } from '@/types/finance';
 
-export const APP_VERSION = '1.3.9';
+export const APP_VERSION = '1.4.0';
 export const APP_BUILD = '20261109';
 
 export interface LocalizedChangelogItem {
@@ -11,6 +11,26 @@ export interface LocalizedChangelogItem {
 }
 
 export const APP_CHANGELOG: LocalizedChangelogItem[] = [
+  {
+    version: '1.4.0',
+    date: '2026-11-09',
+    title: {
+      en: 'Unified Custom Liquid Glass Calendar across All Dialogs & Japanese Dates',
+      ja: '全モーダルのカレンダーUI統一と日本語日付ピッカーの全面適用',
+    },
+    highlights: {
+      en: [
+        'Unified Custom DatePicker: replaced native browser/OS date inputs across Add/Edit Transaction modals and Daily Spend custom range filters with the beautiful custom liquid-glass calendar.',
+        '100% Japanese Calendar: displays Japanese month/year headers (e.g. 2026年 11月), Japanese weekday initials (日・月・火・水・木・金・土), and localized today/yesterday buttons.',
+        'Consistent Mobile & Web UX: seamless dark liquid glass aesthetics matching Android, iOS, and Web layouts identically.',
+      ],
+      ja: [
+        'カスタムカレンダーの統一：取引記録モーダル、取引編集モーダル、日次支出の期間指定フィルターに残っていたOS標準の日付入力を廃止し、洗練されたリキッドグラス・カレンダーに完全統一。',
+        '完全日本語カレンダー：「2026年 11月」のヘッダー表示、曜日表記（日・月・火・水・木・金・土）、「今日」「昨日」「今日を選択」ショートカットボタンの日本語対応。',
+        'Web・APK・iOSの一貫性：全プラットフォームで一貫したモダンなデザインと操作性を実現。',
+      ],
+    },
+  },
   {
     version: '1.3.9',
     date: '2026-11-09',

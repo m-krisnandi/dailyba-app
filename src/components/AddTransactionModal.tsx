@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect, useMemo } from 'react';
 import { CustomSelect, CustomSelectOption } from './CustomSelect';
+import { CustomDatePicker } from '@/components/CustomDatePicker';
 import {
   Currency,
   ExpenseCategory,
@@ -315,12 +316,11 @@ export function AddTransactionModal({
             <label className="text-xs font-bold text-[var(--text-muted)] uppercase tracking-wider block">
               {t.record.date}
             </label>
-            <input
-              type="date"
+            <CustomDatePicker
               value={date}
-              onChange={(e) => setDate(e.target.value)}
-              className="w-full bg-[var(--bg-subtle)] border border-[var(--border-subtle)] focus:border-[var(--border-strong)] rounded-2xl px-4 py-2.5 text-xs font-mono font-bold text-[var(--text-main)] outline-none cursor-pointer"
-              required
+              onChange={setDate}
+              language={language}
+              dropUp={true}
             />
           </div>
 

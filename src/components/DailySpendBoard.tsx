@@ -6,6 +6,7 @@ import { formatCurrency, translations } from '@/lib/i18n';
 import { EditTransactionModal } from '@/components/EditTransactionModal';
 import { AddTransactionModal } from '@/components/AddTransactionModal';
 import { TransactionDetailModal } from '@/components/TransactionDetailModal';
+import { CustomDatePicker } from '@/components/CustomDatePicker';
 import { Edit3 } from 'lucide-react';
 import { convertCurrency, DEFAULT_RATES, ExchangeRates, formatNumberWithCommas, parseRawNumber } from '@/lib/currency';
 import { EXPENSE_CATEGORY_ICONS } from '@/lib/constants';
@@ -655,27 +656,25 @@ export function DailySpendBoard({
 
         {/* Custom Date Range Picker Accordion */}
         {filterMode === 'custom' && (
-          <div className="p-3.5 rounded-2xl bg-[var(--bg-subtle)] border border-[var(--border-subtle)] flex flex-wrap items-center justify-between gap-3 animate-fade-in text-xs">
-            <div className="flex items-center space-x-2">
-              <span className="text-[11px] font-bold text-[var(--text-muted)] uppercase tracking-wider">
+          <div className="p-3.5 rounded-2xl bg-[var(--bg-subtle)] border border-[var(--border-subtle)] grid grid-cols-1 sm:grid-cols-2 gap-3 animate-fade-in text-xs">
+            <div className="space-y-1">
+              <span className="text-[11px] font-bold text-[var(--text-muted)] uppercase tracking-wider block">
                 {t.dailySpend.from}:
               </span>
-              <input
-                type="date"
+              <CustomDatePicker
                 value={customFrom}
-                onChange={(e) => setCustomFrom(e.target.value)}
-                className="px-3 py-1.5 rounded-xl bg-[var(--bg-surface-solid)] border border-[var(--border-subtle)] text-[var(--text-main)] font-mono text-xs focus:border-[var(--border-strong)] outline-none cursor-pointer"
+                onChange={setCustomFrom}
+                language={language}
               />
             </div>
-            <div className="flex items-center space-x-2">
-              <span className="text-[11px] font-bold text-[var(--text-muted)] uppercase tracking-wider">
+            <div className="space-y-1">
+              <span className="text-[11px] font-bold text-[var(--text-muted)] uppercase tracking-wider block">
                 {t.dailySpend.to}:
               </span>
-              <input
-                type="date"
+              <CustomDatePicker
                 value={customTo}
-                onChange={(e) => setCustomTo(e.target.value)}
-                className="px-3 py-1.5 rounded-xl bg-[var(--bg-surface-solid)] border border-[var(--border-subtle)] text-[var(--text-main)] font-mono text-xs focus:border-[var(--border-strong)] outline-none cursor-pointer"
+                onChange={setCustomTo}
+                language={language}
               />
             </div>
           </div>
