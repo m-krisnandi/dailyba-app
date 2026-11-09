@@ -14,7 +14,7 @@ export function parseSmartText(text: string): ParsedInput | null {
   // Regex to extract number (supports 25k, 50rb, 1.5m, etc.)
   const tokens = clean.split(/\s+/);
   let amount = 0;
-  let remainingTokens: string[] = [];
+  const remainingTokens: string[] = [];
 
   for (const token of tokens) {
     const lower = token.toLowerCase();

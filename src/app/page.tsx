@@ -324,7 +324,7 @@ export default function Home() {
             onClick={() => setIsChangelogModalOpen(true)}
             className="text-[var(--accent-emerald)] hover:underline underline-offset-2 transition-all cursor-pointer font-bold"
           >
-            What's New (Changelog)
+            What&apos;s New (Changelog)
           </button>
         </div>
       </footer>
