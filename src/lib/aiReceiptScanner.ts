@@ -52,6 +52,28 @@ export interface ParsedReceiptResult {
 }
 
 /**
+ * Checks whether an error or environment state is due to lack of network,
+ * offline mode, DNS resolution failure, or timeout.
+ */
+export function isNetworkError(err: any): boolean {
+  if (typeof navigator !== 'undefined' && !navigator.onLine) return true;
+  if (!err) return false;
+  if (err.name === 'NetworkOfflineError' || err.message === 'NETWORK_OFFLINE') return true;
+  if (err.name === 'AbortError' || err.message?.includes('aborted')) return true;
+  const msg = (err.message || '').toLowerCase();
+  return (
+    msg.includes('network') ||
+    msg.includes('fetch') ||
+    msg.includes('offline') ||
+    msg.includes('failed to fetch') ||
+    msg.includes('timeout') ||
+    msg.includes('timed out') ||
+    msg.includes('connection') ||
+    msg.includes('econnrefused')
+  );
+}
+
+/**
  * Resizes and compresses image to max 1800px for optimal OCR recognition on long receipts,
  * minimal memory footprint, and high-speed analysis across all mobile devices.
  */
@@ -118,6 +140,13 @@ export async function parseReceiptWithAI(
   activeCurrency: Currency = 'IDR',
   language: Language = 'ja'
 ): Promise<ParsedReceiptResult> {
+  // 1. Instant check for offline network state
+  if (typeof navigator !== 'undefined' && !navigator.onLine) {
+    const offlineErr = new Error('NETWORK_OFFLINE');
+    offlineErr.name = 'NetworkOfflineError';
+    throw offlineErr;
+  }
+
   const apiKey = getAIEngineApiKey();
   const candidateModels = ['gemini-2.5-flash', 'gemini-2.5-flash-lite', 'gemini-3.5-flash', 'gemini-3.5-flash-lite'];
 
@@ -185,6 +214,9 @@ Language Requirements:
   let lastError: Error | null = null;
 
   for (const model of candidateModels) {
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 15000);
+
     try {
       const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`;
       const payload = {
@@ -211,6 +243,7 @@ Language Requirements:
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload),
+        signal: controller.signal,
       });
 
       if (!res.ok) {
@@ -291,6 +324,12 @@ Language Requirements:
       };
     } catch (err: any) {
       lastError = err;
+      // If network connection failed or timed out, do not retry other candidate models in a loop
+      if (isNetworkError(err)) {
+        break;
+      }
+    } finally {
+      clearTimeout(timeoutId);
     }
   }
 

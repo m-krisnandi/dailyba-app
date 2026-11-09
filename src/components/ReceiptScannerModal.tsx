@@ -4,10 +4,11 @@ import React, { useState, useRef, useMemo, useEffect } from 'react';
 import { Currency, ExpenseCategory, FundingSource, Language, Transaction } from '@/types/finance';
 import { translations, formatCurrency } from '@/lib/i18n';
 import { formatNumberWithCommas, parseRawNumber, convertCurrency, useExchangeRates } from '@/lib/currency';
+import { getTodayLocalDate } from '@/lib/dateUtils';
 import { EXPENSE_CATEGORY_ICONS, FUNDING_SOURCE_ICONS, getCategoryBadgeStyle, getFundingSourceBadgeStyle } from '@/lib/constants';
 import { CustomDatePicker } from './CustomDatePicker';
 import { CustomSelect, CustomSelectOption } from './CustomSelect';
-import { prepareImageForAI, parseReceiptWithAI, ParsedReceiptResult } from '@/lib/aiReceiptScanner';
+import { prepareImageForAI, parseReceiptWithAI, ParsedReceiptResult, isNetworkError } from '@/lib/aiReceiptScanner';
 import { useBodyScrollLock } from '@/lib/useBodyScrollLock';
 import {
   Camera,
@@ -19,6 +20,8 @@ import {
   AlertCircle,
   Eye,
   CreditCard,
+  WifiOff,
+  PenLine,
 } from 'lucide-react';
 
 interface ReceiptScannerModalProps {
@@ -42,6 +45,7 @@ export function ReceiptScannerModal({
 
   const cameraInputRef = useRef<HTMLInputElement>(null);
   const galleryInputRef = useRef<HTMLInputElement>(null);
+  const lastFileRef = useRef<File | null>(null);
 
   const [step, setStep] = useState<'idle' | 'camera' | 'scanning' | 'review' | 'error'>('idle');
   const videoRef = useRef<HTMLVideoElement>(null);
@@ -49,6 +53,27 @@ export function ReceiptScannerModal({
   const [cameraError, setCameraError] = useState<string | null>(null);
   const [imagePreview, setImagePreview] = useState<string | null>(null);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const [isNetworkFailure, setIsNetworkFailure] = useState<boolean>(false);
+  const [isManualOfflineMode, setIsManualOfflineMode] = useState<boolean>(false);
+
+  // Connectivity state for ambient hints
+  const [isOnline, setIsOnline] = useState<boolean>(() => {
+    if (typeof navigator !== 'undefined' && typeof navigator.onLine === 'boolean') {
+      return navigator.onLine;
+    }
+    return true;
+  });
+
+  useEffect(() => {
+    const handleOnline = () => setIsOnline(true);
+    const handleOffline = () => setIsOnline(false);
+    window.addEventListener('online', handleOnline);
+    window.addEventListener('offline', handleOffline);
+    return () => {
+      window.removeEventListener('online', handleOnline);
+      window.removeEventListener('offline', handleOffline);
+    };
+  }, []);
 
   // Review form state
   const [amountStr, setAmountStr] = useState<string>('');
@@ -163,6 +188,9 @@ export function ReceiptScannerModal({
     setStep('idle');
     setImagePreview(null);
     setErrorMessage(null);
+    setIsNetworkFailure(false);
+    setIsManualOfflineMode(false);
+    lastFileRef.current = null;
     setAmountStr('');
     setNote('');
     setShowFullReceipt(false);
@@ -170,6 +198,9 @@ export function ReceiptScannerModal({
 
   const handleProcessImage = async (file: File) => {
     try {
+      lastFileRef.current = file;
+      setIsNetworkFailure(false);
+      setIsManualOfflineMode(false);
       setStep('scanning');
       setErrorMessage(null);
 
@@ -192,9 +223,35 @@ export function ReceiptScannerModal({
       setStep('review');
     } catch (err: any) {
       console.error('Receipt parse error:', err);
-      setErrorMessage(err?.message || (language === 'ja' ? 'レシートの解析に失敗しました。もう一度お試しください。' : 'Failed to scan receipt. Please ensure the total amount is clearly visible.'));
+      const isNet = isNetworkError(err);
+      setIsNetworkFailure(isNet);
+      if (isNet) {
+        setErrorMessage(
+          language === 'ja'
+            ? 'オフラインまたは通信環境が不安定なため、AI解析サーバーに接続できませんでした。'
+            : 'You appear to be offline or network connection is unstable. AI analysis could not complete.'
+        );
+      } else {
+        setErrorMessage(
+          err?.message ||
+            (language === 'ja'
+              ? 'レシートの解析に失敗しました。もう一度お試しください。'
+              : 'Failed to scan receipt. Please ensure the total amount is clearly visible.')
+        );
+      }
       setStep('error');
     }
+  };
+
+  const handleSwitchToManualEntry = () => {
+    setIsManualOfflineMode(true);
+    setShowFullReceipt(true); // Automatically expand the photo preview so user can read it!
+    setAmountStr('');
+    setDate(getTodayLocalDate());
+    setCategory('food_drinks');
+    setSource('cash');
+    setNote('');
+    setStep('review');
   };
 
   const handleFileInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -285,6 +342,18 @@ export function ReceiptScannerModal({
         {/* 1. IDLE STATE: Choose Camera or Upload */}
         {step === 'idle' && (
           <div className="space-y-4 py-2">
+            {/* Ambient Offline Banner */}
+            {!isOnline && (
+              <div className="flex items-center space-x-2.5 p-3 rounded-2xl bg-amber-500/10 border border-amber-500/25 text-xs text-amber-500">
+                <WifiOff className="w-4 h-4 shrink-0" />
+                <span className="leading-relaxed">
+                  {language === 'ja'
+                    ? '現在オフラインです。撮影した写真を見ながら手動入力で記録できます。'
+                    : 'You are currently offline. You can still capture photos and record manually.'}
+                </span>
+              </div>
+            )}
+
             {cameraError && (
               <div className="p-3 rounded-2xl border border-rose-500/30 bg-rose-500/10 text-xs text-rose-500 flex items-start space-x-2">
                 <AlertCircle className="w-4 h-4 shrink-0 mt-0.5" />
@@ -479,29 +548,73 @@ export function ReceiptScannerModal({
           </div>
         )}
 
-        {/* 3. ERROR STATE */}
+        {/* 3. ERROR & OFFLINE FALLBACK STATE */}
         {step === 'error' && (
           <div className="py-6 flex flex-col items-center justify-center space-y-4 text-center">
-            <div className="w-12 h-12 rounded-2xl bg-rose-500/15 border border-rose-500/30 flex items-center justify-center text-rose-500">
-              <AlertCircle className="w-6 h-6" />
+            <div className={`w-12 h-12 rounded-2xl flex items-center justify-center ${
+              isNetworkFailure
+                ? 'bg-amber-500/15 border border-amber-500/30 text-amber-500'
+                : 'bg-rose-500/15 border border-rose-500/30 text-rose-500'
+            }`}>
+              {isNetworkFailure ? <WifiOff className="w-6 h-6" /> : <AlertCircle className="w-6 h-6" />}
             </div>
-            <div className="space-y-1 max-w-sm">
+
+            <div className="space-y-1.5 max-w-sm">
               <h4 className="text-sm font-bold text-[var(--text-main)]">
-                {language === 'ja' ? '解析できませんでした' : 'Receipt Analysis Failed'}
+                {isNetworkFailure
+                  ? (language === 'ja' ? 'オフライン・通信エラー' : 'Offline or Connection Error')
+                  : (language === 'ja' ? '解析できませんでした' : 'Receipt Analysis Failed')}
               </h4>
-              <p className="text-xs text-rose-500/90 leading-relaxed">
+              <p className="text-xs text-[var(--text-muted)] leading-relaxed">
                 {errorMessage}
               </p>
+              {isNetworkFailure && imagePreview && (
+                <p className="text-[11px] text-amber-500/90 pt-1">
+                  {language === 'ja'
+                    ? '💡 写真は保持されています。写真を見ながら手動入力ですぐに記録できます。'
+                    : '💡 Photo is saved in memory. You can record quickly using manual entry.'}
+                </p>
+              )}
             </div>
-            <div className="flex items-center space-x-2 pt-2">
-              <button
-                type="button"
-                onClick={resetAll}
-                className="px-4 py-2 rounded-xl bg-[var(--bg-subtle)] border border-[var(--border-subtle)] text-xs font-bold text-[var(--text-main)] hover:bg-[var(--bg-subtle-hover)] transition-all flex items-center space-x-1.5 cursor-pointer"
-              >
-                <RotateCcw className="w-3.5 h-3.5" />
-                <span>{language === 'ja' ? 'もう一度試す' : 'Try Again'}</span>
-              </button>
+
+            {/* Actions: If network failure, offer Quick Manual Entry as prominent primary button! */}
+            <div className="flex flex-col sm:flex-row items-center gap-2 pt-2 w-full sm:w-auto">
+              {isNetworkFailure ? (
+                <>
+                  <button
+                    type="button"
+                    onClick={handleSwitchToManualEntry}
+                    className="w-full sm:w-auto px-5 py-2.5 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-white text-xs font-bold shadow-md shadow-emerald-500/20 active:scale-95 transition-all flex items-center justify-center space-x-1.5 cursor-pointer"
+                  >
+                    <PenLine className="w-3.5 h-3.5" />
+                    <span>{language === 'ja' ? '写真を見ながら手動入力' : 'Quick Manual Entry'}</span>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => {
+                      if (lastFileRef.current) {
+                        handleProcessImage(lastFileRef.current);
+                      } else {
+                        resetAll();
+                      }
+                    }}
+                    className="w-full sm:w-auto px-4 py-2.5 rounded-xl bg-[var(--bg-subtle)] border border-[var(--border-subtle)] text-xs font-bold text-[var(--text-muted)] hover:text-[var(--text-main)] hover:bg-[var(--bg-subtle-hover)] transition-all flex items-center justify-center space-x-1.5 cursor-pointer"
+                  >
+                    <RotateCcw className="w-3.5 h-3.5" />
+                    <span>{language === 'ja' ? 'もう一度試す' : 'Retry'}</span>
+                  </button>
+                </>
+              ) : (
+                <button
+                  type="button"
+                  onClick={resetAll}
+                  className="px-4 py-2 rounded-xl bg-[var(--bg-subtle)] border border-[var(--border-subtle)] text-xs font-bold text-[var(--text-main)] hover:bg-[var(--bg-subtle-hover)] transition-all flex items-center space-x-1.5 cursor-pointer"
+                >
+                  <RotateCcw className="w-3.5 h-3.5" />
+                  <span>{language === 'ja' ? 'もう一度試す' : 'Try Again'}</span>
+                </button>
+              )}
             </div>
           </div>
         )}
@@ -510,12 +623,34 @@ export function ReceiptScannerModal({
         {step === 'review' && (
           <form onSubmit={handleSaveTransaction} className="space-y-4">
             {/* Top Success & AI Confidence Bar */}
-            <div className="p-3 rounded-2xl border border-emerald-500/30 bg-emerald-500/10 flex items-center justify-between">
+            <div className={`p-3 rounded-2xl border flex items-center justify-between ${
+              isManualOfflineMode
+                ? 'border-amber-500/30 bg-amber-500/10'
+                : 'border-emerald-500/30 bg-emerald-500/10'
+            }`}>
               <div className="flex items-center space-x-2">
-                <Check className="w-4 h-4 text-emerald-500 shrink-0" />
-                <span className="text-xs font-bold text-emerald-600 dark:text-emerald-400 flex items-center space-x-1.5">
-                  <span>{language === 'ja' ? 'AI解析完了（内容をご確認ください）' : 'Receipt Parsed (Please review details)'}</span>
-                  <span className="text-[10px] font-mono px-1.5 py-0.5 rounded bg-emerald-500/20 text-emerald-500 font-bold">{Math.round(confidence * 100)}%</span>
+                {isManualOfflineMode ? (
+                  <PenLine className="w-4 h-4 text-amber-500 shrink-0" />
+                ) : (
+                  <Check className="w-4 h-4 text-emerald-500 shrink-0" />
+                )}
+                <span className={`text-xs font-bold flex items-center space-x-1.5 ${
+                  isManualOfflineMode ? 'text-amber-500' : 'text-emerald-600 dark:text-emerald-400'
+                }`}>
+                  <span>
+                    {isManualOfflineMode
+                      ? (language === 'ja' ? '手動入力モード（写真確認中）' : 'Manual Entry Mode (Viewing Photo)')
+                      : (language === 'ja' ? 'AI解析完了（内容をご確認ください）' : 'Receipt Parsed (Please review details)')}
+                  </span>
+                  {!isManualOfflineMode ? (
+                    <span className="text-[10px] font-mono px-1.5 py-0.5 rounded bg-emerald-500/20 text-emerald-500 font-bold">
+                      {Math.round(confidence * 100)}%
+                    </span>
+                  ) : (
+                    <span className="text-[10px] font-mono px-1.5 py-0.5 rounded bg-amber-500/20 text-amber-500 font-bold">
+                      {language === 'ja' ? 'オフライン' : 'Offline'}
+                    </span>
+                  )}
                 </span>
               </div>
               {imagePreview && (
@@ -530,9 +665,9 @@ export function ReceiptScannerModal({
               )}
             </div>
 
-            {/* Expanded Receipt Image Preview */}
+            {/* Expanded Receipt Image Preview (Kept visible so user can easily read details from it!) */}
             {showFullReceipt && imagePreview && (
-              <div className="rounded-2xl overflow-hidden border border-[var(--border-subtle)] max-h-48 flex items-center justify-center bg-black/60">
+              <div className="rounded-2xl overflow-hidden border border-[var(--border-subtle)] max-h-56 flex items-center justify-center bg-black/60 shadow-inner">
                 {/* eslint-disable-next-line @next/next/no-img-element */}
                 <img
                   src={imagePreview}
@@ -577,6 +712,7 @@ export function ReceiptScannerModal({
                   type="text"
                   required
                   inputMode="decimal"
+                  autoFocus={isManualOfflineMode}
                   value={amountStr}
                   onChange={(e) => {
                     const raw = e.target.value.replace(/[^0-9.]/g, '');
