@@ -1,7 +1,7 @@
 import { Language } from '@/types/finance';
 
-export const APP_VERSION = '1.5.0';
-export const APP_BUILD = '20261110';
+export const APP_VERSION = '1.5.1';
+export const APP_BUILD = '20261110_2';
 
 export interface LocalizedChangelogItem {
   version: string;
@@ -11,6 +11,28 @@ export interface LocalizedChangelogItem {
 }
 
 export const APP_CHANGELOG: LocalizedChangelogItem[] = [
+  {
+    version: '1.5.1',
+    date: '2026-11-10',
+    title: {
+      en: 'Scanner Portrait Viewfinder, Offline Detection, Quick Manual Fallback & Multi-Currency Preview',
+      ja: '縦型レシート用カメラビューファインダー、オフライン自動検知＆手動フォールバック、通貨リアルタイム換算プレビュー',
+    },
+    highlights: {
+      en: [
+        'Optimized Receipt Viewfinder: Expanded camera viewport into a sleek tall portrait aspect with vertical receipt guide frame and laser scan guide for long grocery/restaurant bills.',
+        'Offline & Network Timeout Detection: Gracefully handles loss of internet and network timeouts with instant fallback to Quick Manual Entry while keeping the captured receipt photo displayed right above the form.',
+        'Real-time Multi-Currency Conversion: Switch between JPY, IDR, USD, and MMK instantly in the receipt scanner modal with live conversion preview.',
+        'Codebase & Performance Polish: Zero linter warnings, optimized React hook dependencies, and streamlined single APK release package.',
+      ],
+      ja: [
+        '縦長レシート対応ファインダー：スーパーや外食の長いレシートも撮影しやすい縦型ポートレート枠とスキャンガイドレーザーを新設。',
+        'オフライン＆通信タイムアウト自動検知：電波不良やオフライン時も撮影した写真をそのまま画面上にプレビュー表示しながら「写真を見ながら手動入力」でスムーズに即時記録可能。',
+        '通貨リアルタイム自動換算：レシート読み取り画面でJPY/IDR/USD/MMKをワンタップ切り替え、現在のアクティブ通貨への概算額を即時プレビュー。',
+        'コードベース最適化：全React Hooks依存関係の最適化とリンター警告0件達成、単一APKビルドパッケージへ集約。',
+      ],
+    },
+  },
   {
     version: '1.5.0',
     date: '2026-11-10',
