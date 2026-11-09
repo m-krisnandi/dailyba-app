@@ -1,6 +1,6 @@
 import { Language } from '@/types/finance';
 
-export const APP_VERSION = '1.4.6';
+export const APP_VERSION = '1.4.7';
 export const APP_BUILD = '20261109';
 
 export interface LocalizedChangelogItem {
@@ -11,6 +11,22 @@ export interface LocalizedChangelogItem {
 }
 
 export const APP_CHANGELOG: LocalizedChangelogItem[] = [
+  {
+    version: '1.4.7',
+    date: '2026-11-09',
+    title: {
+      en: 'Fix Investment Tab Crash caused by function initialization',
+      ja: '投資タブ切り替え時のクラッシュ不具合を修正',
+    },
+    highlights: {
+      en: [
+        'Resolved critical runtime ReferenceError when clicking the Investment Board tab by correctly hoisting category icon helpers.',
+      ],
+      ja: [
+        '投資・純資産タブをクリックした際に発生していた初期化エラー（クラッシュ）を修正し、スムーズに表示できるように改善。',
+      ],
+    },
+  },
   {
     version: '1.4.6',
     date: '2026-11-09',

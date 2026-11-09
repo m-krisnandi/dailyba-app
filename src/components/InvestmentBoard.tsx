@@ -22,6 +22,21 @@ import {
   Sparkles,
 } from 'lucide-react';
 
+function getCategoryIcon(cat: InvestmentAsset['category']) {
+  switch (cat) {
+    case 'stock':
+      return Building;
+    case 'crypto':
+      return Sparkles;
+    case 'gold':
+      return Coins;
+    case 'deposit':
+      return ShieldCheck;
+    default:
+      return TrendingUp;
+  }
+}
+
 interface InvestmentBoardProps {
   language: Language;
   currency: Currency;
@@ -133,20 +148,7 @@ export function InvestmentBoard({
     setIsModalOpen(false);
   };
 
-  const getCategoryIcon = (cat: InvestmentAsset['category']) => {
-    switch (cat) {
-      case 'stock':
-        return Building;
-      case 'crypto':
-        return Sparkles;
-      case 'gold':
-        return Coins;
-      case 'deposit':
-        return ShieldCheck;
-      default:
-        return TrendingUp;
-    }
-  };
+
 
   return (
     <div className="space-y-6">
