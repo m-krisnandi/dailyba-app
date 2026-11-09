@@ -3,7 +3,7 @@
 import React, { useMemo, useState, useEffect } from 'react';
 import { Currency, ExpenseCategory, Language, Transaction } from '@/types/finance';
 import { formatCurrency, translations } from '@/lib/i18n';
-import { EXPENSE_CATEGORY_ICONS } from '@/lib/constants';
+import { EXPENSE_CATEGORY_ICONS, getCategoryBadgeStyle } from '@/lib/constants';
 import { convertCurrency, DEFAULT_RATES, ExchangeRates } from '@/lib/currency';
 import {
   ArrowDownRight,
@@ -341,6 +341,7 @@ export function YearlySummaryBoard({
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             {topAnnualCategories.map((item) => {
               const Icon = EXPENSE_CATEGORY_ICONS[item.category as ExpenseCategory] || TrendingUp;
+              const catStyle = getCategoryBadgeStyle("expense", item.category);
               return (
                 <div
                   key={item.category}
@@ -348,7 +349,7 @@ export function YearlySummaryBoard({
                 >
                   <div className="flex items-center justify-between">
                     <div className="flex items-center space-x-2.5">
-                      <div className="w-8 h-8 rounded-xl bg-[var(--bg-surface-solid)] border border-[var(--border-subtle)] flex items-center justify-center text-[var(--text-main)] shadow-xs">
+                      <div className={`w-8 h-8 rounded-xl border flex items-center justify-center shadow-xs ${catStyle.border} ${catStyle.bg} ${catStyle.text}`}>
                         <Icon className="w-4 h-4" />
                       </div>
                       <span className="text-xs font-bold text-[var(--text-main)]">

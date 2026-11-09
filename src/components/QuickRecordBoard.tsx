@@ -151,11 +151,15 @@ export function QuickRecordBoard({
 
   const billCategoryOptions = useMemo<CustomSelectOption<ExpenseCategory>[]>(
     () =>
-      visibleExpenseCategories.map((cat) => ({
-        value: cat,
-        label: t.expenseCategories[cat] || cat,
-        icon: EXPENSE_CATEGORY_ICONS[cat],
-      })),
+      visibleExpenseCategories.map((cat) => {
+        const style = getCategoryBadgeStyle("expense", cat);
+        return {
+          value: cat,
+          label: t.expenseCategories[cat] || cat,
+          icon: EXPENSE_CATEGORY_ICONS[cat],
+          badgeClass: `${style.border} ${style.bg} ${style.text}`,
+        };
+      }),
     [visibleExpenseCategories, t]
   );
 
@@ -866,6 +870,7 @@ export function QuickRecordBoard({
               {visibleExpenseCategories.map((catKey) => {
                 const Icon = EXPENSE_CATEGORY_ICONS[catKey] || AlertCircle;
                 const isSelected = selectedExpenseCat === catKey;
+                const catStyle = getCategoryBadgeStyle("expense", catKey);
                 return (
                   <button
                     key={catKey}
@@ -877,7 +882,9 @@ export function QuickRecordBoard({
                         : 'border-[var(--border-subtle)] bg-[var(--bg-subtle)] hover:bg-[var(--bg-subtle-hover)] text-[var(--text-main)]'
                     }`}
                   >
-                    <Icon className={`w-4 h-4 shrink-0 ${isSelected ? 'text-[var(--text-main)]' : 'text-[var(--text-muted)]'}`} />
+                    <div className={`w-6 h-6 rounded-lg flex items-center justify-center shrink-0 border ${catStyle.border} ${catStyle.bg} ${catStyle.text}`}>
+                      <Icon className="w-3.5 h-3.5" />
+                    </div>
                     <span className="text-xs truncate">
                       {t.expenseCategories[catKey]}
                     </span>
@@ -911,6 +918,7 @@ export function QuickRecordBoard({
               {visibleIncomeCategories.map((catKey) => {
                 const Icon = INCOME_CATEGORY_ICONS[catKey] || ArrowUpRight;
                 const isSelected = selectedIncomeCat === catKey;
+                const catStyle = getCategoryBadgeStyle("income", catKey);
                 return (
                   <button
                     key={catKey}
@@ -922,7 +930,9 @@ export function QuickRecordBoard({
                         : 'border-[var(--border-subtle)] bg-[var(--bg-subtle)] hover:bg-[var(--bg-subtle-hover)] text-[var(--text-main)]'
                     }`}
                   >
-                    <Icon className={`w-4 h-4 shrink-0 ${isSelected ? 'text-[var(--text-main)]' : 'text-[var(--text-muted)]'}`} />
+                    <div className={`w-6 h-6 rounded-lg flex items-center justify-center shrink-0 border ${catStyle.border} ${catStyle.bg} ${catStyle.text}`}>
+                      <Icon className="w-3.5 h-3.5" />
+                    </div>
                     <span className="text-xs truncate">
                       {t.incomeCategories[catKey]}
                     </span>
@@ -1472,6 +1482,7 @@ export function QuickRecordBoard({
                 {allExpenseCategories.map((catKey) => {
                   const Icon = EXPENSE_CATEGORY_ICONS[catKey] || AlertCircle;
                   const isHidden = hiddenCategories.includes(catKey);
+                  const catStyle = getCategoryBadgeStyle("expense", catKey);
                   return (
                     <div
                       key={catKey}
@@ -1483,7 +1494,7 @@ export function QuickRecordBoard({
                       }`}
                     >
                       <div className="flex items-center space-x-2.5 min-w-0">
-                        <div className="w-7 h-7 rounded-lg bg-[var(--bg-subtle)] flex items-center justify-center text-[var(--text-main)] shrink-0">
+                        <div className={`w-7 h-7 rounded-lg flex items-center justify-center shrink-0 border ${catStyle.border} ${catStyle.bg} ${catStyle.text}`}>
                           <Icon className="w-3.5 h-3.5" />
                         </div>
                         <span className={`text-xs font-medium truncate ${isHidden ? 'line-through text-[var(--text-muted)]' : 'text-[var(--text-main)]'}`}>
@@ -1515,6 +1526,7 @@ export function QuickRecordBoard({
                 {allIncomeCategories.map((catKey) => {
                   const Icon = INCOME_CATEGORY_ICONS[catKey] || ArrowUpRight;
                   const isHidden = hiddenCategories.includes(catKey);
+                  const catStyle = getCategoryBadgeStyle("income", catKey);
                   return (
                     <div
                       key={catKey}
@@ -1526,7 +1538,7 @@ export function QuickRecordBoard({
                       }`}
                     >
                       <div className="flex items-center space-x-2.5 min-w-0">
-                        <div className="w-7 h-7 rounded-lg bg-[var(--bg-subtle)] flex items-center justify-center text-[var(--text-main)] shrink-0">
+                        <div className={`w-7 h-7 rounded-lg flex items-center justify-center shrink-0 border ${catStyle.border} ${catStyle.bg} ${catStyle.text}`}>
                           <Icon className="w-3.5 h-3.5" />
                         </div>
                         <span className={`text-xs font-medium truncate ${isHidden ? 'line-through text-[var(--text-muted)]' : 'text-[var(--text-main)]'}`}>

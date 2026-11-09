@@ -3,7 +3,7 @@
 import React, { useMemo, useState, useEffect, useRef } from 'react';
 import { Currency, ExpenseCategory, Language, MonthlyBudgetPlan, Transaction, TransactionType } from '@/types/finance';
 import { formatCurrency, translations } from '@/lib/i18n';
-import { EXPENSE_CATEGORY_ICONS } from '@/lib/constants';
+import { EXPENSE_CATEGORY_ICONS, getCategoryBadgeStyle } from '@/lib/constants';
 import { getMonthDateRange, isDateInMonthCycle } from '@/lib/dateUtils';
 import { AddTransactionModal } from '@/components/AddTransactionModal';
 import { useBodyScrollLock } from '@/lib/useBodyScrollLock';
@@ -767,6 +767,7 @@ export function MonthlySummaryBoard({
                   {Object.entries(categoryTargets).map(([catKey, targetVal]) => {
                     if (!targetVal || targetVal <= 0) return null;
                     const Icon = EXPENSE_CATEGORY_ICONS[catKey as ExpenseCategory] || TrendingDown;
+                    const catStyle = getCategoryBadgeStyle("expense", catKey);
                     const spent = categorySpentMap[catKey] || 0;
                     const percent = Math.round((spent / targetVal) * 100);
                     const isCatOver = spent > targetVal;
@@ -780,7 +781,7 @@ export function MonthlySummaryBoard({
                       >
                         <div className="flex items-center justify-between text-xs">
                           <div className="flex items-center space-x-2">
-                            <div className="w-7 h-7 rounded-xl bg-[var(--bg-surface-solid)] border border-[var(--border-subtle)] flex items-center justify-center text-[var(--text-muted)] shrink-0">
+                            <div className={`w-7 h-7 rounded-xl flex items-center justify-center shrink-0 border ${catStyle.border} ${catStyle.bg} ${catStyle.text}`}>
                               <Icon className="w-3.5 h-3.5" />
                             </div>
                             <span className="font-bold text-[var(--text-main)]">{catLabel}</span>
@@ -1012,11 +1013,14 @@ export function MonthlySummaryBoard({
             <div className="space-y-3">
               {categoryBreakdown.map((item) => {
                 const Icon = EXPENSE_CATEGORY_ICONS[item.category as ExpenseCategory] || TrendingDown;
+                const catStyle = getCategoryBadgeStyle("expense", item.category);
                 return (
                   <div key={item.category} className="space-y-1.5">
                     <div className="flex items-center justify-between text-xs font-semibold">
                       <div className="flex items-center space-x-2 text-[var(--text-main)]">
-                        <Icon className="w-3.5 h-3.5 text-[var(--text-muted)]" />
+                        <div className={`w-6 h-6 rounded-lg flex items-center justify-center shrink-0 border ${catStyle.border} ${catStyle.bg} ${catStyle.text}`}>
+                          <Icon className="w-3.5 h-3.5" />
+                        </div>
                         <span>{item.label}</span>
                       </div>
                       <div className="text-right">
@@ -1240,6 +1244,7 @@ export function MonthlySummaryBoard({
                   {activeCategories.map((catKey) => {
                     const Icon = EXPENSE_CATEGORY_ICONS[catKey] || TrendingDown;
                     const catLabel = t.expenseCategories[catKey] || catKey;
+                    const catStyle = getCategoryBadgeStyle("expense", catKey);
                     const currentVal = modalCategoryTargets[catKey] || '';
 
                     return (
@@ -1248,7 +1253,9 @@ export function MonthlySummaryBoard({
                         className="flex items-center justify-between gap-3 p-2 rounded-xl bg-[var(--bg-subtle)] border border-[var(--border-subtle)]"
                       >
                         <div className="flex items-center space-x-2 shrink-0">
-                          <Icon className="w-4 h-4 text-[var(--text-muted)]" />
+                          <div className={`w-6 h-6 rounded-lg flex items-center justify-center shrink-0 border ${catStyle.border} ${catStyle.bg} ${catStyle.text}`}>
+                            <Icon className="w-3.5 h-3.5" />
+                          </div>
                           <span className="text-xs font-bold text-[var(--text-main)]">
                             {catLabel}
                           </span>

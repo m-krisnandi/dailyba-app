@@ -1,6 +1,6 @@
 import { Language } from '@/types/finance';
 
-export const APP_VERSION = '1.4.3';
+export const APP_VERSION = '1.4.4';
 export const APP_BUILD = '20261109';
 
 export interface LocalizedChangelogItem {
@@ -11,6 +11,26 @@ export interface LocalizedChangelogItem {
 }
 
 export const APP_CHANGELOG: LocalizedChangelogItem[] = [
+  {
+    version: '1.4.4',
+    date: '2026-11-09',
+    title: {
+      en: 'Universal Vibrant Category Colors across Pickers, Modals & Dropdowns',
+      ja: 'カテゴリー選択・モーダル・ドロップダウンへのカラーバッジ全面適用',
+    },
+    highlights: {
+      en: [
+        'Vibrant Category Pickers: eliminated grey category icons on Quick Entry and Income selection grids, wrapping every option in its distinctive glowing liquid glass badge.',
+        'Colorful Custom Dropdowns: category dropdown options across Add/Edit Transaction modals and Recurring Bills now render each icon with its matching vibrant theme color.',
+        'Category Management & Progress Boards: category badges in Manage Categories modal, Monthly Budget progress bars, and Yearly Summaries now share unified colorful branding.',
+      ],
+      ja: [
+        'カテゴリー選択グリッドのカラー化：記帳画面のカテゴリー選択ボタンに残っていた無機質なグレーアイコンを廃止し、各カテゴリー固有のリキッドグラス・カラーバッジを適用。',
+        'ドロップダウン内のアイコン発色：取引追加・編集モーダルや固定費設定のカテゴリー選択リストでも、各項目が鮮やかなテーマカラーで表示。',
+        '管理画面・月次年次推移との統一：カテゴリー管理モーダル、月次予算のカテゴリー別進捗バー、年間カテゴリーランキングの全アイコンを完全カラー統一。',
+      ],
+    },
+  },
   {
     version: '1.4.3',
     date: '2026-11-09',

@@ -9,6 +9,7 @@ export interface CustomSelectOption<T extends string = string> {
   sublabel?: string;
   icon?: LucideIcon | React.ComponentType<{ className?: string }>;
   badgeColor?: string;
+  badgeClass?: string;
 }
 
 interface CustomSelectProps<T extends string = string> {
@@ -91,7 +92,8 @@ export function CustomSelect<T extends string = string>({
       >
         <div className="flex items-center space-x-2.5 min-w-0 pr-2">
           {SelectedIcon && (
-            <div className="w-6 h-6 rounded-lg bg-[var(--bg-surface)] border border-[var(--border-subtle)] flex items-center justify-center text-[var(--text-main)] shrink-0 shadow-2xs">
+            <div className={`w-6 h-6 rounded-lg flex items-center justify-center shrink-0 shadow-2xs border ${selectedOption?.badgeClass || "bg-[var(--bg-surface)] border-[var(--border-subtle)] text-[var(--text-main)]"}`}>
+
               <SelectedIcon className="w-3.5 h-3.5" />
             </div>
           )}
@@ -141,9 +143,9 @@ export function CustomSelect<T extends string = string>({
                   {OptIcon && (
                     <div
                       className={`w-6 h-6 rounded-lg flex items-center justify-center shrink-0 border transition-colors ${
-                        isSelected
+                        opt.badgeClass || (isSelected
                           ? 'bg-[var(--bg-surface)] border-[var(--border-strong)] text-[var(--accent-emerald)]'
-                          : 'bg-[var(--bg-subtle)] border-[var(--border-subtle)] text-[var(--text-muted)]'
+                          : 'bg-[var(--bg-subtle)] border-[var(--border-subtle)] text-[var(--text-muted)]')
                       }`}
                     >
                       <OptIcon className="w-3.5 h-3.5" />

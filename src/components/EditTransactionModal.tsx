@@ -17,6 +17,7 @@ import {
   EXPENSE_CATEGORY_ICONS,
   INCOME_CATEGORY_ICONS,
   FUNDING_SOURCE_ICONS,
+  getCategoryBadgeStyle,
 } from '@/lib/constants';
 import { formatNumberWithCommas, parseRawNumber } from '@/lib/currency';
 import { useBodyScrollLock } from '@/lib/useBodyScrollLock';
@@ -78,17 +79,25 @@ export function EditTransactionModal({
 
   const categoryOptions = useMemo<CustomSelectOption[]>(() => {
     if (type === 'expense') {
-      return expenseCategories.map((cat) => ({
-        value: cat,
-        label: t.expenseCategories[cat] || cat,
-        icon: EXPENSE_CATEGORY_ICONS[cat],
-      }));
+      return expenseCategories.map((cat) => {
+        const style = getCategoryBadgeStyle("expense", cat);
+        return {
+          value: cat,
+          label: t.expenseCategories[cat] || cat,
+          icon: EXPENSE_CATEGORY_ICONS[cat],
+          badgeClass: `${style.border} ${style.bg} ${style.text}`,
+        };
+      });
     }
-    return incomeCategories.map((cat) => ({
-      value: cat,
-      label: t.incomeCategories[cat] || cat,
-      icon: INCOME_CATEGORY_ICONS[cat],
-    }));
+    return incomeCategories.map((cat) => {
+      const style = getCategoryBadgeStyle("income", cat);
+      return {
+        value: cat,
+        label: t.incomeCategories[cat] || cat,
+        icon: INCOME_CATEGORY_ICONS[cat],
+        badgeClass: `${style.border} ${style.bg} ${style.text}`,
+      };
+    });
   }, [type, t]);
 
   if (!isOpen || !transaction) return null;
