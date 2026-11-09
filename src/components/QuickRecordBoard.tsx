@@ -198,6 +198,7 @@ export function QuickRecordBoard({
   const [billCurrency, setBillCurrency] = useState<Currency>(currency);
   const [billSource, setBillSource] = useState<FundingSource>('bank');
   const [billDay, setBillDay] = useState<string>('25');
+  const [billDayEnd, setBillDayEnd] = useState<string>('');
 
   // Transactions Feed Filters & Pagination
   const [txSearchQuery, setTxSearchQuery] = useState('');
@@ -377,19 +378,73 @@ export function QuickRecordBoard({
   const activeRecurringBills = Array.isArray(recurringBills) ? recurringBills : [];
 
   const recurringStatus = useMemo(() => {
-    if (!currentMonthPrefix) return activeRecurringBills.map((b) => ({ ...b, isPaid: false, paidTxId: undefined }));
+    if (!currentMonthPrefix) return activeRecurringBills.map((b) => ({ ...b, isPaid: false, paidTxId: undefined, isAdvancePayment: false, paidDate: undefined }));
+
+    // Previous month prefix for advance payments (e.g. 2026-10 when current is 2026-11)
+    const [yStr, mStr] = currentMonthPrefix.split("-");
+    const curY = parseInt(yStr || "2026", 10);
+    const curM = parseInt(mStr || "11", 10);
+    const prevY = curM === 1 ? curY - 1 : curY;
+    const prevM = curM === 1 ? 12 : curM - 1;
+    const prevMonthPrefix = `${prevY}-${String(prevM).padStart(2, "0")}`;
+
     return activeRecurringBills.map((bill) => {
       const billLabel = bill.name || (bill.titleKey && t.expenseCategories[bill.titleKey as ExpenseCategory]) || bill.category;
-      const matchingTx = transactions.find(
+      const lowerLabel = billLabel.toLowerCase();
+
+      // 1. Current month matching transaction
+      const currentMonthTx = transactions.find(
         (tx) =>
-          tx.type === 'expense' &&
-          (tx.category === bill.category || (tx.note && tx.note.includes(billLabel))) &&
+          tx.type === "expense" &&
+          (tx.recurringBillId === bill.id ||
+            tx.category === bill.category ||
+            (tx.note && tx.note.toLowerCase().includes(lowerLabel))) &&
           tx.date.startsWith(currentMonthPrefix)
       );
+
+      if (currentMonthTx) {
+        return {
+          ...bill,
+          isPaid: true,
+          paidTxId: currentMonthTx.id,
+          paidDate: currentMonthTx.date,
+          isAdvancePayment: false,
+        };
+      }
+
+      // 2. Smart Advance Payment Detection:
+      // Transactions in tail of previous month (day >= 20) matching this bill
+      const prevMonthMatches = transactions.filter(
+        (tx) =>
+          tx.type === "expense" &&
+          (tx.recurringBillId === bill.id ||
+            tx.category === bill.category ||
+            (tx.note && tx.note.toLowerCase().includes(lowerLabel))) &&
+          tx.date.startsWith(prevMonthPrefix)
+      ).sort((a, b) => b.date.localeCompare(a.date));
+
+      const advanceTx = prevMonthMatches.find((tx) => {
+        const parts = tx.date.split("-");
+        const day = parts.length === 3 ? parseInt(parts[2], 10) : 0;
+        return day >= 20;
+      });
+
+      if (advanceTx) {
+        return {
+          ...bill,
+          isPaid: true,
+          paidTxId: advanceTx.id,
+          paidDate: advanceTx.date,
+          isAdvancePayment: true,
+        };
+      }
+
       return {
         ...bill,
-        isPaid: Boolean(matchingTx),
-        paidTxId: matchingTx ? matchingTx.id : undefined,
+        isPaid: false,
+        paidTxId: undefined,
+        paidDate: undefined,
+        isAdvancePayment: false,
       };
     });
   }, [transactions, currentMonthPrefix, activeRecurringBills, t.expenseCategories]);
@@ -405,17 +460,24 @@ export function QuickRecordBoard({
       currency,
       date: date || new Date().toISOString().split('T')[0],
       note: language === "ja" ? `毎月の固定費: ${billLabel}` : `Monthly Fixed: ${billLabel}`,
+      recurringBillId: bill.id,
+      isRecurring: true,
     });
     setStatusMessage(language === "ja" ? `${billLabel} の支払いを記録しました！` : `Paid ${billLabel}!`);
     setTimeout(() => setStatusMessage(null), 2500);
   };
 
-  const handleToggleRecurringPaid = (bill: RecurringBill & { isPaid: boolean; paidTxId?: string }) => {
+  const handleToggleRecurringPaid = (bill: RecurringBill & { isPaid: boolean; paidTxId?: string; isAdvancePayment?: boolean }) => {
     const billLabel = bill.name || (bill.titleKey && t.expenseCategories[bill.titleKey as ExpenseCategory]) || bill.category;
     if (bill.isPaid && bill.paidTxId && onDeleteTransaction) {
-      onDeleteTransaction(bill.paidTxId);
-      setStatusMessage(language === "ja" ? `${billLabel} の支払済マークを解除しました。` : `Unmarked ${billLabel} as paid (entry removed from history).`);
-      setTimeout(() => setStatusMessage(null), 2500);
+      const linked = transactions.find((t) => t.id === bill.paidTxId);
+      if (linked) {
+        setDeletingTx(linked);
+      } else {
+        onDeleteTransaction(bill.paidTxId);
+        setStatusMessage(language === "ja" ? `${billLabel} の支払済マークを解除しました。` : `Unmarked ${billLabel} as paid.`);
+        setTimeout(() => setStatusMessage(null), 2500);
+      }
     } else if (!bill.isPaid) {
       handleConfirmRecurring(bill);
     }
@@ -453,7 +515,8 @@ export function QuickRecordBoard({
     setBillCategory(visibleExpenseCategories[0] || 'rent');
     setBillCurrency(currency);
     setBillSource('bank');
-    setBillDay('25');
+    setBillDay('1');
+    setBillDayEnd('');
     setIsBillModalOpen(true);
   };
 
@@ -466,6 +529,7 @@ export function QuickRecordBoard({
     setBillCurrency(bill.currency);
     setBillSource(bill.source);
     setBillDay(bill.dayOfMonth ? String(bill.dayOfMonth) : '');
+    setBillDayEnd(bill.dueDayEnd ? String(bill.dueDayEnd) : '');
     setIsBillModalOpen(true);
   };
 
@@ -483,6 +547,7 @@ export function QuickRecordBoard({
       currency: billCurrency,
       source: billSource,
       dayOfMonth: billDay ? parseInt(billDay, 10) : undefined,
+      dueDayEnd: billDayEnd ? parseInt(billDayEnd, 10) : undefined,
     };
 
     if (editingBill && onUpdateRecurringBill) {
@@ -995,7 +1060,15 @@ export function QuickRecordBoard({
                           {bill.dayOfMonth && (
                             <span className="flex items-center space-x-0.5 mr-1 shrink-0">
                               <Clock className="w-2.5 h-2.5" />
-                              <span>{language === 'ja' ? `毎月${bill.dayOfMonth}日` : `Day ${bill.dayOfMonth}`}</span>
+                              <span>
+                                {language === 'ja'
+                                  ? (bill.dueDayEnd && bill.dueDayEnd !== bill.dayOfMonth
+                                      ? `毎月${bill.dayOfMonth}〜${bill.dueDayEnd}日`
+                                      : `毎月${bill.dayOfMonth}日`)
+                                  : (bill.dueDayEnd && bill.dueDayEnd !== bill.dayOfMonth
+                                      ? `Days ${bill.dayOfMonth}–${bill.dueDayEnd}`
+                                      : `Day ${bill.dayOfMonth}`)}
+                              </span>
                             </span>
                           )}
                           <span className="truncate">{t.sources[bill.source]}</span>
@@ -1046,7 +1119,15 @@ export function QuickRecordBoard({
                       >
                         <Check className="w-3 h-3 stroke-[3]" />
                       </div>
-                      <span className="text-[11px] whitespace-nowrap">{bill.isPaid ? t.actions.paidThisMonth : t.actions.confirmPay}</span>
+                      <span className="text-[11px] whitespace-nowrap">
+                        {bill.isPaid
+                          ? (bill.isAdvancePayment
+                              ? (language === 'ja'
+                                  ? `前払い済 (${bill.paidDate ? bill.paidDate.slice(5) : ''})`
+                                  : `Paid in Advance (${bill.paidDate ? bill.paidDate.slice(5) : ''})`)
+                              : t.actions.paidThisMonth)
+                          : t.actions.confirmPay}
+                      </span>
                     </button>
 
                     {/* Desktop only edit & delete */}
@@ -1589,20 +1670,40 @@ export function QuickRecordBoard({
               </div>
             </div>
 
-            {/* Day of Month */}
+            {/* Day of Month / Payment Window */}
             <div className="space-y-1.5">
-              <label className="text-xs font-semibold text-[var(--text-muted)]">
-                {t.record.dayOfMonth}
-              </label>
-              <input
-                type="number"
-                min="1"
-                max="31"
-                value={billDay}
-                onChange={(e) => setBillDay(e.target.value)}
-                placeholder="25"
-                className="w-full bg-[var(--bg-subtle)] border border-[var(--border-subtle)] focus:border-[var(--border-strong)] rounded-xl px-4 py-2.5 text-xs text-[var(--text-main)] font-mono outline-none"
-              />
+              <div className="flex items-center justify-between">
+                <label className="text-xs font-semibold text-[var(--text-muted)]">
+                  {language === 'ja' ? '支払期日・締切日' : 'Due Day / Payment Window'}
+                </label>
+                <span className="text-[10px] text-[var(--text-muted)]">
+                  {language === 'ja' ? '（例: 1〜10日）' : '(e.g. Day 1 to 10)'}
+                </span>
+              </div>
+              <div className="grid grid-cols-2 gap-2">
+                <div>
+                  <input
+                    type="number"
+                    min="1"
+                    max="31"
+                    value={billDay}
+                    onChange={(e) => setBillDay(e.target.value)}
+                    placeholder={language === 'ja' ? '開始日 (例: 1)' : 'From day (e.g. 1)'}
+                    className="w-full bg-[var(--bg-subtle)] border border-[var(--border-subtle)] focus:border-[var(--border-strong)] rounded-xl px-4 py-2.5 text-xs text-[var(--text-main)] font-mono outline-none"
+                  />
+                </div>
+                <div>
+                  <input
+                    type="number"
+                    min="1"
+                    max="31"
+                    value={billDayEnd}
+                    onChange={(e) => setBillDayEnd(e.target.value)}
+                    placeholder={language === 'ja' ? '締切日 (任意 例: 10)' : 'Until day (opt. e.g. 10)'}
+                    className="w-full bg-[var(--bg-subtle)] border border-[var(--border-subtle)] focus:border-[var(--border-strong)] rounded-xl px-4 py-2.5 text-xs text-[var(--text-main)] font-mono outline-none"
+                  />
+                </div>
+              </div>
             </div>
 
             <div className="flex items-center justify-end space-x-2 pt-2">

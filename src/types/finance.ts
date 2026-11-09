@@ -60,6 +60,7 @@ export interface RecurringBill {
   currency: Currency;
   source: FundingSource;
   dayOfMonth?: number;
+  dueDayEnd?: number;
 }
 
 export interface MonthlyBudgetPlan {

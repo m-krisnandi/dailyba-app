@@ -1,6 +1,6 @@
 import { Language } from '@/types/finance';
 
-export const APP_VERSION = '1.4.2';
+export const APP_VERSION = '1.4.3';
 export const APP_BUILD = '20261109';
 
 export interface LocalizedChangelogItem {
@@ -11,6 +11,26 @@ export interface LocalizedChangelogItem {
 }
 
 export const APP_CHANGELOG: LocalizedChangelogItem[] = [
+  {
+    version: '1.4.3',
+    date: '2026-11-09',
+    title: {
+      en: 'Smart Advance Payment Detection & Flexible Due Windows for Recurring Bills',
+      ja: '固定費の前払い自動検知および支払期日レンジ指定の対応',
+    },
+    highlights: {
+      en: [
+        'Smart Advance Payment Detection: transactions recorded in the tail of the preceding month (e.g. rent paid on Oct 23 for Nov) are automatically recognized by the current month recurring bill, displaying "Paid in Advance (10/23)" without duplicate entries.',
+        'Flexible Due Windows (e.g. Days 1–10): recurring bills now support range deadlines (e.g. from day 1 to 10) instead of rigid single-day dates.',
+        'Protected Unmark: unmarking an advance or linked payment now triggers the sleek confirmation modal to safeguard historical records.',
+      ],
+      ja: [
+        '前払い（翌月分）の自動検知：前月末（20日以降等、例: 10月23日振込）に記録された支出を翌月の固定費が自動認識し、二重計上なしで「前払い済 (10/23)」として自動チェック。',
+        '柔軟な支払期日レンジ（例: 毎月1日〜10日）：固定費の期日指定で「1日〜10日」のような支払期間（締切日）の設定に対応。',
+        '支払済解除の保護：前払い・確定済み固定費のチェックを解除する際、確認モーダルを表示して誤削除を防止。',
+      ],
+    },
+  },
   {
     version: '1.4.2',
     date: '2026-11-09',
