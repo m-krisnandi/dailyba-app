@@ -29,6 +29,7 @@ interface AuthContextType {
   forgotPassword: (email: string) => Promise<{ success: boolean; message?: string; resetCode?: string }>;
   resetPassword: (email: string, code: string, newPass: string) => Promise<{ success: boolean; message?: string }>;
   logout: () => void;
+  deleteAccount: () => Promise<{ success: boolean; message?: string }>;
   pushStateToCloud: (state: FinanceState) => Promise<boolean>;
   pullStateFromCloud: () => Promise<FinanceState | null>;
   setSyncStatus: (status: SyncStatus) => void;
@@ -98,6 +99,24 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const resetPassword = async (email: string, code: string, newPass: string) => {
     return await dailybaApi.resetPassword(email, code, newPass);
+  };
+
+  const deleteAccount = async (): Promise<{ success: boolean; message?: string }> => {
+    try {
+      const res = await dailybaApi.deleteAccount();
+      if (res.success) {
+        setToken(null);
+        setUser(null);
+        setSyncStatus('idle');
+        setLastSyncedAt(null);
+        try {
+          localStorage.removeItem(LAST_SYNCED_KEY);
+        } catch {}
+      }
+      return res;
+    } catch (err: any) {
+      return { success: false, message: err?.message || 'Failed to delete account' };
+    }
   };
 
   const logout = () => {
@@ -180,6 +199,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         forgotPassword,
         resetPassword,
         logout,
+        deleteAccount,
         pushStateToCloud,
         pullStateFromCloud,
         setSyncStatus,

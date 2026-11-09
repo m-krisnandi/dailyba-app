@@ -6,6 +6,7 @@ import { translations } from '@/lib/i18n';
 import { getTodayLocalDate } from '@/lib/dateUtils';
 import { useBodyScrollLock } from '@/lib/useBodyScrollLock';
 import { ConfirmDeleteModal } from './ConfirmDeleteModal';
+import { LegalModal } from './LegalModal';
 import {
   Download,
   Upload,
@@ -41,6 +42,7 @@ export function BackupModal({
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [feedback, setFeedback] = useState<string | null>(null);
   const [isConfirmClearOpen, setIsConfirmClearOpen] = useState(false);
+  const [isLegalModalOpen, setIsLegalModalOpen] = useState(false);
 
   if (!isOpen) return null;
 
@@ -208,6 +210,15 @@ export function BackupModal({
               <Trash2 className="w-3.5 h-3.5" />
               <span>{language === "ja" ? "すべてのデータを削除" : "Delete All Data"}</span>
             </button>
+            <div className="pt-1 text-center">
+              <button
+                type="button"
+                onClick={() => setIsLegalModalOpen(true)}
+                className="text-[11px] text-[var(--text-faint)] hover:text-[var(--text-muted)] hover:underline cursor-pointer"
+              >
+                {language === "ja" ? "プライバシーポリシー & 利用規約" : "Privacy Policy & Terms of Service"}
+              </button>
+            </div>
           </div>
         </div>
       </div>
@@ -225,6 +236,12 @@ export function BackupModal({
           setTimeout(() => setFeedback(null), 2500);
         }}
         onClose={() => setIsConfirmClearOpen(false)}
+      />
+
+      <LegalModal
+        isOpen={isLegalModalOpen}
+        onClose={() => setIsLegalModalOpen(false)}
+        language={language}
       />
     </div>
   );

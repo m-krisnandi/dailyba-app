@@ -1,6 +1,6 @@
 import { Language } from '@/types/finance';
 
-export const APP_VERSION = '1.4.8';
+export const APP_VERSION = '1.5.0';
 export const APP_BUILD = '20261110';
 
 export interface LocalizedChangelogItem {
@@ -11,6 +11,26 @@ export interface LocalizedChangelogItem {
 }
 
 export const APP_CHANGELOG: LocalizedChangelogItem[] = [
+  {
+    version: '1.5.0',
+    date: '2026-11-10',
+    title: {
+      en: 'AI Receipt & Invoice Scanner with Gemini, Permanent Account Deletion, & Store Compliance',
+      ja: 'Gemini AI レシート・請求書自動スキャン機能、アカウント完全削除、ストア公開基準対応',
+    },
+    highlights: {
+      en: [
+        'AI Receipt & Invoice Scanner: Take photos or upload bills/receipts. Powered by Gemini Multimodal Vision, automatically parsing total amount, payment source (QRIS/Bank/Cash/Card), date, merchant, and expense categories.',
+        'Permanent Account & Data Deletion: Complete GDPR, Apple App Store Guideline 5.1.1(v), and Google Play Data Safety compliance. Irreversibly delete account and cloud vault with one tap.',
+        'Store Compliance & Privacy Policy: In-app Privacy Policy & Terms of Service modal, plus camera & photo library permissions configured for iOS & Android.',
+      ],
+      ja: [
+        'Gemini AI レシート・請求書スキャナー：カメラ撮影または画像アップロードにより、合計金額・支払方法（QRIS/銀行/現金/クレカ）・日付・店舗名・費目を全自動抽出＆入力補助。',
+        'アカウントおよびクラウドデータの完全削除：Apple App Store ガイドライン 5.1.1(v) および Google Play データセーフティ基準に完全準拠し、サーバー上の個人データと同期バックアップを永久破棄可能に。',
+        'プライバシーポリシー・利用規約モーダル：アプリ内に専用の法的規約画面を完備し、カメラ・写真ライブラリの利用目的を明記。',
+      ],
+    },
+  },
   {
     version: '1.4.8',
     date: '2026-11-10',

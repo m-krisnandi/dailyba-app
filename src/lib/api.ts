@@ -186,6 +186,17 @@ export const dailybaApi = {
     });
   },
 
+  async deleteAccount(): Promise<ApiResponse> {
+    const res = await request('/api/auth/account', {
+      method: 'DELETE',
+    });
+    if (res.success) {
+      setStoredToken(null);
+      setStoredUser(null);
+    }
+    return res;
+  },
+
   logout() {
     setStoredToken(null);
     setStoredUser(null);

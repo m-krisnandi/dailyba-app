@@ -3,6 +3,7 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { CustomSelect, CustomSelectOption } from './CustomSelect';
 import { CustomDatePicker } from '@/components/CustomDatePicker';
+import { ReceiptScannerModal } from '@/components/ReceiptScannerModal';
 import {
   Currency,
   ExpenseCategory,
@@ -33,6 +34,7 @@ import {
   CreditCard,
   Plus,
   Sparkles,
+  Camera,
 } from 'lucide-react';
 
 const expenseCategories = Object.keys(EXPENSE_CATEGORY_ICONS) as ExpenseCategory[];
@@ -71,6 +73,7 @@ export function AddTransactionModal({
   const t = translations[language];
 
   const todayStr = useMemo(() => getTodayLocalDate(), []);
+  const [isReceiptScannerOpen, setIsReceiptScannerOpen] = useState(false);
   const [type, setType] = useState<TransactionType>(initialType);
   const [amountStr, setAmountStr] = useState<string>('');
   const [category, setCategory] = useState<string>(initialCategory || 'food_drinks');
@@ -184,13 +187,24 @@ export function AddTransactionModal({
               </p>
             </div>
           </div>
-          <button
-            type="button"
-            onClick={onClose}
-            className="p-1.5 rounded-xl text-[var(--text-muted)] hover:text-[var(--text-main)] hover:bg-[var(--bg-subtle)] transition-all cursor-pointer"
-          >
-            <X className="w-5 h-5" />
-          </button>
+          <div className="flex items-center space-x-1.5">
+            <button
+              type="button"
+              onClick={() => setIsReceiptScannerOpen(true)}
+              className="px-2.5 py-1.5 rounded-xl text-emerald-500 hover:text-emerald-400 bg-emerald-500/10 hover:bg-emerald-500/20 border border-emerald-500/20 text-xs font-bold transition-all cursor-pointer flex items-center space-x-1.5"
+              title="AI Scan Receipt"
+            >
+              <Camera className="w-3.5 h-3.5" />
+              <span className="hidden sm:inline">{language === "ja" ? "AI読取" : "AI Scan"}</span>
+            </button>
+            <button
+              type="button"
+              onClick={onClose}
+              className="p-1.5 rounded-xl text-[var(--text-muted)] hover:text-[var(--text-main)] hover:bg-[var(--bg-subtle)] transition-all cursor-pointer"
+            >
+              <X className="w-5 h-5" />
+            </button>
+          </div>
         </div>
 
         <form onSubmit={handleSubmit} className="space-y-4">
@@ -383,6 +397,18 @@ export function AddTransactionModal({
           </div>
         </form>
       </div>
+
+      <ReceiptScannerModal
+        isOpen={isReceiptScannerOpen}
+        onClose={() => setIsReceiptScannerOpen(false)}
+        language={language}
+        currency={currency}
+        onAddTransaction={(tx) => {
+          onAddTransaction(tx);
+          setIsReceiptScannerOpen(false);
+          onClose();
+        }}
+      />
     </div>
   );
 }

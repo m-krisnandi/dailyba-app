@@ -292,6 +292,22 @@ app.post('/api/sync', authenticateToken, (req, res) => {
   }
 });
 
+// 7. Delete Account & All Cloud Data (DELETE /api/auth/account)
+app.delete('/api/auth/account', authenticateToken, (req, res) => {
+  try {
+    const userId = req.user.id;
+    db.prepare('DELETE FROM user_data WHERE user_id = ?').run(userId);
+    db.prepare('DELETE FROM users WHERE id = ?').run(userId);
+    res.json({
+      success: true,
+      message: 'Account and associated cloud data deleted successfully'
+    });
+  } catch (err) {
+    console.error('Delete account error:', err);
+    res.status(500).json({ success: false, message: 'Failed to delete account' });
+  }
+});
+
 app.listen(PORT, () => {
   console.log(`[Dailyba API Server] Running on http://localhost:${PORT}`);
   console.log(`[Dailyba API Server] Database: ${DB_PATH}`);

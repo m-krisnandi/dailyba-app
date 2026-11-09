@@ -17,6 +17,7 @@ import { CustomDatePicker } from '@/components/CustomDatePicker';
 import { EditTransactionModal } from '@/components/EditTransactionModal';
 import { TransactionDetailModal } from '@/components/TransactionDetailModal';
 import { ConfirmDeleteModal } from '@/components/ConfirmDeleteModal';
+import { ReceiptScannerModal } from '@/components/ReceiptScannerModal';
 import { CustomSelect, CustomSelectOption } from '@/components/CustomSelect';
 import { useBodyScrollLock } from '@/lib/useBodyScrollLock';
 import { getTodayLocalDate } from '@/lib/dateUtils';
@@ -31,6 +32,7 @@ import {
   Check,
   Trash2,
   Sparkles,
+  Camera,
   ArrowDownRight,
   ArrowUpRight,
   Wallet,
@@ -199,6 +201,7 @@ export function QuickRecordBoard({
   const [currentMonthPrefix, setCurrentMonthPrefix] = useState<string>('2026-11');
 
   // Modals state
+  const [isReceiptScannerOpen, setIsReceiptScannerOpen] = useState(false);
   const [isCategoryModalOpen, setIsCategoryModalOpen] = useState(false);
   const [isBillModalOpen, setIsBillModalOpen] = useState(false);
   useBodyScrollLock(isCategoryModalOpen || isBillModalOpen);
@@ -735,9 +738,20 @@ export function QuickRecordBoard({
               <Sparkles className="w-4 h-4 text-[var(--accent-emerald)]" />
               <span>{t.record.smartEntryTitle}</span>
             </label>
-            <span className="text-[11px] text-[var(--text-faint)] font-mono">
-              {t.record.pressEnterToSave}
-            </span>
+            <div className="flex items-center space-x-2">
+              <button
+                type="button"
+                onClick={() => setIsReceiptScannerOpen(true)}
+                className="px-2.5 py-1 rounded-xl bg-emerald-500/15 text-emerald-500 dark:text-emerald-400 border border-emerald-500/30 hover:bg-emerald-500/25 transition-all text-xs font-bold flex items-center space-x-1.5 cursor-pointer shadow-xs active:scale-[0.98]"
+                title="AI Receipt / Invoice Scanner"
+              >
+                <Camera className="w-3.5 h-3.5" />
+                <span>{language === 'ja' ? 'レシートAI読取' : 'AI Scan Receipt'}</span>
+              </button>
+              <span className="text-[11px] text-[var(--text-faint)] font-mono hidden sm:inline">
+                {t.record.pressEnterToSave}
+              </span>
+            </div>
           </div>
           <div className="flex items-center space-x-2">
             <input
@@ -747,6 +761,15 @@ export function QuickRecordBoard({
               placeholder={t.record.smartTextPlaceholder}
               className="flex-1 min-w-0 bg-[var(--bg-subtle)] border border-[var(--border-subtle)] focus:border-[var(--border-strong)] rounded-2xl px-3.5 sm:px-4 py-2.5 sm:py-3 text-xs sm:text-sm text-[var(--text-main)] placeholder-[var(--text-faint)] outline-none transition-all"
             />
+            {/* Quick Camera Action Button */}
+            <button
+              type="button"
+              onClick={() => setIsReceiptScannerOpen(true)}
+              className="p-2.5 sm:p-3 rounded-2xl border border-[var(--border-subtle)] bg-[var(--bg-subtle)] hover:bg-[var(--bg-subtle-hover)] text-emerald-500 hover:text-emerald-400 flex items-center justify-center shrink-0 cursor-pointer transition-all active:scale-[0.98]"
+              title={language === 'ja' ? 'レシートをカメラ/画像で解析' : 'Scan receipt with Camera/Upload'}
+            >
+              <Camera className="w-4 h-4" />
+            </button>
             {/* Executive Monochrome Button */}
             <button
               type="submit"
@@ -1796,6 +1819,15 @@ export function QuickRecordBoard({
           }
         }}
         onClose={() => setDeletingTx(null)}
+      />
+
+      {/* AI Receipt Scanner Modal */}
+      <ReceiptScannerModal
+        isOpen={isReceiptScannerOpen}
+        onClose={() => setIsReceiptScannerOpen(false)}
+        language={language}
+        currency={currency}
+        onAddTransaction={onAddTransaction}
       />
 
       {/* Confirm Delete Recurring Bill Modal */}

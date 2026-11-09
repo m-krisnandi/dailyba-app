@@ -20,6 +20,7 @@ import {
   LogIn,
   RefreshCw,
   LogOut,
+  Trash2,
   User as UserIcon,
   Smartphone,
   Download,
@@ -349,10 +350,22 @@ export function Header({
                       logout();
                       setIsUserMenuOpen(false);
                     }}
-                    className="w-full flex items-center space-x-2 px-2.5 py-2 rounded-xl text-xs text-rose-400 hover:text-rose-300 hover:bg-rose-500/10 transition-all cursor-pointer"
+                    className="w-full flex items-center space-x-2 px-2.5 py-2 rounded-xl text-xs text-[var(--text-muted)] hover:text-[var(--text-main)] hover:bg-[var(--bg-subtle)] transition-all cursor-pointer"
                   >
                     <LogOut className="w-3.5 h-3.5" />
                     <span>{language === "ja" ? "ログアウト" : "Log Out"}</span>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => {
+                      onOpenAuth();
+                      setIsUserMenuOpen(false);
+                    }}
+                    className="w-full flex items-center space-x-2 px-2.5 py-2 rounded-xl text-xs text-rose-500 hover:text-rose-400 hover:bg-rose-500/10 transition-all cursor-pointer"
+                  >
+                    <Trash2 className="w-3.5 h-3.5" />
+                    <span>{language === "ja" ? "アカウントの削除" : "Delete Account"}</span>
                   </button>
 
                   <div className="pt-2 border-t border-[var(--border-subtle)] px-2.5 flex items-center justify-between text-[10px] font-mono text-[var(--text-faint)]">
