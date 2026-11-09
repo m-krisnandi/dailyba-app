@@ -239,7 +239,7 @@ export function DailySpendBoard({
     if (!isNaN(val) && val > 0) {
       onUpdateDailyTarget(val, currency);
       setIsEditingTarget(false);
-      setStatusMessage('Daily target updated successfully!');
+      setStatusMessage(language === "ja" ? "日次支出目標を更新しました！" : "Daily target updated successfully!");
       setTimeout(() => setStatusMessage(null), 2500);
     }
   };
@@ -248,7 +248,7 @@ export function DailySpendBoard({
     setTargetInputStr(formatNumberWithCommas(val));
     onUpdateDailyTarget(val, currency);
     setIsEditingTarget(false);
-    setStatusMessage('Daily target updated successfully!');
+    setStatusMessage(language === "ja" ? "日次支出目標を更新しました！" : "Daily target updated successfully!");
     setTimeout(() => setStatusMessage(null), 2500);
   };
 
@@ -297,7 +297,7 @@ export function DailySpendBoard({
                   setIsAddExpenseModalOpen(true);
                 }}
                 className="flex items-center justify-center space-x-1.5 px-3 sm:px-4 py-2.5 rounded-2xl bg-[var(--btn-primary-bg)] text-[var(--btn-primary-text)] border border-[var(--btn-primary-border)] shadow-[var(--btn-primary-shadow)] hover:opacity-90 active:scale-95 text-xs sm:text-sm font-bold transition-all cursor-pointer min-w-0"
-                title="Record Today's Spend"
+                title={language === "ja" ? "今日の支出を記録" : "Record Today's Spend"}
               >
                 <Plus className="w-4 h-4 shrink-0" />
                 <span className="truncate">

@@ -266,7 +266,7 @@ export function QuickRecordBoard({
 
     setAmountStr('');
     setNote('');
-    setStatusMessage('Transaction recorded successfully!');
+    setStatusMessage(language === "ja" ? "取引を正常に記録しました！" : "Transaction recorded successfully!");
     setTimeout(() => {
       setStatusMessage(null);
       isSubmittingRef.current = false;
@@ -344,7 +344,7 @@ export function QuickRecordBoard({
 
     const parsed = parseSmartText(smartText);
     if (!parsed) {
-      setStatusMessage('Could not parse text. Format e.g. "train 220 bank" or "laundry 600"');
+      setStatusMessage(language === "ja" ? '入力を解析できませんでした。例: 「電車 220」や「昼食 1000 現金」' : 'Could not parse text. Format e.g. "train 220 bank" or "laundry 600"');
       setTimeout(() => setStatusMessage(null), 3000);
       return;
     }
@@ -362,7 +362,7 @@ export function QuickRecordBoard({
     });
 
     setSmartText('');
-    setStatusMessage(`Saved ${parsed.category} (${parsed.source})!`);
+    setStatusMessage(language === "ja" ? `${t.expenseCategories[parsed.category as ExpenseCategory] || parsed.category}（${t.sources[parsed.source as FundingSource] || parsed.source}）を記録しました！` : `Saved ${parsed.category} (${parsed.source})!`);
     setTimeout(() => {
       setStatusMessage(null);
       isSubmittingRef.current = false;
@@ -400,9 +400,9 @@ export function QuickRecordBoard({
       source: bill.source,
       currency,
       date: date || new Date().toISOString().split('T')[0],
-      note: `Monthly Fixed: ${billLabel}`,
+      note: language === "ja" ? `毎月の固定費: ${billLabel}` : `Monthly Fixed: ${billLabel}`,
     });
-    setStatusMessage(`Paid ${billLabel}!`);
+    setStatusMessage(language === "ja" ? `${billLabel} の支払いを記録しました！` : `Paid ${billLabel}!`);
     setTimeout(() => setStatusMessage(null), 2500);
   };
 
@@ -410,7 +410,7 @@ export function QuickRecordBoard({
     const billLabel = bill.name || (bill.titleKey && t.expenseCategories[bill.titleKey as ExpenseCategory]) || bill.category;
     if (bill.isPaid && bill.paidTxId && onDeleteTransaction) {
       onDeleteTransaction(bill.paidTxId);
-      setStatusMessage(`Unmarked ${billLabel} as paid (entry removed from history).`);
+      setStatusMessage(language === "ja" ? `${billLabel} の支払済マークを解除しました。` : `Unmarked ${billLabel} as paid (entry removed from history).`);
       setTimeout(() => setStatusMessage(null), 2500);
     } else if (!bill.isPaid) {
       handleConfirmRecurring(bill);
@@ -437,7 +437,7 @@ export function QuickRecordBoard({
     if (onDeleteRecurringBill) {
       onDeleteRecurringBill(bill.id);
     }
-    setStatusMessage(`Deleted ${billLabel} and cleared from history.`);
+    setStatusMessage(language === "ja" ? `${billLabel} を削除しました。` : `Deleted ${billLabel} and cleared from history.`);
     setTimeout(() => setStatusMessage(null), 2500);
   };
 
@@ -486,10 +486,10 @@ export function QuickRecordBoard({
         ...payload,
         id: editingBill.id,
       });
-      setStatusMessage('Recurring bill updated!');
+      setStatusMessage(language === "ja" ? "固定費を更新しました！" : "Recurring bill updated!");
     } else if (onAddRecurringBill) {
       onAddRecurringBill(payload);
-      setStatusMessage('Recurring bill created!');
+      setStatusMessage(language === "ja" ? "固定費を新しく追加しました！" : "Recurring bill created!");
     }
 
     setIsBillModalOpen(false);

@@ -1199,7 +1199,7 @@ export function MonthlySummaryBoard({
                       const raw = e.target.value.replace(/[^0-9.]/g, '');
                       setModalTotalTarget(formatNumberWithCommas(raw));
                     }}
-                    placeholder="e.g. 150,000"
+                    placeholder={language === "ja" ? "例: 150,000" : "e.g. 150,000"}
                     className="w-full bg-[var(--bg-subtle)] border border-[var(--border-subtle)] focus:border-[var(--border-strong)] rounded-2xl pl-4 pr-16 py-3.5 text-base font-bold text-[var(--text-main)] outline-none tabular-numbers font-mono"
                   />
                   <span className="absolute right-4 top-1/2 -translate-y-1/2 text-xs font-mono font-bold text-[var(--text-muted)] pointer-events-none select-none">

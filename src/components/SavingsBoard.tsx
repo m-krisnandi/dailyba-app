@@ -135,7 +135,7 @@ export function SavingsBoard({
     if (!isNaN(val) && val >= 0) {
       onUpdateGoal(val, currency);
       setIsEditingGoal(false);
-      setStatusMessage('Monthly savings target updated!');
+      setStatusMessage(language === "ja" ? "今月の貯蓄目標を更新しました！" : "Monthly savings target updated!");
       setTimeout(() => setStatusMessage(null), 2500);
     }
   };
@@ -144,14 +144,14 @@ export function SavingsBoard({
     setGoalInput(formatNumberWithCommas(val));
     onUpdateGoal(val, currency);
     setIsEditingGoal(false);
-    setStatusMessage('Monthly savings target updated!');
+    setStatusMessage(language === "ja" ? "今月の貯蓄目標を更新しました！" : "Monthly savings target updated!");
     setTimeout(() => setStatusMessage(null), 2500);
   };
 
   const handleDeleteItem = (id: string) => {
     if (onDeleteTransaction) {
       onDeleteTransaction(id);
-      setStatusMessage('Savings entry removed.');
+      setStatusMessage(language === "ja" ? "貯金記録を削除しました。" : "Savings entry removed.");
       setTimeout(() => setStatusMessage(null), 2500);
     }
   };

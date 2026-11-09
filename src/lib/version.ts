@@ -1,6 +1,6 @@
 import { Language } from '@/types/finance';
 
-export const APP_VERSION = '1.3.7';
+export const APP_VERSION = '1.3.8';
 export const APP_BUILD = '20261109';
 
 export interface LocalizedChangelogItem {
@@ -11,6 +11,28 @@ export interface LocalizedChangelogItem {
 }
 
 export const APP_CHANGELOG: LocalizedChangelogItem[] = [
+  {
+    version: '1.3.8',
+    date: '2026-11-09',
+    title: {
+      en: '100% Pure Japanese Localization & Elimination of Residual English Hints',
+      ja: 'Enter表記の「決定」統一およびUI通知・プレースホルダーの完全日本語化',
+    },
+    highlights: {
+      en: [
+        'Smart Entry Key Terminology: replaced raw English "Enter" with Japanese "決定キーで保存" and "決定..." in quick entry hints.',
+        'Notification Toasts: fully localized transaction, fixed recurring bill, and savings notification banners into Japanese.',
+        'Localized Input Placeholders: translated asset name examples (Toyota, eMAXIS Slim, Bitcoin) and budget placeholders.',
+        'Auth & Verification Prompts: localized OTP verification code sent and password reset feedback messages.',
+      ],
+      ja: [
+        'スマート入力キーの日本語統一：「Enterキーで保存」「Enter...」を日本語標準の「決定キーで保存」「決定...」に全面統一。',
+        'ステータス通知メッセージの完全日本語化：記帳完了、毎月の固定費登録・支払・削除、貯蓄目標更新時のトースト通知を日本語化。',
+        '入力プレースホルダーの最適化：資産追加時の銘柄例（トヨタ自動車、eMAXIS Slim 全世界株式、ビットコイン等）や予算入力例を日本語環境向けに整備。',
+        '認証・パスワード再設定通知：認証コード発行および送信メッセージを日本語化。',
+      ],
+    },
+  },
   {
     version: '1.3.7',
     date: '2026-11-09',

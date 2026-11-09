@@ -151,9 +151,9 @@ export function AuthModal({ isOpen, onClose, onSuccess, language = 'en' }: AuthM
       setForgotStep(2);
       if (res.resetCode) {
         setResetCode(res.resetCode);
-        setSuccessMsg(`OTP Code generated: ${res.resetCode}. Enter code & new password below.`);
+        setSuccessMsg(isJa ? `認証コードを発行しました: ${res.resetCode}。新しいパスワードを設定してください。` : `OTP Code generated: ${res.resetCode}. Enter code & new password below.`);
       } else {
-        setSuccessMsg(res.message || 'Verification code sent to your email.');
+        setSuccessMsg(res.message || (isJa ? "認証コードをメールに送信しました。" : "Verification code sent to your email."));
       }
     } else {
       setError(res.message || (isJa ? "このメールアドレスのアカウントは見つかりませんでした。" : "No account found with this email."));
@@ -358,7 +358,7 @@ export function AuthModal({ isOpen, onClose, onSuccess, language = 'en' }: AuthM
                   type="text"
                   value={name}
                   onChange={(e) => setName(e.target.value)}
-                  placeholder="Your Name"
+                  placeholder={isJa ? "お名前" : "Your Name"}
                   className="w-full pl-10 pr-3.5 py-2 rounded-xl border border-[var(--border-subtle)] bg-[var(--bg-subtle)] text-xs text-[var(--text-main)] placeholder-[var(--text-faint)] focus:outline-none focus:border-[var(--accent-emerald)] transition-all font-sans"
                 />
               </div>

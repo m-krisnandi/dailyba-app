@@ -420,12 +420,12 @@ export function InvestmentBoard({
                     category === 'gold'
                       ? (language === 'ja' ? '例: 純金積立、金地金 10g' : 'e.g. Physical Gold (Antam) or Digital Gold')
                       : category === 'crypto'
-                      ? 'e.g. Bitcoin (BTC), Ethereum'
+                      ? (language === 'ja' ? '例: ビットコイン (BTC)、イーサリアム' : 'e.g. Bitcoin (BTC), Ethereum')
                       : category === 'stock'
-                      ? 'e.g. Apple (AAPL), BBCA'
+                      ? (language === 'ja' ? '例: トヨタ自動車 (7203)、Apple (AAPL)' : 'e.g. Apple (AAPL), BBCA')
                       : category === 'deposit'
                       ? (language === 'ja' ? '例: 定期預金 1年' : 'e.g. Bank Fixed Deposit')
-                      : 'e.g. S&P 500 ETF, BTC, or Gold'
+                      : (language === 'ja' ? '例: eMAXIS Slim 全世界株式、S&P 500' : 'e.g. S&P 500 ETF, BTC, or Gold')
                   }
                   className="w-full bg-[var(--bg-subtle)] border border-[var(--border-subtle)] focus:border-[var(--border-strong)] rounded-xl px-4 py-2.5 text-xs text-[var(--text-main)] outline-none"
                 />
