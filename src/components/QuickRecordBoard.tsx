@@ -32,7 +32,7 @@ import {
   Check,
   Trash2,
   Sparkles,
-  Camera,
+  ScanText,
   ArrowDownRight,
   ArrowUpRight,
   Wallet,
@@ -758,7 +758,7 @@ export function QuickRecordBoard({
               className="px-3 sm:px-3.5 py-2.5 sm:py-3 rounded-2xl border border-[var(--border-subtle)] bg-[var(--bg-subtle)] hover:bg-[var(--bg-subtle-hover)] hover:border-emerald-500/40 text-emerald-500 flex items-center justify-center space-x-1.5 shrink-0 cursor-pointer transition-all active:scale-[0.98] shadow-xs"
               title={language === 'ja' ? 'レシート・請求書読取' : 'Scan Receipt / Bill'}
             >
-              <Camera className="w-4 h-4" />
+              <ScanText className="w-4 h-4" />
               <span className="text-xs font-bold hidden sm:inline">{language === 'ja' ? 'レシート読取' : 'Scan Receipt'}</span>
             </button>
             {/* Executive Monochrome Button */}

@@ -31,7 +31,7 @@ import {
   Wallet,
   CreditCard,
   Plus,
-  Camera,
+  ScanText,
 } from 'lucide-react';
 
 const expenseCategories = Object.keys(EXPENSE_CATEGORY_ICONS) as ExpenseCategory[];
@@ -190,7 +190,7 @@ export function AddTransactionModal({
               className="px-2.5 py-1.5 rounded-xl text-emerald-500 hover:text-emerald-400 bg-emerald-500/10 hover:bg-emerald-500/20 border border-emerald-500/20 text-xs font-bold transition-all cursor-pointer flex items-center space-x-1.5"
               title={language === "ja" ? "レシート読取" : "Scan Receipt"}
             >
-              <Camera className="w-3.5 h-3.5" />
+              <ScanText className="w-3.5 h-3.5" />
               <span className="hidden sm:inline">{language === "ja" ? "レシート読取" : "Scan Receipt"}</span>
             </button>
             <button

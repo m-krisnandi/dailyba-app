@@ -15,7 +15,7 @@ import { EXPENSE_CATEGORY_ICONS, getCategoryBadgeStyle } from '@/lib/constants';
 import { getTodayLocalDate, formatLocalDate } from '@/lib/dateUtils';
 import {
   Plus,
-  Camera,
+  ScanText,
   CalendarDays,
   SlidersHorizontal,
   Check,
@@ -318,7 +318,7 @@ export function DailySpendBoard({
                 className="flex-1 sm:flex-initial flex items-center justify-center space-x-1 sm:space-x-1.5 px-2 sm:px-4 py-2.5 rounded-xl sm:rounded-2xl border border-[var(--border-subtle)] bg-[var(--bg-subtle)] hover:bg-[var(--bg-subtle-hover)] hover:border-emerald-500/40 text-emerald-500 text-xs sm:text-sm font-bold transition-all shadow-xs cursor-pointer active:scale-95 min-w-0"
                 title={language === "ja" ? "レシート・領収書読取" : "Scan Receipt"}
               >
-                <Camera className="w-4 h-4 shrink-0" />
+                <ScanText className="w-4 h-4 shrink-0" />
                 <span className="truncate">
                   <span className="sm:hidden">{language === "ja" ? "スキャン" : "Scan"}</span>
                   <span className="hidden sm:inline">{language === "ja" ? "レシート読取" : "Scan Receipt"}</span>

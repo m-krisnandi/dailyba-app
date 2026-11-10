@@ -27,7 +27,7 @@ import {
   ChevronDown,
   AlertCircle,
   Plus,
-  Camera,
+  ScanText,
   SlidersHorizontal,
   History,
 } from 'lucide-react';
@@ -670,7 +670,7 @@ export function MonthlySummaryBoard({
                 className="flex items-center space-x-1.5 px-3.5 sm:px-4 py-2 rounded-2xl border border-[var(--border-subtle)] bg-[var(--bg-subtle)] hover:bg-[var(--bg-subtle-hover)] hover:border-emerald-500/40 text-emerald-500 text-xs font-bold transition-all shadow-xs cursor-pointer shrink-0 active:scale-95"
                 title={language === "ja" ? "レシート・領収書読取" : "Scan Receipt"}
               >
-                <Camera className="w-3.5 h-3.5" />
+                <ScanText className="w-3.5 h-3.5" />
                 <span>{language === "ja" ? "レシート読取" : "Scan Receipt"}</span>
               </button>
             )}
