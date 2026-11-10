@@ -13,6 +13,7 @@ const eslintConfig = defineConfig([
     "ios/**",
     "public/**",
     "server/**",
+    "scripts/**",
     "next-env.d.ts",
   ]),
   {

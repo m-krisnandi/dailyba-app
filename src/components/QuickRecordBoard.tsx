@@ -992,7 +992,7 @@ export function QuickRecordBoard({
                   key={src}
                   type="button"
                   onClick={() => setSource(src)}
-                  className={`p-2.5 rounded-xl border text-center flex items-center justify-center space-x-1.5 min-w-0 transition-all cursor-pointer ${
+                  className={`px-2 py-2.5 sm:px-3 rounded-xl border text-center flex items-center justify-center space-x-1 sm:space-x-1.5 min-w-0 transition-all cursor-pointer ${
                     isSelected
                       ? 'border-[var(--border-strong)] bg-[var(--bg-surface-solid)] text-[var(--text-main)] font-bold shadow-xs'
                       : 'border-[var(--border-subtle)] bg-[var(--bg-subtle)] hover:bg-[var(--bg-subtle-hover)] text-[var(--text-muted)]'

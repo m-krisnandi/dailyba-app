@@ -291,8 +291,8 @@ export function DailySpendBoard({
             </p>
           </div>
 
-          {/* Action Buttons: Responsive flex row */}
-          <div className="flex items-center gap-2 w-full sm:w-auto shrink-0 mt-1 sm:mt-0 flex-wrap">
+          {/* Action Buttons: Responsive row with balanced 1/3 width on mobile */}
+          <div className="flex items-center gap-1.5 sm:gap-2 w-full sm:w-auto shrink-0 mt-2 sm:mt-0">
             {onAddTransaction && (
               <button
                 type="button"
@@ -300,13 +300,13 @@ export function DailySpendBoard({
                   setAddExpenseDate(todayStr);
                   setIsAddExpenseModalOpen(true);
                 }}
-                className="flex-1 sm:flex-initial flex items-center justify-center space-x-1.5 px-3 sm:px-4 py-2.5 rounded-2xl bg-[var(--btn-primary-bg)] text-[var(--btn-primary-text)] border border-[var(--btn-primary-border)] shadow-[var(--btn-primary-shadow)] hover:opacity-90 active:scale-95 text-xs sm:text-sm font-bold transition-all cursor-pointer min-w-0"
+                className="flex-1 sm:flex-initial flex items-center justify-center space-x-1 sm:space-x-1.5 px-2 sm:px-4 py-2.5 rounded-xl sm:rounded-2xl bg-[var(--btn-primary-bg)] text-[var(--btn-primary-text)] border border-[var(--btn-primary-border)] shadow-[var(--btn-primary-shadow)] hover:opacity-90 active:scale-95 text-xs sm:text-sm font-bold transition-all cursor-pointer min-w-0"
                 title={language === "ja" ? "今日の支出を記録" : "Record Today's Spend"}
               >
                 <Plus className="w-4 h-4 shrink-0" />
                 <span className="truncate">
-                  <span className="sm:hidden">{t.dailySpend.addSpend}</span>
-                  <span className="hidden sm:inline">{t.record.recordTodayExpense || "Record Today's Spend"}</span>
+                  <span className="sm:hidden">{language === "ja" ? "支出追加" : "Spend"}</span>
+                  <span className="hidden sm:inline">{language === "ja" ? "今日の支出を記録" : (t.record.recordTodayExpense || "Record Today's Spend")}</span>
                 </span>
               </button>
             )}
@@ -315,18 +315,21 @@ export function DailySpendBoard({
               <button
                 type="button"
                 onClick={() => setIsReceiptScannerOpen(true)}
-                className="flex items-center justify-center space-x-1.5 px-3 sm:px-4 py-2.5 rounded-2xl border border-[var(--border-subtle)] bg-[var(--bg-subtle)] hover:bg-[var(--bg-subtle-hover)] hover:border-emerald-500/40 text-emerald-500 text-xs sm:text-sm font-bold transition-all shadow-xs cursor-pointer active:scale-95"
+                className="flex-1 sm:flex-initial flex items-center justify-center space-x-1 sm:space-x-1.5 px-2 sm:px-4 py-2.5 rounded-xl sm:rounded-2xl border border-[var(--border-subtle)] bg-[var(--bg-subtle)] hover:bg-[var(--bg-subtle-hover)] hover:border-emerald-500/40 text-emerald-500 text-xs sm:text-sm font-bold transition-all shadow-xs cursor-pointer active:scale-95 min-w-0"
                 title={language === "ja" ? "レシート・領収書読取" : "Scan Receipt"}
               >
                 <Camera className="w-4 h-4 shrink-0" />
-                <span className="truncate">{language === "ja" ? "レシート読取" : "Scan Receipt"}</span>
+                <span className="truncate">
+                  <span className="sm:hidden">{language === "ja" ? "スキャン" : "Scan"}</span>
+                  <span className="hidden sm:inline">{language === "ja" ? "レシート読取" : "Scan Receipt"}</span>
+                </span>
               </button>
             )}
 
             <button
               type="button"
               onClick={() => setIsEditingTarget(!isEditingTarget)}
-              className={`flex items-center justify-center space-x-1.5 px-3 sm:px-4 py-2.5 rounded-2xl border text-xs sm:text-sm font-bold transition-all shadow-xs cursor-pointer min-w-0 ${
+              className={`flex-1 sm:flex-initial flex items-center justify-center space-x-1 sm:space-x-1.5 px-2 sm:px-4 py-2.5 rounded-xl sm:rounded-2xl border text-xs sm:text-sm font-bold transition-all shadow-xs cursor-pointer min-w-0 ${
                 isEditingTarget
                   ? 'bg-[var(--bg-surface-solid)] border-[var(--border-strong)] text-[var(--text-main)] ring-1 ring-[var(--border-strong)]'
                   : 'border-[var(--border-subtle)] bg-[var(--bg-subtle)] hover:bg-[var(--bg-subtle-hover)] hover:border-[var(--border-strong)] text-[var(--text-main)]'
@@ -335,13 +338,13 @@ export function DailySpendBoard({
               {isEditingTarget ? (
                 <>
                   <X className="w-4 h-4 shrink-0" />
-                  <span>{t.actions.cancel}</span>
+                  <span className="truncate">{t.actions.cancel}</span>
                 </>
               ) : (
                 <>
                   <SlidersHorizontal className="w-4 h-4 shrink-0" />
                   <span className="truncate">
-                    <span className="sm:hidden">{t.dailySpend.setTarget}</span>
+                    <span className="sm:hidden">{language === "ja" ? "目標" : "Target"}</span>
                     <span className="hidden sm:inline">{t.dailySpend.adjustDailyTarget}</span>
                   </span>
                 </>

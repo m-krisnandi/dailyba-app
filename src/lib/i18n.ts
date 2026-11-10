@@ -295,8 +295,8 @@ export const translations: Record<Language, Translations> = {
     },
     sources: {
       cash: 'Cash',
-      bank: 'Bank Transfer',
-      ewallet: 'IC / e-Wallet',
+      bank: 'Bank',
+      ewallet: 'E-Wallet',
       credit_card: 'Credit Card',
     },
     expenseCategories: {
@@ -314,10 +314,10 @@ export const translations: Record<Language, Translations> = {
     },
     incomeCategories: {
       salary: 'Salary',
-      freelance: 'Freelance & Side Gig',
+      freelance: 'Freelance',
       bonus: 'Bonus',
-      dividend: 'Dividends & Yield',
-      carryover: 'Carryover (Previous Leftover)',
+      dividend: 'Dividends',
+      carryover: 'Carryover',
       others: 'Other Income',
     },
     investmentCategories: {
@@ -530,8 +530,8 @@ export const translations: Record<Language, Translations> = {
     },
     sources: {
       cash: '現金',
-      bank: '銀行振込',
-      ewallet: '交通系IC・電子マネー',
+      bank: '銀行',
+      ewallet: '電子マネー',
       credit_card: 'クレジットカード',
     },
     expenseCategories: {
@@ -549,10 +549,10 @@ export const translations: Record<Language, Translations> = {
     },
     incomeCategories: {
       salary: '給与',
-      freelance: '副業・業務委託',
+      freelance: '副業',
       bonus: '賞与',
       dividend: '配当・利息',
-      carryover: '前月繰越金・残り',
+      carryover: '繰越金',
       others: 'その他収入',
     },
     investmentCategories: {
