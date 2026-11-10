@@ -9,10 +9,11 @@
     "build": "next build",
     "start": "next start",
     "lint": "eslint",
-    "sync": "rm -f public/dailyba.apk out/dailyba.apk android/app/src/main/assets/public/dailyba.apk && next build && rm -f out/dailyba.apk && npx cap sync && rm -f android/app/src/main/assets/public/dailyba.apk",
+    "sync": "next build && rm -f out/dailyba.apk out/dailyba.aab android/app/src/main/assets/public/dailyba.apk android/app/src/main/assets/public/dailyba.aab && npx cap sync && rm -f out/dailyba.apk out/dailyba.aab android/app/src/main/assets/public/dailyba.apk android/app/src/main/assets/public/dailyba.aab",
     "open:android": "npx cap open android",
     "open:ios": "npx cap open ios",
-    "build:apk": "rm -f public/dailyba.apk out/dailyba.apk android/app/src/main/assets/public/dailyba.apk && next build && rm -f out/dailyba.apk && npx cap sync && rm -f android/app/src/main/assets/public/dailyba.apk && cd android && JAVA_HOME=$(/usr/libexec/java_home -v 21 2>/dev/null || echo $JAVA_HOME) ./gradlew assembleDebug && cp app/build/outputs/apk/debug/app-debug.apk ../public/dailyba.apk"
+    "build:apk": "next build && rm -f out/dailyba.apk out/dailyba.aab android/app/src/main/assets/public/dailyba.apk android/app/src/main/assets/public/dailyba.aab && npx cap sync && rm -f out/dailyba.apk out/dailyba.aab android/app/src/main/assets/public/dailyba.apk android/app/src/main/assets/public/dailyba.aab && cd android && JAVA_HOME=$(/usr/libexec/java_home -v 21 2>/dev/null || echo $JAVA_HOME) ./gradlew assembleDebug && cp app/build/outputs/apk/debug/app-debug.apk ../public/dailyba.apk",
+    "build:aab": "next build && rm -f out/dailyba.apk out/dailyba.aab android/app/src/main/assets/public/dailyba.apk android/app/src/main/assets/public/dailyba.aab && npx cap sync && rm -f out/dailyba.apk out/dailyba.aab android/app/src/main/assets/public/dailyba.apk android/app/src/main/assets/public/dailyba.aab && cd android && JAVA_HOME=$(/usr/libexec/java_home -v 21 2>/dev/null || echo $JAVA_HOME) ./gradlew bundleRelease && cp app/build/outputs/bundle/release/app-release.aab ../public/dailyba.aab"
   },
   "dependencies": {
     "@capacitor/core": "^8.6.0",

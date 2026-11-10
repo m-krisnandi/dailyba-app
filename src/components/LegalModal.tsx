@@ -174,9 +174,18 @@ export function LegalModal({
 
         {/* Footer */}
         <div className="pt-3 border-t border-[var(--border-subtle)] flex items-center justify-between shrink-0">
-          <span className="text-[10px] text-[var(--text-faint)] font-mono">
-            Dailyba • Updated Nov 2026
-          </span>
+          <div className="flex items-center space-x-2 text-[10px] text-[var(--text-faint)] font-mono">
+            <span>Dailyba • Updated Nov 2026</span>
+            <span>•</span>
+            <a
+              href={tab === "privacy" ? "/privacy" : "/terms"}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-emerald-500 hover:underline font-semibold"
+            >
+              {isJa ? "ブラウザで開く" : "Open in Browser"} ↗
+            </a>
+          </div>
           <button
             type="button"
             onClick={onClose}

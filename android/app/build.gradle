@@ -1,10 +1,10 @@
 apply plugin: 'com.android.application'
 
 android {
-    namespace = "com.solidpace.kakeibo"
+    namespace = "com.dailyba.app"
     compileSdk = rootProject.ext.compileSdkVersion
     defaultConfig {
-        applicationId "com.solidpace.kakeibo"
+        applicationId "com.dailyba.app"
         minSdkVersion rootProject.ext.minSdkVersion
         targetSdkVersion rootProject.ext.targetSdkVersion
         versionCode 151
@@ -13,11 +13,22 @@ android {
         aaptOptions {
              // Files and dirs to omit from the packaged assets dir, modified to accommodate modern web apps.
              // Default: https://android.googlesource.com/platform/frameworks/base/+/282e181b58cf72b6ca770dc7ca5f91f135444502/tools/aapt/AaptAssets.cpp#61
-            ignoreAssetsPattern = '!.svn:!.git:!.ds_store:!*.scc:.*:!CVS:!thumbs.db:!picasa.ini:!*~'
+            ignoreAssetsPattern = '!.svn:!.git:!.ds_store:!*.scc:.*:!CVS:!thumbs.db:!picasa.ini:!*~:!*.apk:!*.aab'
+        }
+    }
+    signingConfigs {
+        release {
+            if (file("dailyba-release.jks").exists()) {
+                storeFile file("dailyba-release.jks")
+                storePassword System.getenv("KEYSTORE_PASSWORD") ?: "dailybaSecure2026!"
+                keyAlias System.getenv("KEY_ALIAS") ?: "dailyba"
+                keyPassword System.getenv("KEY_PASSWORD") ?: "dailybaSecure2026!"
+            }
         }
     }
     buildTypes {
         release {
+            signingConfig signingConfigs.release
             minifyEnabled false
             proguardFiles getDefaultProguardFile('proguard-android.txt'), 'proguard-rules.pro'
         }

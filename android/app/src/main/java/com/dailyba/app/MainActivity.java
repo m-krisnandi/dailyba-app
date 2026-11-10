@@ -1,4 +1,4 @@
-package com.solidpace.kakeibo;
+package com.dailyba.app;
 
 import com.getcapacitor.BridgeActivity;
 
