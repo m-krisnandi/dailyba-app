@@ -63,7 +63,7 @@ const bcaParser = {
       occurredAt = normalizeDate(dateMatch[1]);
     }
 
-    const timeMatch = text.match(/Jam|Pukul\s*[:\s]*([0-9]{2}:[0-9]{2})/i);
+    const timeMatch = text.match(/(?:Jam|Pukul)\s*[:\s]*([0-9]{2}:[0-9]{2})/i);
     if (timeMatch) {
       occurredTime = timeMatch[1];
     }

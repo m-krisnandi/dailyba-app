@@ -1,7 +1,15 @@
 const crypto = require('crypto');
 
 const ALGORITHM = 'aes-256-gcm';
-const SECRET_SEED = process.env.ENCRYPTION_KEY || process.env.JWT_SECRET || 'dailyba_default_encryption_seed_2026';
+
+// In production, strictly require ENCRYPTION_KEY to prevent silent data loss or security degradation
+if (process.env.NODE_ENV === 'production' && !process.env.ENCRYPTION_KEY) {
+  console.error('[SECURITY FATAL] ENCRYPTION_KEY must be set in production environment!');
+  process.exit(1);
+}
+
+const SECRET_SEED = process.env.ENCRYPTION_KEY || process.env.JWT_SECRET || 'dailyba_dev_encryption_seed_2026';
+// Derived once at startup
 const DERIVED_KEY = crypto.scryptSync(SECRET_SEED, 'dailyba_salt_v1', 32);
 
 /**
@@ -20,16 +28,17 @@ function encrypt(text) {
 }
 
 /**
- * Decrypts AES-256-GCM ciphertext string
+ * Decrypts AES-256-GCM ciphertext string.
+ * Returns null if decryption fails or authentication tag is invalid (e.g. key changed).
  * @param {string} cipherText
- * @returns {string}
+ * @returns {string|null}
  */
 function decrypt(cipherText) {
   if (!cipherText) return '';
   const parts = cipherText.split(':');
   if (parts.length !== 3) {
-    // If not in iv:tag:encrypted format, return as-is (e.g. legacy plaintext migration)
-    return cipherText;
+    // If legacy unencrypted plaintext, return null to force secure reconnection
+    return null;
   }
   try {
     const iv = Buffer.from(parts[0], 'hex');
@@ -41,35 +50,75 @@ function decrypt(cipherText) {
     decrypted += decipher.final('utf8');
     return decrypted;
   } catch (err) {
-    console.error('[Crypto] Decryption failed:', err.message);
-    return '';
+    console.error('[Crypto] Decryption failed (invalid key or corrupted tag):', err.message);
+    return null;
   }
 }
 
 /**
- * Sanitizes and redacts sensitive PII from email snippets before logging or storing
- * Masks credit card numbers, PAN, bank accounts, and phone numbers.
+ * Constant-time comparison to prevent timing attacks on HMAC signatures
+ * @param {string} a
+ * @param {string} b
+ * @returns {boolean}
+ */
+function timingSafeEqual(a, b) {
+  if (typeof a !== 'string' || typeof b !== 'string') return false;
+  const bufA = Buffer.from(a, 'hex');
+  const bufB = Buffer.from(b, 'hex');
+  if (bufA.length !== bufB.length) return false;
+  return crypto.timingSafeEqual(bufA, bufB);
+}
+
+/**
+ * Removes personal greeting lines (e.g. "Halo MUHAMAD KRISNANDI ,") before sending to external LLM
+ * @param {string} text
+ * @returns {string}
+ */
+function stripGreetings(text) {
+  if (!text) return '';
+  return String(text)
+    .replace(/^(?:Halo|Assalamu'alaikum|Dear|Hi|Hello|Kepada\s+Yth)[^\n\r]+[\n\r]+/gim, '')
+    .replace(/(?:Halo|Assalamu'alaikum|Dear|Hi|Hello|Kepada\s+Yth)\s+[A-Z\s]{3,30},/gi, '');
+}
+
+/**
+ * Sanitizes and redacts sensitive PII from email snippets before logging, storing, or sending to LLM.
+ * Carefully preserves merchant names with numbers (e.g. "Good Laundry 1"), amounts (e.g. "1500000"), and dates ("2026-11-06").
  * @param {string} text
  * @returns {string}
  */
 function redactPII(text) {
   if (!text) return '';
-  return String(text)
-    // Redact 16-19 digit card PANs (e.g. 9360000801984237685)
-    .replace(/\b(\d{4})\d{8,11}(\d{4})\b/g, '$1********$2')
-    // Redact 10-14 digit bank account numbers (e.g. 502799066497)
-    .replace(/\b(\d{3})\d{4,8}(\d{3})\b/g, '$1****$2')
-    // Redact email addresses
-    .replace(/([a-zA-Z0-9_.+-]+)@([a-zA-Z0-9-]+\.[a-zA-Z0-9-.]+)/g, (match, user, domain) => {
-      const maskedUser = user.length > 2 ? `${user.slice(0, 2)}***` : '***';
-      return `${maskedUser}@${domain}`;
-    })
-    // Redact Indonesian/International phone numbers
-    .replace(/(?:\+62|08)[0-9]{8,12}/g, '[REDACTED_PHONE]');
+  let clean = String(text);
+
+  // 1. Redact 16-19 digit card PANs (e.g. 9360000801984237685 or 9360 0008 0198 4237)
+  clean = clean.replace(/\b(\d{4})[-\s]?\d{4}[-\s]?\d{4}[-\s]?\d{4,7}\b/g, '$1********');
+
+  // 2. Redact 10-14 digit bank account numbers (explicitly labeled or standalone sequence of 10-14 digits)
+  // Ensures 7-digit amounts like 1500000 or dates like 20261106 are not matched!
+  clean = clean.replace(/(?:rekening|account|from|ke\s*rek|no\.?\s*rek)[:\s]*([0-9]{10,14})/gi, (match, acc) => {
+    return `rekening ${acc.slice(0, 3)}****${acc.slice(-3)}`;
+  });
+
+  // Standalone 10-14 digit sequences (e.g. From 502799066497)
+  clean = clean.replace(/\b(\d{3})\d{4,8}(\d{3})\b/g, '$1****$2');
+
+  // 3. Redact email addresses
+  clean = clean.replace(/([a-zA-Z0-9_.+-]+)@([a-zA-Z0-9-]+\.[a-zA-Z0-9-.]+)/g, (match, user, domain) => {
+    const maskedUser = user.length > 2 ? `${user.slice(0, 2)}***` : '***';
+    return `${maskedUser}@${domain}`;
+  });
+
+  // 4. Redact Indonesian/International mobile phone numbers
+  clean = clean.replace(/(?:\+62|08)[0-9]{8,12}/g, '[REDACTED_PHONE]');
+
+  return clean;
 }
 
 module.exports = {
   encrypt,
   decrypt,
+  timingSafeEqual,
+  stripGreetings,
   redactPII
 };

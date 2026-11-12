@@ -10,7 +10,7 @@ const CATEGORY_RULES = [
     patterns: [
       /\b(rm|rumah\s*makan|warung|resto|restaurant|cafe|coffee|kopi|salero|padang|soto|bakso|mie|ayam|bento|ramen|sushi|izakaya|shokudo|dining|food|drink|bakery|roti|tea|boba|starbucks|mcdonald|kfc|burger|pizza|dunkin|hokben|jco|gofood|grabfood|shopeefood)\b/i,
       /\b(indomaret|alfamart|superindo|hero|hypermart|familymart|7-eleven|seven-eleven|sevel|lawson|ministop|seiyu|aeon|life|maruetsu|supermarket|grocery|groceries|pasar)\b/i,
-      /(食堂|居酒屋|カフェ|珈琲|ラーメン|寿司|定食|レストラン|弁当|スーパー|コンビニ|ファミリーマート|セブンイレブン|ローソン|飲食店|パン屋)/
+      /(食堂|居酒屋|カフェ|珈琲|ラーメン|寿司|定食|レストラン|弁当|スーパー|コンビニ|ファミリーマート|セブン[-ー]?イレブン|ローソン|飲食店|パン屋)/
     ]
   },
   {

@@ -1,7 +1,24 @@
 const express = require('express');
 const crypto = require('crypto');
 const { parseEmailReceipt } = require('./parsers/engine');
-const { encrypt, decrypt, redactPII } = require('./crypto');
+const { cleanMimeText } = require('./parsers/types');
+const { encrypt, decrypt, timingSafeEqual, redactPII, stripGreetings } = require('./crypto');
+
+const ALLOWED_CATEGORIES = new Set([
+  'food_drinks',
+  'shopping',
+  'train',
+  'ride',
+  'laundry',
+  'rent',
+  'family',
+  'gifts',
+  'vps',
+  'mobile',
+  'others'
+]);
+
+const ALLOWED_SOURCES = new Set(['bank', 'ewallet', 'credit_card', 'cash']);
 
 /**
  * Creates the Email & Bank Sync Router
@@ -47,6 +64,16 @@ function createEmailSyncRouter(db, authenticateToken, jwtSecret) {
       UNIQUE(user_id, message_id)
     );
 
+    -- Permanent tombstone registry of all processed email message_ids.
+    -- Never deleted by user clearing pending imports, preventing duplicate imports upon re-sync or re-connect.
+    CREATE TABLE IF NOT EXISTS imported_message_ids (
+      user_id TEXT NOT NULL,
+      message_id TEXT NOT NULL,
+      created_at TEXT NOT NULL,
+      PRIMARY KEY(user_id, message_id),
+      FOREIGN KEY(user_id) REFERENCES users(id) ON DELETE CASCADE
+    );
+
     CREATE INDEX IF NOT EXISTS idx_pending_user_status ON pending_imports (user_id, status);
     CREATE INDEX IF NOT EXISTS idx_pending_hash ON pending_imports (user_id, dedup_hash);
   `);
@@ -75,13 +102,19 @@ function createEmailSyncRouter(db, authenticateToken, jwtSecret) {
     const rawAccessToken = decrypt(conn.access_token);
     const now = Date.now();
 
+    // If token decryption failed (e.g. key changed or legacy plaintext), force reconnect
+    if (!rawRefreshToken) {
+      db.prepare('UPDATE google_connections SET requires_reauth = 1 WHERE user_id = ?').run(userId);
+      return null;
+    }
+
     // Return existing token if valid for at least 2 more minutes
     if (rawAccessToken && conn.token_expires_at && conn.token_expires_at > now + 120000 && !conn.requires_reauth) {
       return rawAccessToken;
     }
 
     const { clientId, clientSecret } = getGoogleOAuthConfig();
-    if (!clientId || !clientSecret || !rawRefreshToken) return null;
+    if (!clientId || !clientSecret) return null;
 
     try {
       const res = await fetch('https://oauth2.googleapis.com/token', {
@@ -212,12 +245,12 @@ function createEmailSyncRouter(db, authenticateToken, jwtSecret) {
         return res.status(400).send('Missing code or state parameter');
       }
 
-      // Verify HMAC state and 10-minute validity
+      // Verify HMAC state with timingSafeEqual and 10-minute validity
       let userId;
       try {
         const decoded = JSON.parse(Buffer.from(state, 'base64url').toString('utf8'));
         const expectedSig = crypto.createHmac('sha256', jwtSecret).update(decoded.payload).digest('hex');
-        if (expectedSig !== decoded.sig) {
+        if (!timingSafeEqual(expectedSig, decoded.sig)) {
           return res.status(400).send('Invalid state signature');
         }
         const payload = JSON.parse(decoded.payload);
@@ -360,7 +393,7 @@ function createEmailSyncRouter(db, authenticateToken, jwtSecret) {
                   } catch (err) {}
                   window.close();
                 } else {
-                  // Mobile or standalone tab
+                  // Mobile deep link fallback
                   window.location.href = 'dailyba://app?emailSync=connected';
                   setTimeout(() => { window.location.href = '/'; }, 1000);
                 }
@@ -396,8 +429,10 @@ function createEmailSyncRouter(db, authenticateToken, jwtSecret) {
     }
   });
 
-  // 5. Trigger Gmail Sync (with incremental sync & PII redaction)
+  // 5. Trigger Gmail Sync (with incremental sync, tombstone deduplication, MIME decoding, and DKIM verification)
   router.post('/sync', authenticateToken, async (req, res) => {
+    const syncStartTime = new Date().toISOString();
+
     try {
       const accessToken = await getValidAccessToken(req.user.id);
       if (!accessToken) {
@@ -412,12 +447,12 @@ function createEmailSyncRouter(db, authenticateToken, jwtSecret) {
         });
       }
 
-      // Check last synced timestamp for incremental sync (saves quota and time)
+      // Check last synced timestamp for incremental sync
       const conn = db.prepare('SELECT last_synced_at FROM google_connections WHERE user_id = ?').get(req.user.id);
       let incrementalFilter = '';
       if (conn?.last_synced_at) {
         const lastEpoch = Math.floor(new Date(conn.last_synced_at).getTime() / 1000);
-        // Overlap buffer of 5 minutes (300 seconds)
+        // Overlap buffer of 5 minutes (300 seconds) to avoid missing in-flight emails
         const safeAfter = Math.max(0, lastEpoch - 300);
         incrementalFilter = ` after:${safeAfter}`;
       }
@@ -462,14 +497,14 @@ function createEmailSyncRouter(db, authenticateToken, jwtSecret) {
       let duplicateCount = 0;
 
       for (const msg of messages) {
-        // Check if messageId already exists in pending_imports
-        const existing = db.prepare('SELECT id FROM pending_imports WHERE user_id = ? AND message_id = ?').get(req.user.id, msg.id);
-        if (existing) {
+        // 1. Permanent tombstone check: ensure this message was never imported before
+        const seen = db.prepare('SELECT 1 FROM imported_message_ids WHERE user_id = ? AND message_id = ?').get(req.user.id, msg.id);
+        if (seen) {
           duplicateCount++;
           continue;
         }
 
-        // Fetch message detail
+        // 2. Fetch full message detail
         const msgUrl = `https://gmail.googleapis.com/gmail/v1/users/me/messages/${msg.id}?format=full`;
         const msgRes = await fetch(msgUrl, {
           headers: { Authorization: `Bearer ${accessToken}` }
@@ -482,63 +517,85 @@ function createEmailSyncRouter(db, authenticateToken, jwtSecret) {
         const fromHeader = headers.find(h => h.name.toLowerCase() === 'from')?.value || '';
         const subjectHeader = headers.find(h => h.name.toLowerCase() === 'subject')?.value || '';
         const dateHeader = headers.find(h => h.name.toLowerCase() === 'date')?.value || '';
+        const authResults = headers.find(h => h.name.toLowerCase() === 'authentication-results')?.value || '';
 
-        // Recursively extract text parts
-        function extractParts(payload) {
+        // DKIM / SPF verification: check if sender signature failed
+        const isDkimFailed = authResults.includes('dkim=fail') || authResults.includes('spf=fail');
+
+        // Extract and decode base64url MIME payload parts
+        function extractMimeParts(payload) {
           if (!payload) return '';
           let text = '';
           if (payload.body && payload.body.data) {
             try {
-              text += Buffer.from(payload.body.data, 'base64url').toString('utf8') + ' ';
+              const decoded = Buffer.from(payload.body.data, 'base64url').toString('utf8');
+              text += cleanMimeText(decoded) + '\n';
             } catch {}
           }
           if (payload.parts && Array.isArray(payload.parts)) {
             for (const p of payload.parts) {
-              text += extractParts(p);
+              text += extractMimeParts(p);
             }
           }
           return text;
         }
 
-        const fullExtractedText = extractParts(msgData.payload) || msgData.snippet || '';
+        const decodedBody = extractMimeParts(msgData.payload) || cleanMimeText(msgData.snippet || '');
 
         const parsed = await parseEmailReceipt({
           from: fromHeader,
           subject: subjectHeader,
-          text: fullExtractedText,
+          text: decodedBody,
           date: dateHeader,
           messageId: msg.id
         });
 
         if (parsed && parsed.amount > 0) {
+          // If DKIM verification explicitly failed, downgrade confidence to require manual inspection
+          let finalConfidence = parsed.confidence;
+          if (isDkimFailed) {
+            finalConfidence = 0.2;
+            console.warn(`[Security] DKIM/SPF check failed for message ${msg.id} from ${fromHeader}`);
+          }
+
           const insertId = 'imp_' + Date.now() + '_' + crypto.randomBytes(4).toString('hex');
           const now = new Date().toISOString();
           const cleanSnippet = redactPII(parsed.rawSnippet || '').slice(0, 300);
 
           try {
-            db.prepare(`
-              INSERT OR IGNORE INTO pending_imports (
-                id, user_id, message_id, dedup_hash, source, provider,
-                merchant, amount, currency, category, occurred_at, occurred_time,
-                raw_snippet, confidence, status, created_at
-              ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'pending', ?)
-            `).run(
-              insertId,
-              req.user.id,
-              parsed.messageId,
-              parsed.dedupHash,
-              parsed.source,
-              parsed.provider,
-              parsed.merchant,
-              parsed.amount,
-              parsed.currency,
-              parsed.category,
-              parsed.occurredAt,
-              parsed.occurredTime || null,
-              cleanSnippet,
-              parsed.confidence,
-              now
-            );
+            db.transaction(() => {
+              // Register in permanent imported_message_ids tombstone table
+              db.prepare(`
+                INSERT OR IGNORE INTO imported_message_ids (user_id, message_id, created_at)
+                VALUES (?, ?, ?)
+              `).run(req.user.id, parsed.messageId, now);
+
+              // Stage into pending_imports
+              db.prepare(`
+                INSERT OR IGNORE INTO pending_imports (
+                  id, user_id, message_id, dedup_hash, source, provider,
+                  merchant, amount, currency, category, occurred_at, occurred_time,
+                  raw_snippet, confidence, status, created_at
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'pending', ?)
+              `).run(
+                insertId,
+                req.user.id,
+                parsed.messageId,
+                parsed.dedupHash,
+                parsed.source,
+                parsed.provider,
+                parsed.merchant,
+                parsed.amount,
+                parsed.currency,
+                parsed.category,
+                parsed.occurredAt,
+                parsed.occurredTime || null,
+                cleanSnippet,
+                finalConfidence,
+                now
+              );
+            })();
+
             importedCount++;
           } catch (e) {
             console.warn('[Sync] Insert skipped or duplicate:', e.message);
@@ -546,15 +603,14 @@ function createEmailSyncRouter(db, authenticateToken, jwtSecret) {
         }
       }
 
-      // Update last synced timestamp
-      const nowIso = new Date().toISOString();
-      db.prepare('UPDATE google_connections SET last_synced_at = ? WHERE user_id = ?').run(nowIso, req.user.id);
+      // Update last synced watermark with syncStartTime only after successful query
+      db.prepare('UPDATE google_connections SET last_synced_at = ? WHERE user_id = ?').run(syncStartTime, req.user.id);
 
       res.json({
         success: true,
         importedCount,
         duplicateCount,
-        lastSyncedAt: nowIso,
+        lastSyncedAt: syncStartTime,
         message: `Sync complete. ${importedCount} new transactions imported to pending review.`
       });
     } catch (err) {
@@ -572,8 +628,10 @@ function createEmailSyncRouter(db, authenticateToken, jwtSecret) {
       }
 
       const syntheticMsgId = 'raw_' + Date.now() + '_' + crypto.randomBytes(4).toString('hex');
+      const cleanText = cleanMimeText(text || '');
+
       const parsed = await parseEmailReceipt({
-        text: text || '',
+        text: cleanText,
         subject: subject || '',
         from: from || '',
         date: date || new Date().toISOString(),
@@ -594,29 +652,36 @@ function createEmailSyncRouter(db, authenticateToken, jwtSecret) {
         const now = new Date().toISOString();
         const cleanSnippet = redactPII(parsed.rawSnippet || '').slice(0, 300);
 
-        db.prepare(`
-          INSERT INTO pending_imports (
-            id, user_id, message_id, dedup_hash, source, provider,
-            merchant, amount, currency, category, occurred_at, occurred_time,
-            raw_snippet, confidence, status, created_at
-          ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'pending', ?)
-        `).run(
-          insertId,
-          req.user.id,
-          parsed.messageId,
-          parsed.dedupHash,
-          parsed.source,
-          parsed.provider,
-          parsed.merchant,
-          parsed.amount,
-          parsed.currency,
-          parsed.category,
-          parsed.occurredAt,
-          parsed.occurredTime || null,
-          cleanSnippet,
-          parsed.confidence,
-          now
-        );
+        db.transaction(() => {
+          db.prepare(`
+            INSERT OR IGNORE INTO imported_message_ids (user_id, message_id, created_at)
+            VALUES (?, ?, ?)
+          `).run(req.user.id, parsed.messageId, now);
+
+          db.prepare(`
+            INSERT INTO pending_imports (
+              id, user_id, message_id, dedup_hash, source, provider,
+              merchant, amount, currency, category, occurred_at, occurred_time,
+              raw_snippet, confidence, status, created_at
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'pending', ?)
+          `).run(
+            insertId,
+            req.user.id,
+            parsed.messageId,
+            parsed.dedupHash,
+            parsed.source,
+            parsed.provider,
+            parsed.merchant,
+            parsed.amount,
+            parsed.currency,
+            parsed.category,
+            parsed.occurredAt,
+            parsed.occurredTime || null,
+            cleanSnippet,
+            parsed.confidence,
+            now
+          );
+        })();
 
         stagedItem = db.prepare('SELECT * FROM pending_imports WHERE id = ?').get(insertId);
       }
@@ -651,29 +716,80 @@ function createEmailSyncRouter(db, authenticateToken, jwtSecret) {
     }
   });
 
-  // 8. Atomic & Safe Approve Import(s)
+  // 8. Atomic, Server-Authoritative Approve
+  // In a single SQLite transaction:
+  // - Validates category & source allowlists
+  // - Updates pending_imports status to 'approved' (guaranteeing changes === 1)
+  // - Automatically commits the new transaction into the user's finance state in user_data
   router.post('/approve', authenticateToken, (req, res) => {
     try {
       const { id, all, updates } = req.body;
 
       if (all) {
         // Safe Approve All: Only approve items with confidence >= 0.8
-        // Low confidence items are kept for manual individual review!
-        const approvedItems = db.prepare(`
+        const itemsToApprove = db.prepare(`
           SELECT * FROM pending_imports
           WHERE user_id = ? AND status = 'pending' AND confidence >= 0.8
         `).all(req.user.id);
 
-        if (approvedItems.length > 0) {
-          const ids = approvedItems.map(i => i.id);
-          const placeholders = ids.map(() => '?').join(',');
-
-          db.prepare(`
-            UPDATE pending_imports
-            SET status = 'approved', raw_snippet = NULL
-            WHERE user_id = ? AND id IN (${placeholders})
-          `).run(req.user.id, ...ids);
+        if (itemsToApprove.length === 0) {
+          return res.json({
+            success: true,
+            approvedItems: [],
+            newTransactions: [],
+            message: 'No pending items eligible for batch approval (confidence >= 0.8)'
+          });
         }
+
+        const newTransactions = [];
+        let updatedState = null;
+
+        db.transaction(() => {
+          // 1. Fetch user finance state
+          const record = db.prepare('SELECT data_json, version FROM user_data WHERE user_id = ?').get(req.user.id);
+          let state = record && record.data_json ? JSON.parse(record.data_json) : { transactions: [] };
+          if (!Array.isArray(state.transactions)) state.transactions = [];
+
+          // 2. Process each item into finance state
+          for (const item of itemsToApprove) {
+            const finalCategory = ALLOWED_CATEGORIES.has(item.category) ? item.category : 'others';
+            const finalSource = ALLOWED_SOURCES.has(item.source) ? item.source : 'bank';
+
+            const newTx = {
+              id: 'tx_' + Date.now() + '_' + crypto.randomBytes(4).toString('hex'),
+              type: 'expense',
+              amount: item.amount,
+              category: finalCategory,
+              source: finalSource,
+              currency: item.currency,
+              date: item.occurred_at,
+              note: `${item.provider.toUpperCase()}: ${item.merchant}`
+            };
+
+            state.transactions.unshift(newTx);
+            newTransactions.push(newTx);
+
+            db.prepare(`
+              UPDATE pending_imports
+              SET status = 'approved', raw_snippet = NULL
+              WHERE id = ? AND user_id = ?
+            `).run(item.id, req.user.id);
+          }
+
+          // 3. Save state in user_data
+          const now = new Date().toISOString();
+          const version = (record?.version || 0) + 1;
+          db.prepare(`
+            INSERT INTO user_data (user_id, data_json, version, synced_at)
+            VALUES (?, ?, ?, ?)
+            ON CONFLICT(user_id) DO UPDATE SET
+              data_json = excluded.data_json,
+              version = user_data.version + 1,
+              synced_at = excluded.synced_at
+          `).run(req.user.id, JSON.stringify(state), version, now);
+
+          updatedState = state;
+        })();
 
         const remainingPending = db.prepare(`
           SELECT COUNT(*) as count FROM pending_imports
@@ -682,9 +798,11 @@ function createEmailSyncRouter(db, authenticateToken, jwtSecret) {
 
         return res.json({
           success: true,
-          approvedItems,
+          approvedItems: itemsToApprove,
+          newTransactions,
+          updatedState,
           remainingPendingCount: remainingPending?.count || 0,
-          message: `Approved ${approvedItems.length} transactions. ${remainingPending?.count || 0} low-confidence items kept for manual review.`
+          message: `Approved ${itemsToApprove.length} transactions. ${remainingPending?.count || 0} low-confidence items kept for manual review.`
         });
       }
 
@@ -692,51 +810,84 @@ function createEmailSyncRouter(db, authenticateToken, jwtSecret) {
         return res.status(400).json({ success: false, message: 'Transaction ID is required' });
       }
 
-      // Atomic single approve: check changes === 1 to prevent double-clicks
-      let updateInfo;
-      if (updates) {
-        updateInfo = db.prepare(`
-          UPDATE pending_imports
-          SET merchant = COALESCE(?, merchant),
-              amount = COALESCE(?, amount),
-              category = COALESCE(?, category),
-              source = COALESCE(?, source),
-              currency = COALESCE(?, currency),
-              occurred_at = COALESCE(?, occurred_at),
-              status = 'approved',
-              raw_snippet = NULL
-          WHERE id = ? AND user_id = ? AND status = 'pending'
-        `).run(
-          updates.merchant || null,
-          updates.amount || null,
-          updates.category || null,
-          updates.source || null,
-          updates.currency || null,
-          updates.occurred_at || null,
-          id,
-          req.user.id
-        );
-      } else {
-        updateInfo = db.prepare(`
-          UPDATE pending_imports
-          SET status = 'approved', raw_snippet = NULL
-          WHERE id = ? AND user_id = ? AND status = 'pending'
-        `).run(id, req.user.id);
-      }
+      // Single item approval with category/source validation
+      let updatedItem = null;
+      let newTransaction = null;
+      let updatedState = null;
 
-      if (updateInfo.changes === 0) {
+      const approveTxn = db.transaction(() => {
+        const item = db.prepare('SELECT * FROM pending_imports WHERE id = ? AND user_id = ? AND status = "pending"').get(id, req.user.id);
+        if (!item) return false;
+
+        const targetCategory = updates?.category || item.category;
+        const targetSource = updates?.source || item.source;
+
+        const finalCategory = ALLOWED_CATEGORIES.has(targetCategory) ? targetCategory : 'others';
+        const finalSource = ALLOWED_SOURCES.has(targetSource) ? targetSource : 'bank';
+        const finalMerchant = updates?.merchant || item.merchant;
+        const finalAmount = updates?.amount !== undefined ? Number(updates.amount) : item.amount;
+        const finalCurrency = updates?.currency || item.currency;
+        const finalDate = updates?.occurred_at || item.occurred_at;
+
+        // 1. Update pending_imports
+        const info = db.prepare(`
+          UPDATE pending_imports
+          SET merchant = ?, amount = ?, category = ?, source = ?, currency = ?, occurred_at = ?, status = 'approved', raw_snippet = NULL
+          WHERE id = ? AND user_id = ? AND status = 'pending'
+        `).run(finalMerchant, finalAmount, finalCategory, finalSource, finalCurrency, finalDate, id, req.user.id);
+
+        if (info.changes === 0) return false;
+
+        // 2. Fetch and append to user_data.transactions
+        const record = db.prepare('SELECT data_json, version FROM user_data WHERE user_id = ?').get(req.user.id);
+        let state = record && record.data_json ? JSON.parse(record.data_json) : { transactions: [] };
+        if (!Array.isArray(state.transactions)) state.transactions = [];
+
+        newTransaction = {
+          id: 'tx_' + Date.now() + '_' + crypto.randomBytes(4).toString('hex'),
+          type: 'expense',
+          amount: finalAmount,
+          category: finalCategory,
+          source: finalSource,
+          currency: finalCurrency,
+          date: finalDate,
+          note: `${item.provider.toUpperCase()}: ${finalMerchant}`
+        };
+
+        state.transactions.unshift(newTransaction);
+
+        // 3. Save user_data
+        const now = new Date().toISOString();
+        const version = (record?.version || 0) + 1;
+        db.prepare(`
+          INSERT INTO user_data (user_id, data_json, version, synced_at)
+          VALUES (?, ?, ?, ?)
+          ON CONFLICT(user_id) DO UPDATE SET
+            data_json = excluded.data_json,
+            version = user_data.version + 1,
+            synced_at = excluded.synced_at
+        `).run(req.user.id, JSON.stringify(state), version, now);
+
+        updatedItem = db.prepare('SELECT * FROM pending_imports WHERE id = ?').get(id);
+        updatedState = state;
+        return true;
+      });
+
+      const success = approveTxn();
+
+      if (!success) {
         return res.status(409).json({
           success: false,
           message: 'Transaction is already processed or does not exist'
         });
       }
 
-      const updatedItem = db.prepare('SELECT * FROM pending_imports WHERE id = ?').get(id);
-
       res.json({
         success: true,
         approvedItem: updatedItem,
-        message: 'Transaction approved successfully'
+        newTransaction,
+        updatedState,
+        message: 'Transaction approved and recorded into your balance ledger'
       });
     } catch (err) {
       console.error('Approve error:', err);
@@ -789,7 +940,7 @@ function createEmailSyncRouter(db, authenticateToken, jwtSecret) {
     }
   });
 
-  // 10. Delete / Clear Processed History
+  // 10. Delete / Clear Processed History (Tombstones remain in imported_message_ids)
   router.delete('/clear', authenticateToken, (req, res) => {
     try {
       db.prepare(`
@@ -799,7 +950,7 @@ function createEmailSyncRouter(db, authenticateToken, jwtSecret) {
 
       res.json({
         success: true,
-        message: 'Processed import history cleared'
+        message: 'Processed import history cleared from staging view'
       });
     } catch (err) {
       console.error('Clear error:', err);

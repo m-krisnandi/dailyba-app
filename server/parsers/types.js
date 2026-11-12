@@ -111,6 +111,66 @@ function parseCurrencyAmount(rawInput, currencyHint = 'IDR') {
 }
 
 /**
+ * Decodes and sanitizes MIME HTML/text payloads received from Gmail API.
+ * Converts HTML table layouts into readable text, decodes HTML entities, and strips tags.
+ *
+ * @param {string} rawHtmlOrText
+ * @returns {string} Clean plain text
+ */
+function cleanMimeText(rawHtmlOrText) {
+  if (!rawHtmlOrText) return '';
+  let str = String(rawHtmlOrText);
+
+  // 1. Remove style, script, and head blocks
+  str = str.replace(/<style[^>]*>[\s\S]*?<\/style>/gi, '');
+  str = str.replace(/<script[^>]*>[\s\S]*?<\/script>/gi, '');
+  str = str.replace(/<head[^>]*>[\s\S]*?<\/head>/gi, '');
+
+  // 2. Convert block boundaries to newlines
+  str = str.replace(/<\/(p|div|tr|li|h[1-6])>/gi, '\n');
+  str = str.replace(/<(br|hr)\s*\/?>/gi, '\n');
+  str = str.replace(/<\/(td|th)>/gi, ' ');
+
+  // 3. Strip remaining HTML tags
+  str = str.replace(/<[^>]+>/g, '');
+
+  // 4. Decode HTML entities
+  const entities = {
+    '&nbsp;': ' ',
+    '&amp;': '&',
+    '&lt;': '<',
+    '&gt;': '>',
+    '&quot;': '"',
+    '&#39;': "'",
+    '&#x27;': "'",
+    '&apos;': "'",
+    '&yen;': '¥',
+    '&#165;': '¥',
+    '&copy;': ''
+  };
+
+  str = str.replace(/&(?:nbsp|amp|lt|gt|quot|#39|#x27|apos|yen|#165|copy);/gi, match => {
+    return entities[match.toLowerCase()] ?? ' ';
+  });
+
+  // Decode arbitrary decimal entities (e.g. &#8217;)
+  str = str.replace(/&#(\d+);/g, (m, dec) => {
+    try {
+      return String.fromCharCode(parseInt(dec, 10));
+    } catch {
+      return ' ';
+    }
+  });
+
+  // 5. Normalize whitespace and newlines
+  str = str.replace(/\r\n/g, '\n').replace(/\r/g, '\n');
+  str = str.replace(/[ \t]+/g, ' ');
+  str = str.replace(/\n\s*\n\s*\n+/g, '\n\n');
+
+  return str.trim();
+}
+
+/**
  * Converts various date formats (e.g. "06 November 2026", "12 Nov 2026", "2026/11/12", "2026年11月12日")
  * into ISO "YYYY-MM-DD".
  *
@@ -128,6 +188,15 @@ function normalizeDate(rawDate) {
     const y = isoMatch[1];
     const m = String(isoMatch[2]).padStart(2, '0');
     const d = String(isoMatch[3]).padStart(2, '0');
+    return `${y}-${m}-${d}`;
+  }
+
+  // DD/MM/YYYY or DD-MM-YYYY (e.g. 10/11/2026 or 12-11-2026)
+  const dmyNumeric = clean.match(/^(\d{1,2})[/-](\d{1,2})[/-](\d{4})/);
+  if (dmyNumeric) {
+    const d = String(dmyNumeric[1]).padStart(2, '0');
+    const m = String(dmyNumeric[2]).padStart(2, '0');
+    const y = dmyNumeric[3];
     return `${y}-${m}-${d}`;
   }
 
@@ -176,5 +245,6 @@ function normalizeDate(rawDate) {
 module.exports = {
   createDedupHash,
   parseCurrencyAmount,
+  cleanMimeText,
   normalizeDate
 };

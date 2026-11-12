@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useMemo, useState, useEffect, useRef } from 'react';
+import React, { useMemo, useState, useEffect, useRef, useCallback } from 'react';
 import { useFinanceStore } from '@/lib/storage';
 import { useExchangeRates, convertCurrency } from '@/lib/currency';
 import { useAuth } from '@/lib/authContext';
@@ -68,9 +68,24 @@ export default function Home() {
     pullStateFromCloud,
   } = useAuth();
 
-
   const [activeTab, setActiveTab] = useState<TabKey>('record');
   const [autoOpenScanner, setAutoOpenScanner] = useState(false);
+  const [isMounted, setIsMounted] = useState(false);
+  const [isBackupModalOpen, setIsBackupModalOpen] = useState(false);
+  const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
+  const [isChangelogModalOpen, setIsChangelogModalOpen] = useState(false);
+  const [isEmailSyncModalOpen, setIsEmailSyncModalOpen] = useState(false);
+  const [pendingEmailSyncCount, setPendingEmailSyncCount] = useState(0);
+
+  const refreshEmailSyncCount = useCallback(() => {
+    if (typeof window !== 'undefined') {
+      dailybaApi.getEmailSyncStatus().then(res => {
+        if (res.success && res.data) {
+          setPendingEmailSyncCount(res.data.pendingCount);
+        }
+      }).catch(() => {});
+    }
+  }, []);
 
   useEffect(() => {
     // Check initial URL params (e.g. ?action=scan)
@@ -81,38 +96,29 @@ export default function Home() {
       }
     }
 
-    // Capacitor App URL Open listener for deep links (dailyba://app?action=scan)
+    // Capacitor App URL Open listener for deep links (dailyba://app?action=scan or dailyba://app?emailSync=connected)
     import('@capacitor/app').then(({ App }) => {
       App.addListener('appUrlOpen', (data) => {
         if (data.url.includes('action=scan') || data.url.includes('scan')) {
           setActiveTab('record');
           setAutoOpenScanner(true);
+        } else if (data.url.includes('emailSync')) {
+          // Close in-app Custom Tab / system browser
+          import('@capacitor/browser').then(({ Browser }) => {
+            Browser.close().catch(() => {});
+          }).catch(() => {});
+          setIsEmailSyncModalOpen(true);
+          refreshEmailSyncCount();
         }
       });
     }).catch(() => {
       // Ignore if not native or not installed
     });
-  }, []);
-  const [isMounted, setIsMounted] = useState(false);
-  const [isBackupModalOpen, setIsBackupModalOpen] = useState(false);
-  const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
-  const [isChangelogModalOpen, setIsChangelogModalOpen] = useState(false);
-  const [isEmailSyncModalOpen, setIsEmailSyncModalOpen] = useState(false);
-  const [pendingEmailSyncCount, setPendingEmailSyncCount] = useState(0);
-
-  const refreshEmailSyncCount = () => {
-    if (typeof window !== 'undefined') {
-      dailybaApi.getEmailSyncStatus().then(res => {
-        if (res.success && res.data) {
-          setPendingEmailSyncCount(res.data.pendingCount);
-        }
-      }).catch(() => {});
-    }
-  };
+  }, [refreshEmailSyncCount]);
 
   useEffect(() => {
     refreshEmailSyncCount();
-  }, [isAuthenticated]);
+  }, [isAuthenticated, refreshEmailSyncCount]);
 
   const handleApproveBankTransactions = (txs: Omit<Transaction, 'id'>[]) => {
     for (const t of txs) {
@@ -409,7 +415,6 @@ export default function Home() {
         isOpen={isChangelogModalOpen}
         onClose={() => setIsChangelogModalOpen(false)}
       />
-
 
       {/* Bank & Email Sync Modal */}
       <BankEmailSyncModal
