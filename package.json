@@ -16,6 +16,7 @@
     "build:aab": "next build && rm -f out/dailyba.apk out/dailyba.aab android/app/src/main/assets/public/dailyba.apk android/app/src/main/assets/public/dailyba.aab && npx cap sync && rm -f out/dailyba.apk out/dailyba.aab android/app/src/main/assets/public/dailyba.apk android/app/src/main/assets/public/dailyba.aab && cd android && JAVA_HOME=$(/usr/libexec/java_home -v 21 2>/dev/null || echo $JAVA_HOME) ./gradlew bundleRelease && cp app/build/outputs/bundle/release/app-release.aab ../public/dailyba.aab"
   },
   "dependencies": {
+    "@capacitor/app": "^8.1.2",
     "@capacitor/core": "^8.6.0",
     "@capacitor/local-notifications": "^8.3.1",
     "clsx": "^2.1.1",

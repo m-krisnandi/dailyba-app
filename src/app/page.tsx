@@ -65,7 +65,31 @@ export default function Home() {
     pullStateFromCloud,
   } = useAuth();
 
+
   const [activeTab, setActiveTab] = useState<TabKey>('record');
+  const [autoOpenScanner, setAutoOpenScanner] = useState(false);
+
+  useEffect(() => {
+    // Check initial URL params (e.g. ?action=scan)
+    if (typeof window !== 'undefined') {
+      const params = new URLSearchParams(window.location.search);
+      if (params.get('action') === 'scan' || window.location.hash.includes('scan')) {
+        setAutoOpenScanner(true);
+      }
+    }
+
+    // Capacitor App URL Open listener for deep links (dailyba://app?action=scan)
+    import('@capacitor/app').then(({ App }) => {
+      App.addListener('appUrlOpen', (data) => {
+        if (data.url.includes('action=scan') || data.url.includes('scan')) {
+          setActiveTab('record');
+          setAutoOpenScanner(true);
+        }
+      });
+    }).catch(() => {
+      // Ignore if not native or not installed
+    });
+  }, []);
   const [isMounted, setIsMounted] = useState(false);
   const [isBackupModalOpen, setIsBackupModalOpen] = useState(false);
   const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
@@ -226,6 +250,7 @@ export default function Home() {
           <>
             {activeTab === 'record' && (
           <QuickRecordBoard
+            initialScanOpen={autoOpenScanner}
             language={state.language}
             currency={state.currency}
             rates={rates}

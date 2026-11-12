@@ -65,6 +65,7 @@ interface QuickRecordBoardProps {
   onAddRecurringBill?: (bill: Omit<RecurringBill, 'id'>) => void;
   onUpdateRecurringBill?: (bill: RecurringBill) => void;
   onDeleteRecurringBill?: (id: string) => void;
+  initialScanOpen?: boolean;
 }
 
 const ALL_EXPENSE_CATEGORIES: ExpenseCategory[] = [
@@ -104,6 +105,7 @@ export function QuickRecordBoard({
   onAddRecurringBill,
   onUpdateRecurringBill,
   onDeleteRecurringBill,
+  initialScanOpen = false,
 }: QuickRecordBoardProps) {
   const t = translations[language];
   const [editingTx, setEditingTx] = useState<Transaction | null>(null);
@@ -205,7 +207,13 @@ export function QuickRecordBoard({
   const [currentMonthPrefix, setCurrentMonthPrefix] = useState<string>('2026-11');
 
   // Modals state
-  const [isReceiptScannerOpen, setIsReceiptScannerOpen] = useState(false);
+  const [isReceiptScannerOpen, setIsReceiptScannerOpen] = useState(initialScanOpen);
+
+  useEffect(() => {
+    if (initialScanOpen) {
+      setIsReceiptScannerOpen(true);
+    }
+  }, [initialScanOpen]);
   const [isCategoryModalOpen, setIsCategoryModalOpen] = useState(false);
   const [isBillModalOpen, setIsBillModalOpen] = useState(false);
   useBodyScrollLock(isCategoryModalOpen || isBillModalOpen);

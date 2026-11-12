@@ -8,7 +8,7 @@
     android:padding="16dp"
     android:gravity="center_vertical">
 
-    <!-- Header: App Name & Status Indicator -->
+    <!-- Header: App Title & Subtitle -->
     <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
@@ -53,7 +53,7 @@
         android:textStyle="bold"
         android:fontFamily="sans-serif-black" />
 
-    <!-- Action Bar: Tap to open app and quick record -->
+    <!-- Action Bar: + Quick Record & 1-Tap Scan Receipt -->
     <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
@@ -64,12 +64,25 @@
         <TextView
             android:id="@+id/widget_quick_record_btn"
             android:layout_width="0dp"
-            android:layout_height="32dp"
+            android:layout_height="34dp"
             android:layout_weight="1"
+            android:layout_marginEnd="6dp"
             android:background="@drawable/widget_button_bg"
             android:gravity="center"
-            android:text="+ Quick Record"
+            android:text="+ Record"
             android:textColor="#FFFFFF"
+            android:textSize="11sp"
+            android:textStyle="bold" />
+
+        <TextView
+            android:id="@+id/widget_scan_receipt_btn"
+            android:layout_width="0dp"
+            android:layout_height="34dp"
+            android:layout_weight="1"
+            android:background="@drawable/widget_button_secondary_bg"
+            android:gravity="center"
+            android:text="Scan Receipt"
+            android:textColor="#38BDF8"
             android:textSize="11sp"
             android:textStyle="bold" />
     </LinearLayout>
