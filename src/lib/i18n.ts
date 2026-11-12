@@ -75,6 +75,12 @@ export interface Translations {
     filterResults: string;
     noMatchingTransactions: string;
     resetFilters: string;
+    sortBy: string;
+    sortNewestDate: string;
+    sortOldestDate: string;
+    sortRecentAdded: string;
+    sortHighestAmount: string;
+    sortLowestAmount: string;
     page: string;
     of: string;
     prev: string;
@@ -288,6 +294,12 @@ export const translations: Record<Language, Translations> = {
       filterResults: 'matching',
       noMatchingTransactions: 'No transactions match your filter.',
       resetFilters: 'Reset Filters',
+      sortBy: 'Sort by',
+      sortNewestDate: 'Newest Date',
+      sortOldestDate: 'Oldest Date',
+      sortRecentAdded: 'Recently Added',
+      sortHighestAmount: 'Highest Amount',
+      sortLowestAmount: 'Lowest Amount',
       page: 'Page',
       of: 'of',
       prev: 'Prev',
@@ -523,6 +535,12 @@ export const translations: Record<Language, Translations> = {
       filterResults: '件一致',
       noMatchingTransactions: '条件に一致する取引履歴がありません。',
       resetFilters: 'フィルターを解除',
+      sortBy: '並び替え',
+      sortNewestDate: '日付が新しい順',
+      sortOldestDate: '日付が古い順',
+      sortRecentAdded: '最近追加順',
+      sortHighestAmount: '金額が高い順',
+      sortLowestAmount: '金額が低い順',
       page: 'ページ',
       of: '/',
       prev: '前へ',

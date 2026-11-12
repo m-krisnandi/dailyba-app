@@ -9,8 +9,10 @@ import {
   Language,
   RecurringBill,
   Transaction,
+  TransactionSortOption,
   TransactionType,
 } from '@/types/finance';
+import { getTransactionSortOptions, sortTransactions } from '@/lib/transactionSort';
 import { formatCurrency, translations } from '@/lib/i18n';
 import { convertCurrency, DEFAULT_RATES, ExchangeRates, formatNumberWithCommas, parseRawNumber } from '@/lib/currency';
 import { CustomDatePicker } from '@/components/CustomDatePicker';
@@ -133,6 +135,8 @@ export function QuickRecordBoard({
     return ALL_INCOME_CATEGORIES.filter((c) => !hiddenCategories.includes(c));
   }, [hiddenCategories]);
 
+  const sortOptions = useMemo(() => getTransactionSortOptions(t), [t]);
+
   const filterSourceOptions = useMemo<CustomSelectOption<FundingSource | 'all'>[]>(
     () => [
       { value: 'all', label: t.record.allSources, icon: SlidersHorizontal },
@@ -222,6 +226,7 @@ export function QuickRecordBoard({
   const [txSearchQuery, setTxSearchQuery] = useState('');
   const [txFilterType, setTxFilterType] = useState<'all' | TransactionType>('all');
   const [txFilterSource, setTxFilterSource] = useState<'all' | FundingSource>('all');
+  const [txSortBy, setTxSortBy] = useState<TransactionSortOption>('date-desc');
   const [txCurrentPage, setTxCurrentPage] = useState(1);
   const TX_PAGE_SIZE = 10;
 
@@ -583,7 +588,11 @@ export function QuickRecordBoard({
   };
 
   // Filter & Search Handlers for Recent Transactions
-  const isTxFiltered = txSearchQuery.trim() !== '' || txFilterType !== 'all' || txFilterSource !== 'all';
+  const isTxFiltered =
+    txSearchQuery.trim() !== '' ||
+    txFilterType !== 'all' ||
+    txFilterSource !== 'all' ||
+    txSortBy !== 'date-desc';
 
   const handleSearchChange = (val: string) => {
     setTxSearchQuery(val);
@@ -600,15 +609,21 @@ export function QuickRecordBoard({
     setTxCurrentPage(1);
   };
 
+  const handleSortChange = (nextSort: TransactionSortOption) => {
+    setTxSortBy(nextSort);
+    setTxCurrentPage(1);
+  };
+
   const handleResetFilters = () => {
     setTxSearchQuery('');
     setTxFilterType('all');
     setTxFilterSource('all');
+    setTxSortBy('date-desc');
     setTxCurrentPage(1);
   };
 
   const filteredTransactions = useMemo(() => {
-    return transactions.filter((tx) => {
+    const list = transactions.filter((tx) => {
       // Type filter
       if (txFilterType !== 'all' && tx.type !== txFilterType) {
         return false;
@@ -643,7 +658,9 @@ export function QuickRecordBoard({
       }
       return true;
     });
-  }, [transactions, txFilterType, txFilterSource, txSearchQuery, t]);
+
+    return sortTransactions(list, txSortBy, currency, rates);
+  }, [transactions, txFilterType, txFilterSource, txSearchQuery, txSortBy, currency, rates, t]);
 
   const totalPages = Math.max(1, Math.ceil(filteredTransactions.length / TX_PAGE_SIZE));
   const currentPage = Math.min(txCurrentPage, totalPages);
@@ -1238,7 +1255,7 @@ export function QuickRecordBoard({
         {/* Search & Filter Bar - visible when transactions exist or filter is active */}
         {(transactions.length > 0 || isTxFiltered) && (
           <div className="space-y-2.5 pt-1">
-            {/* Search Input & Funding Source Select */}
+            {/* Search Input, Funding Source Select, & Sort Order Select */}
             <div className="flex flex-col sm:flex-row gap-2">
               <div className="relative flex-1 min-w-0">
                 <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-[var(--text-muted)] pointer-events-none" />
@@ -1260,12 +1277,21 @@ export function QuickRecordBoard({
                 )}
               </div>
 
-              <div className="shrink-0 min-w-[140px] sm:min-w-[160px]">
-                <CustomSelect
-                  value={txFilterSource}
-                  onChange={(val) => handleFilterSourceChange(val as any)}
-                  options={filterSourceOptions}
-                />
+              <div className="grid grid-cols-2 sm:flex sm:items-center gap-2 shrink-0">
+                <div className="w-full sm:w-[150px]">
+                  <CustomSelect
+                    value={txFilterSource}
+                    onChange={(val) => handleFilterSourceChange(val as any)}
+                    options={filterSourceOptions}
+                  />
+                </div>
+                <div className="w-full sm:w-[165px]">
+                  <CustomSelect
+                    value={txSortBy}
+                    onChange={(val) => handleSortChange(val as TransactionSortOption)}
+                    options={sortOptions}
+                  />
+                </div>
               </div>
             </div>
 

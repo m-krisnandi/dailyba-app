@@ -27,6 +27,13 @@ export type Currency = 'JPY' | 'IDR' | 'USD' | 'MMK';
 
 export type Language = 'en' | 'ja';
 
+export type TransactionSortOption =
+  | 'date-desc'
+  | 'date-asc'
+  | 'recent-added'
+  | 'amount-desc'
+  | 'amount-asc';
+
 export interface Transaction {
   id: string;
   type: TransactionType;

@@ -1,11 +1,12 @@
 'use client';
 
 import React, { useMemo, useState, useEffect } from 'react';
-import { Currency, Language, Transaction } from '@/types/finance';
+import { Currency, Language, Transaction, TransactionSortOption } from '@/types/finance';
 import { formatCurrency, translations } from '@/lib/i18n';
 import { EditTransactionModal } from '@/components/EditTransactionModal';
 import { ConfirmDeleteModal } from './ConfirmDeleteModal';
-import { Edit3 } from 'lucide-react';
+import { CustomSelect } from '@/components/CustomSelect';
+import { getTransactionSortOptions, sortTransactions } from '@/lib/transactionSort';
 import { convertCurrency, DEFAULT_RATES, ExchangeRates, formatNumberWithCommas, parseRawNumber } from '@/lib/currency';
 import {
   Wallet,
@@ -15,6 +16,10 @@ import {
   SlidersHorizontal,
   Trash2,
   X,
+  Edit3,
+  Search,
+  ChevronLeft,
+  ChevronRight,
 } from 'lucide-react';
 
 interface SavingsBoardProps {
@@ -45,6 +50,63 @@ export function SavingsBoard({
   const [editingTx, setEditingTx] = useState<Transaction | null>(null);
   const [deletingTx, setDeletingTx] = useState<Transaction | null>(null);
   const t = translations[language];
+
+  // Savings History Search, Sort & Pagination
+  const [savingsSearchQuery, setSavingsSearchQuery] = useState('');
+  const [savingsSortBy, setSavingsSortBy] = useState<TransactionSortOption>('date-desc');
+  const [savingsCurrentPage, setSavingsCurrentPage] = useState(1);
+  const SAVINGS_PAGE_SIZE = 10;
+
+  const sortOptions = useMemo(() => getTransactionSortOptions(t), [t]);
+
+  const isSavingsFiltered = savingsSearchQuery.trim() !== '' || savingsSortBy !== 'date-desc';
+
+  const handleSavingsSearchChange = (val: string) => {
+    setSavingsSearchQuery(val);
+    setSavingsCurrentPage(1);
+  };
+
+  const handleSavingsSortChange = (nextSort: TransactionSortOption) => {
+    setSavingsSortBy(nextSort);
+    setSavingsCurrentPage(1);
+  };
+
+  const handleResetSavingsFilters = () => {
+    setSavingsSearchQuery('');
+    setSavingsSortBy('date-desc');
+    setSavingsCurrentPage(1);
+  };
+
+  const allSavingsTransactions = useMemo(() => {
+    return transactions.filter((tx) => tx.type === 'savings');
+  }, [transactions]);
+
+  const filteredSavingsTransactions = useMemo(() => {
+    const list = allSavingsTransactions.filter((tx) => {
+      if (savingsSearchQuery.trim()) {
+        const query = savingsSearchQuery.toLowerCase().trim();
+        const noteMatch = tx.note ? tx.note.toLowerCase().includes(query) : false;
+        const dateMatch = tx.date ? tx.date.includes(query) : false;
+        const amountMatch = String(tx.amount).includes(query);
+        const sourceLabel = (t.sources[tx.source] || '').toLowerCase();
+        const sourceMatch = (tx.source || '').toLowerCase().includes(query) || sourceLabel.includes(query);
+        if (!noteMatch && !dateMatch && !amountMatch && !sourceMatch) {
+          return false;
+        }
+      }
+      return true;
+    });
+
+    return sortTransactions(list, savingsSortBy, currency, rates);
+  }, [allSavingsTransactions, savingsSearchQuery, savingsSortBy, currency, rates, t]);
+
+  const totalSavingsPages = Math.max(1, Math.ceil(filteredSavingsTransactions.length / SAVINGS_PAGE_SIZE));
+  const currentSavingsPage = Math.min(savingsCurrentPage, totalSavingsPages);
+
+  const paginatedSavingsTransactions = useMemo(() => {
+    const startIndex = (currentSavingsPage - 1) * SAVINGS_PAGE_SIZE;
+    return filteredSavingsTransactions.slice(startIndex, startIndex + SAVINGS_PAGE_SIZE);
+  }, [filteredSavingsTransactions, currentSavingsPage]);
 
   const [customAmountStr, setCustomAmountStr] = useState('');
   const [savingsNote, setSavingsNote] = useState('');
@@ -447,79 +509,173 @@ export function SavingsBoard({
         </form>
       </div>
 
-      {/* Savings Allocation History (with Delete Action) */}
-      <div className="rounded-3xl border border-[var(--border-subtle)] bg-[var(--bg-surface)]  p-6 sm:p-7 shadow-[var(--card-shadow)] space-y-3 transition-all duration-200">
+      {/* Savings Allocation History (with Search, Sort, Pagination & Delete Action) */}
+      <div className="rounded-3xl border border-[var(--border-subtle)] bg-[var(--bg-surface)] p-6 sm:p-7 shadow-[var(--card-shadow)] space-y-3 transition-all duration-200">
         <div className="flex items-center justify-between">
           <h3 className="text-sm font-bold text-[var(--text-main)] flex items-center space-x-2">
             <Wallet className="w-4 h-4 text-[var(--accent-amber)]" />
             <span>{t.savings.activityFeed}</span>
           </h3>
-          <span className="text-xs text-[var(--text-muted)] font-mono">
-            {transactions.filter((tx) => tx.type === 'savings').length} {t.record.items}
-          </span>
+          <div className="flex items-center space-x-2">
+            <span className="text-xs text-[var(--text-muted)] font-mono">
+              {allSavingsTransactions.length} {t.record.items}
+            </span>
+            {isSavingsFiltered && (
+              <button
+                type="button"
+                onClick={handleResetSavingsFilters}
+                className="text-xs text-emerald-500 hover:text-emerald-400 font-medium underline transition-colors cursor-pointer"
+              >
+                {t.record.resetFilters}
+              </button>
+            )}
+          </div>
         </div>
 
-        {transactions.filter((tx) => tx.type === 'savings').length === 0 ? (
+        {/* Search & Sort Bar */}
+        {(allSavingsTransactions.length > 0 || isSavingsFiltered) && (
+          <div className="space-y-2.5 pt-1">
+            <div className="flex flex-col sm:flex-row gap-2">
+              <div className="relative flex-1 min-w-0">
+                <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-[var(--text-muted)] pointer-events-none" />
+                <input
+                  type="text"
+                  value={savingsSearchQuery}
+                  onChange={(e) => handleSavingsSearchChange(e.target.value)}
+                  placeholder={t.record.searchPlaceholder}
+                  className="w-full pl-9 pr-8 py-2 rounded-xl text-xs bg-[var(--bg-subtle)] border border-[var(--border-subtle)] text-[var(--text-main)] placeholder-[var(--text-faint)] focus:outline-none focus:border-emerald-500/50 transition-all"
+                />
+                {savingsSearchQuery && (
+                  <button
+                    type="button"
+                    onClick={() => handleSavingsSearchChange('')}
+                    className="absolute right-2.5 top-1/2 -translate-y-1/2 text-[var(--text-faint)] hover:text-[var(--text-main)] transition-colors p-0.5 cursor-pointer"
+                  >
+                    <X className="w-3.5 h-3.5" />
+                  </button>
+                )}
+              </div>
+
+              <div className="shrink-0 w-full sm:w-[170px]">
+                <CustomSelect
+                  value={savingsSortBy}
+                  onChange={(val) => handleSavingsSortChange(val as TransactionSortOption)}
+                  options={sortOptions}
+                />
+              </div>
+            </div>
+          </div>
+        )}
+
+        {allSavingsTransactions.length === 0 ? (
           <p className="text-xs text-[var(--text-faint)] py-8 text-center">
             {t.record.noTransactions}
           </p>
+        ) : filteredSavingsTransactions.length === 0 ? (
+          <div className="py-8 text-center space-y-2">
+            <p className="text-xs text-[var(--text-muted)]">
+              {t.record.noMatchingTransactions}
+            </p>
+            <button
+              type="button"
+              onClick={handleResetSavingsFilters}
+              className="inline-flex items-center px-3 py-1.5 rounded-xl text-xs font-semibold bg-[var(--bg-subtle)] border border-[var(--border-subtle)] hover:border-emerald-500/50 text-[var(--text-main)] hover:text-emerald-500 transition-all cursor-pointer"
+            >
+              {t.record.resetFilters}
+            </button>
+          </div>
         ) : (
           <div className="space-y-2">
-            {transactions
-              .filter((tx) => tx.type === 'savings')
-              .map((tx) => {
-                const convertedAmount = convertCurrency(
-                  tx.amount,
-                  tx.currency || 'JPY',
-                  currency,
-                  rates
-                );
+            {paginatedSavingsTransactions.map((tx) => {
+              const convertedAmount = convertCurrency(
+                tx.amount,
+                tx.currency || 'JPY',
+                currency,
+                rates
+              );
 
-                return (
-                  <div
-                    key={tx.id}
-                    className="p-3.5 rounded-xl bg-[var(--bg-subtle)] border border-[var(--border-subtle)] hover:border-[var(--border-strong)] flex items-center justify-between text-xs transition-all group"
-                  >
-                    <div className="flex items-center space-x-3">
-                      <div className="w-8 h-8 rounded-xl bg-[var(--accent-amber-soft)] border border-[var(--accent-amber-soft)] text-[var(--accent-amber)] flex items-center justify-center shrink-0">
-                        <Wallet className="w-4 h-4" />
-                      </div>
-                      <div>
-                        <p className="font-semibold text-[var(--text-main)]">
-                          {tx.note || (language === 'ja' ? '貯金振替' : 'Savings Transfer')}
-                        </p>
-                        <p className="text-[11px] text-[var(--text-muted)]">{tx.date}</p>
-                      </div>
+              return (
+                <div
+                  key={tx.id}
+                  className="p-3.5 rounded-xl bg-[var(--bg-subtle)] border border-[var(--border-subtle)] hover:border-[var(--border-strong)] flex items-center justify-between text-xs transition-all group"
+                >
+                  <div className="flex items-center space-x-3">
+                    <div className="w-8 h-8 rounded-xl bg-[var(--accent-amber-soft)] border border-[var(--accent-amber-soft)] text-[var(--accent-amber)] flex items-center justify-center shrink-0">
+                      <Wallet className="w-4 h-4" />
                     </div>
-
-                    <div className="flex items-center space-x-2 sm:space-x-3">
-                      <span className="font-bold text-[var(--accent-amber)] tabular-numbers font-mono">
-                        +{formatCurrency(convertedAmount, currency)}
-                      </span>
-                      {onUpdateTransaction && (
-                        <button
-                          type="button"
-                          onClick={() => setEditingTx(tx)}
-                          className="p-1.5 rounded-lg text-[var(--text-muted)] hover:text-[var(--text-main)] hover:bg-[var(--bg-subtle)] transition-all cursor-pointer"
-                          title={t.actions.edit}
-                        >
-                          <Edit3 className="w-3.5 h-3.5" />
-                        </button>
-                      )}
-                      {onDeleteTransaction && (
-                        <button
-                          type="button"
-                          onClick={() => setDeletingTx(tx)}
-                          className="p-1.5 rounded-lg text-[var(--text-muted)] hover:text-rose-500 hover:bg-rose-500/10 transition-all cursor-pointer"
-                          title={t.actions.delete}
-                        >
-                          <Trash2 className="w-3.5 h-3.5" />
-                        </button>
-                      )}
+                    <div>
+                      <p className="font-semibold text-[var(--text-main)]">
+                        {tx.note || (language === 'ja' ? '貯金振替' : 'Savings Transfer')}
+                      </p>
+                      <p className="text-[11px] text-[var(--text-muted)]">{tx.date}</p>
                     </div>
                   </div>
-                );
-              })}
+
+                  <div className="flex items-center space-x-2 sm:space-x-3">
+                    <span className="font-bold text-[var(--accent-amber)] tabular-numbers font-mono">
+                      +{formatCurrency(convertedAmount, currency)}
+                    </span>
+                    {onUpdateTransaction && (
+                      <button
+                        type="button"
+                        onClick={() => setEditingTx(tx)}
+                        className="p-1.5 rounded-lg text-[var(--text-muted)] hover:text-[var(--text-main)] hover:bg-[var(--bg-subtle)] transition-all cursor-pointer"
+                        title={t.actions.edit}
+                      >
+                        <Edit3 className="w-3.5 h-3.5" />
+                      </button>
+                    )}
+                    {onDeleteTransaction && (
+                      <button
+                        type="button"
+                        onClick={() => setDeletingTx(tx)}
+                        className="p-1.5 rounded-lg text-[var(--text-muted)] hover:text-rose-500 hover:bg-rose-500/10 transition-all cursor-pointer"
+                        title={t.actions.delete}
+                      >
+                        <Trash2 className="w-3.5 h-3.5" />
+                      </button>
+                    )}
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        )}
+
+        {/* Pagination Controls */}
+        {totalSavingsPages > 1 && (
+          <div className="pt-2 flex items-center justify-between border-t border-[var(--border-subtle)]">
+            <span className="text-[11px] text-[var(--text-muted)] font-mono">
+              {(currentSavingsPage - 1) * SAVINGS_PAGE_SIZE + 1}–
+              {Math.min(currentSavingsPage * SAVINGS_PAGE_SIZE, filteredSavingsTransactions.length)}{' ' }
+              {t.record.of} {filteredSavingsTransactions.length}
+            </span>
+
+            <div className="flex items-center space-x-1 sm:space-x-2">
+              <button
+                type="button"
+                onClick={() => setSavingsCurrentPage((p) => Math.max(1, p - 1))}
+                disabled={currentSavingsPage <= 1}
+                className="px-2.5 py-1 rounded-lg text-xs font-medium border border-[var(--border-subtle)] bg-[var(--bg-subtle)] text-[var(--text-main)] hover:bg-[var(--bg-surface)] disabled:opacity-40 disabled:cursor-not-allowed transition-all flex items-center space-x-1 cursor-pointer"
+              >
+                <ChevronLeft className="w-3.5 h-3.5" />
+                <span className="hidden sm:inline">{t.record.prev}</span>
+              </button>
+
+              <span className="px-2 py-1 text-xs font-mono text-[var(--text-muted)]">
+                {currentSavingsPage} / {totalSavingsPages}
+              </span>
+
+              <button
+                type="button"
+                onClick={() => setSavingsCurrentPage((p) => Math.min(totalSavingsPages, p + 1))}
+                disabled={currentSavingsPage >= totalSavingsPages}
+                className="px-2.5 py-1 rounded-lg text-xs font-medium border border-[var(--border-subtle)] bg-[var(--bg-subtle)] text-[var(--text-main)] hover:bg-[var(--bg-surface)] disabled:opacity-40 disabled:cursor-not-allowed transition-all flex items-center space-x-1 cursor-pointer"
+              >
+                <span className="hidden sm:inline">{t.record.next}</span>
+                <ChevronRight className="w-3.5 h-3.5" />
+              </button>
+            </div>
           </div>
         )}
       </div>
