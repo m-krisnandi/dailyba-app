@@ -71,7 +71,7 @@ const ewalletParser = {
 
     // 1. Merchant Extraction
     let merchant = '';
-    const mMatch = text.match(/(?:Merchant|Penerima|Tujuan|利用先|加盟店|支払先|Store|Recipient)[:\s]+([^\r\n]+)/i);
+    const mMatch = text.match(/(?:Nama\s+Produk|Produk|Toko|Nama\s+Toko|Merchant|Penerima|Tujuan|利用先|加盟店|支払先|Store|Recipient)[:\s]+([^\r\n]+)/i);
     if (mMatch) {
       merchant = mMatch[1].trim();
     } else {
@@ -132,11 +132,10 @@ const ewalletParser = {
       return null;
     }
 
-    // Filter out dust/promo/admin noise (e.g. Rp 1 promos, cashback coins)
-    if (currency === "IDR" && amount < 500) {
-      return null;
-    }
-    if (currency === "JPY" && amount < 5) {
+    // For small amounts (like real Rp 1 Shopee VIP / Flash Sale purchases),
+    // ensure the email contains explicit transaction receipt proof (not marketing spam)
+    const hasReceiptProof = /(?:Total\s+Pembayaran|Total\s+Bayar|Total\s+Transaksi|Rincian\s+Pesanan|No\.?\s*Pesanan|Order\s*ID|Invoice|Pembayaran\s*Berhasil|Transaksi\s*Berhasil|お支払い完了)/i.test(text + " " + subject);
+    if (amount <= 10 && !hasReceiptProof) {
       return null;
     }
 

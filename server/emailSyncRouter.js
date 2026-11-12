@@ -78,8 +78,8 @@ function createEmailSyncRouter(db, authenticateToken, jwtSecret) {
     CREATE INDEX IF NOT EXISTS idx_pending_user_status ON pending_imports (user_id, status);
     CREATE INDEX IF NOT EXISTS idx_pending_hash ON pending_imports (user_id, dedup_hash);
 
-    -- Purge dust promo/coin entries (less than 500 IDR or 5 JPY)
-    DELETE FROM pending_imports WHERE (currency = 'IDR' AND amount < 500) OR (currency = 'JPY' AND amount < 5);
+    -- Purge invalid non-positive amounts
+    DELETE FROM pending_imports WHERE amount <= 0;
   `);
 
   // Helper: check if Google OAuth is configured via environment
@@ -550,10 +550,7 @@ function createEmailSyncRouter(db, authenticateToken, jwtSecret) {
       const now = new Date().toISOString();
 
       if (parsed && parsed.amount > 0) {
-        // Filter out dust/promo/admin noise (Rp 1 promos, cashback coins)
-        const isDust = (parsed.currency === 'IDR' && parsed.amount < 500) || (parsed.currency === 'JPY' && parsed.amount < 5);
-        if (isDust) {
-          db.prepare(`INSERT OR IGNORE INTO imported_message_ids (user_id, message_id, created_at) VALUES (?, ?, ?)`).run(userId, parsed.messageId, now);
+        if (parsed.amount <= 0) {
           continue;
         }
 
