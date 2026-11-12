@@ -29,16 +29,16 @@ interface BankEmailSyncModalProps {
   isOpen: boolean;
   onClose: () => void;
   language: Language;
-  onApproveTransactions: (txs: Omit<Transaction, 'id'>[]) => void;
+  onApproveTransactions: (txs: Transaction[]) => void;
   existingTransactions?: Transaction[];
 }
 
-const SAMPLE_JAGO = `Assalamu'alaikum MUHAMAD KRISNANDI,
+const SAMPLE_JAGO = `Assalamu'alaikum ALICE NAKAMURA,
 Thank you for trusting Jago! You have made a payment, and here are the details:
 Transaction Summary
-From 502799066497
+From 502700000001
 To Good Laundry 1
-9360000801984237685
+9360000000000000001
 Amount Rp 15.000
 Transaction Date 06 November 2026, 19:20 WIB
 Transaction Status Successful
@@ -46,7 +46,7 @@ Acquirer Name Bank Mandiri
 Merchant Location Banyumas (Kab)`;
 
 const SAMPLE_MANDIRI = `Pembayaran Berhasil
-Halo MUHAMAD KRISNANDI ,
+Halo JOHN DOE ,
 Berikut adalah detail transaksi Anda dengan QR:
 Penerima
 RM SALERO BARU
@@ -270,17 +270,17 @@ export function BankEmailSyncModal({
       });
 
       if (res.success) {
-        onApproveTransactions([
-          {
-            type: 'expense',
-            amount: item.amount,
-            category: finalCategory,
-            source: finalSource,
-            currency: item.currency,
-            date: item.occurred_at,
-            note: `${item.provider.toUpperCase()}: ${item.merchant}`,
-          },
-        ]);
+        const canonicalTx: Transaction = (res as any).newTransaction || {
+          id: `tx_email_${item.id}_${Date.now()}`,
+          type: 'expense',
+          amount: item.amount,
+          category: finalCategory,
+          source: finalSource,
+          currency: item.currency,
+          date: item.occurred_at,
+          note: `${item.provider.toUpperCase()}: ${item.merchant}`,
+        };
+        onApproveTransactions([canonicalTx]);
 
         setPendingItems(prev => prev.filter(p => p.id !== item.id));
         setFeedback({
@@ -298,7 +298,8 @@ export function BankEmailSyncModal({
     try {
       const res = await dailybaApi.approveImport({ all: true });
       if (res.success) {
-        const approvedTxList: Omit<Transaction, 'id'>[] = pendingItems.map(item => ({
+        const approvedTxList: Transaction[] = (res as any).newTransactions || pendingItems.map(item => ({
+          id: `tx_email_${item.id}_${Date.now()}`,
           type: 'expense',
           amount: item.amount,
           category: itemCategories[item.id] || item.category,
@@ -545,6 +546,11 @@ export function BankEmailSyncModal({
                                   {item.provider}
                                 </span>
                                 <h3 className="text-sm font-bold text-[var(--text-main)]">{item.merchant}</h3>
+                                {item.confidence < 0.8 && (
+                                  <span className="px-1.5 py-0.5 text-[9px] font-bold rounded bg-purple-500/15 text-purple-300 border border-purple-500/30">
+                                    {language === "ja" ? "未検証・要確認" : "Unverified • Review Required"}
+                                  </span>
+                                )}
                                 {isPotentialDuplicate && (
                                   <span className="px-1.5 py-0.5 text-[9px] font-bold rounded bg-amber-500/15 text-amber-400 border border-amber-500/30 flex items-center space-x-1">
                                     <AlertTriangle className="w-2.5 h-2.5" />

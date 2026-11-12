@@ -42,6 +42,7 @@ export default function Home() {
     state,
     isHydrated,
     addTransaction,
+    addTransactionWithId,
     updateTransaction,
     deleteTransaction,
     addOrUpdateInvestment,
@@ -120,9 +121,9 @@ export default function Home() {
     refreshEmailSyncCount();
   }, [isAuthenticated, refreshEmailSyncCount]);
 
-  const handleApproveBankTransactions = (txs: Omit<Transaction, 'id'>[]) => {
+  const handleApproveBankTransactions = (txs: Transaction[]) => {
     for (const t of txs) {
-      addTransaction(t);
+      addTransactionWithId(t);
     }
     setPendingEmailSyncCount(prev => Math.max(0, prev - txs.length));
   };

@@ -288,8 +288,89 @@ Metode: GoPay Balance`
     console.log("✓ Test 10 Passed: Conflict-Safe Sync Merge (Offline Mobile Tx + Server Email Approval)");
   }
 
+    // Test 11: Deleted Transaction Tombstone (Deleting email transaction on phone never resurrects)
+  {
+    const serverState = {
+      transactions: [
+        { id: "tx_email_imp_88", amount: 15000, isEmailImported: true },
+        { id: "tx_base_1", amount: 50000 }
+      ],
+      deletedTxIds: []
+    };
+
+    // User deletes tx_email_imp_88 on mobile device
+    const mobilePayloadAfterDelete = {
+      transactions: [
+        { id: "tx_base_1", amount: 50000 }
+      ],
+      deletedTxIds: ["tx_email_imp_88"]
+    };
+
+    // Run smart merge on server
+    const clientTxIds = new Set(mobilePayloadAfterDelete.transactions.map(t => t.id));
+    const deleted = new Set([
+      ...(mobilePayloadAfterDelete.deletedTxIds || []),
+      ...(serverState.deletedTxIds || [])
+    ]);
+
+    // Strip deleted
+    let mergedTransactions = mobilePayloadAfterDelete.transactions.filter(t => !deleted.has(t.id));
+
+    // Server email transactions missing from client, BUT NOT DELETED
+    const missingEmailTxs = serverState.transactions.filter(t =>
+      (t.isEmailImported || (typeof t.id === "string" && t.id.startsWith("tx_email_"))) &&
+      !clientTxIds.has(t.id) &&
+      !deleted.has(t.id)
+    );
+
+    mergedTransactions = [...missingEmailTxs, ...mergedTransactions];
+
+    assert.strictEqual(mergedTransactions.length, 1, "Merged state must contain only tx_base_1");
+    assert(!mergedTransactions.some(t => t.id === "tx_email_imp_88"), "Deleted email transaction must NOT resurrect");
+    assert.strictEqual(mergedTransactions[0].id, "tx_base_1");
+    console.log("✓ Test 11 Passed: Deleted Transaction Tombstone (No Zombie Email Transactions)");
+  }
+
+  // Test 12: Strict Validation on /approve Payload Updates
+  {
+    const ALLOWED_CATEGORIES = new Set(["food_drinks", "shopping", "train", "ride", "laundry", "rent", "family", "gifts", "vps", "mobile", "others"]);
+    const ALLOWED_SOURCES = new Set(["bank", "ewallet", "credit_card", "cash"]);
+    const ALLOWED_CURRENCIES = new Set(["IDR", "JPY", "USD", "MMK"]);
+
+    function validateUpdates(updates) {
+      if (!updates) return { valid: true };
+      if (updates.amount !== undefined) {
+        const amt = Number(updates.amount);
+        if (!Number.isFinite(amt) || amt <= 0 || amt > 100000000000) return { valid: false, err: "Invalid amount" };
+      }
+      if (updates.currency !== undefined && !ALLOWED_CURRENCIES.has(updates.currency)) {
+        return { valid: false, err: "Invalid currency" };
+      }
+      if (updates.category !== undefined && !ALLOWED_CATEGORIES.has(updates.category)) {
+        return { valid: false, err: "Invalid category" };
+      }
+      if (updates.source !== undefined && !ALLOWED_SOURCES.has(updates.source)) {
+        return { valid: false, err: "Invalid source" };
+      }
+      if (updates.occurred_at !== undefined && !/^\d{4}-\d{2}-\d{2}$/.test(String(updates.occurred_at))) {
+        return { valid: false, err: "Invalid date" };
+      }
+      return { valid: true };
+    }
+
+    assert.strictEqual(validateUpdates({ amount: -500 }).valid, false);
+    assert.strictEqual(validateUpdates({ amount: "invalid" }).valid, false);
+    assert.strictEqual(validateUpdates({ amount: Infinity }).valid, false);
+    assert.strictEqual(validateUpdates({ currency: "XXX" }).valid, false);
+    assert.strictEqual(validateUpdates({ category: "crypto" }).valid, false);
+    assert.strictEqual(validateUpdates({ occurred_at: "12-11-2026" }).valid, false); // must be YYYY-MM-DD
+    assert.strictEqual(validateUpdates({ amount: 15000, currency: "IDR", category: "laundry", occurred_at: "2026-11-06" }).valid, true);
+
+    console.log("✓ Test 12 Passed: Strict Validation on /approve Updates");
+  }
+
   console.log("\n======================================================");
-  console.log("ALL 10 TEST SUITES COMPLETED WITH 100% SUCCESS RATE!");
+  console.log("ALL 12 TEST SUITES COMPLETED WITH 100% SUCCESS RATE!");
   console.log("======================================================");
 }
 

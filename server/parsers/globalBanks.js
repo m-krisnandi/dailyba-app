@@ -136,7 +136,7 @@ const globalBanksParser = {
       category,
       occurredAt,
       occurredTime,
-      confidence: 0.94,
+      confidence: 0.60,
       messageId,
       dedupHash,
       verificationStatus: "unverified_heuristic",

@@ -98,6 +98,7 @@ export interface FinanceState {
   monthStartDay?: number; // 1 to 31, default 1
   dailyReminderEnabled?: boolean;
   dailyReminderTime?: string; // "HH:MM", default "20:00"
+  deletedTxIds?: string[]; // Tombstones for deleted transaction IDs (capped at 500)
 }
 
 export interface PendingImportItem {

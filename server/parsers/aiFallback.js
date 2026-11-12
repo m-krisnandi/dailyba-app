@@ -84,7 +84,7 @@ Respond ONLY with valid JSON with these exact keys:
                 currency: parsed.currency || 'IDR',
                 category: parsed.category || categorizeTransaction(parsed.merchant || subject),
                 occurredAt,
-                confidence: parsed.confidence || 0.85,
+                confidence: Math.min(0.60, parsed.confidence || 0.60),
                 messageId,
                 dedupHash: createDedupHash(parsed.merchant, parsed.amount, occurredAt),
                 rawSnippet: redactPII(text.slice(0, 300))
@@ -167,7 +167,7 @@ function heuristicParse(email) {
     currency,
     category,
     occurredAt,
-    confidence: 0.7,
+    confidence: 0.60,
     messageId,
     dedupHash,
     rawSnippet: redactPII(text.slice(0, 300))

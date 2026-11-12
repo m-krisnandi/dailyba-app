@@ -145,7 +145,7 @@ const ewalletParser = {
       category,
       occurredAt,
       occurredTime,
-      confidence: 0.95,
+      confidence: 0.60,
       messageId,
       dedupHash,
       verificationStatus: "unverified_heuristic",

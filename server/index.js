@@ -308,16 +308,27 @@ app.post('/api/sync', authenticateToken, (req, res) => {
         const serverState = JSON.parse(existingRecord.data_json);
         if (Array.isArray(serverState.transactions) && Array.isArray(finalState.transactions)) {
           const clientTxIds = new Set(finalState.transactions.map(t => t.id));
+          const deleted = new Set([
+            ...(Array.isArray(finalState.deletedTxIds) ? finalState.deletedTxIds : []),
+            ...(Array.isArray(serverState.deletedTxIds) ? serverState.deletedTxIds : [])
+          ]);
 
-          // Identify email-imported transactions on the server missing from client
+          // Strip any transactions that were explicitly deleted
+          finalState.transactions = finalState.transactions.filter(t => !deleted.has(t.id));
+
+          // Identify email-imported transactions on the server missing from client, provided they were NOT deleted
           const missingEmailTxs = serverState.transactions.filter(t => 
-            (t.isEmailImported || (typeof t.id === 'string' && t.id.startsWith('tx_email_'))) && !clientTxIds.has(t.id)
+            (t.isEmailImported || (typeof t.id === 'string' && t.id.startsWith('tx_email_'))) &&
+            !clientTxIds.has(t.id) &&
+            !deleted.has(t.id)
           );
 
           if (missingEmailTxs.length > 0) {
             finalState.transactions = [...missingEmailTxs, ...finalState.transactions];
             hasMerged = true;
           }
+
+          finalState.deletedTxIds = Array.from(deleted).slice(0, 500);
         }
       } catch (mergeErr) {
         console.warn('[Sync] Non-fatal merge warning:', mergeErr.message);

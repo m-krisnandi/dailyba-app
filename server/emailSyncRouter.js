@@ -19,6 +19,7 @@ const ALLOWED_CATEGORIES = new Set([
 ]);
 
 const ALLOWED_SOURCES = new Set(['bank', 'ewallet', 'credit_card', 'cash']);
+const ALLOWED_CURRENCIES = new Set(['IDR', 'JPY', 'USD', 'MMK']);
 
 /**
  * Creates the Email & Bank Sync Router
@@ -812,13 +813,44 @@ function createEmailSyncRouter(db, authenticateToken, jwtSecret) {
         return res.status(400).json({ success: false, message: 'Transaction ID is required' });
       }
 
+      // Strict validation of client updates
+      if (updates) {
+        if (updates.amount !== undefined) {
+          const amt = Number(updates.amount);
+          if (!Number.isFinite(amt) || amt <= 0 || amt > 100000000000) {
+            return res.status(400).json({ success: false, message: 'Invalid amount: must be a positive finite number' });
+          }
+        }
+        if (updates.currency !== undefined && !ALLOWED_CURRENCIES.has(updates.currency)) {
+          return res.status(400).json({ success: false, message: 'Invalid currency. Supported: IDR, JPY, USD, MMK' });
+        }
+        if (updates.category !== undefined && !ALLOWED_CATEGORIES.has(updates.category)) {
+          return res.status(400).json({ success: false, message: 'Invalid expense category' });
+        }
+        if (updates.source !== undefined && !ALLOWED_SOURCES.has(updates.source)) {
+          return res.status(400).json({ success: false, message: 'Invalid funding source' });
+        }
+        if (updates.merchant !== undefined) {
+          const m = String(updates.merchant).trim();
+          if (!m || m.length > 100) {
+            return res.status(400).json({ success: false, message: 'Merchant must be between 1 and 100 characters' });
+          }
+        }
+        if (updates.occurred_at !== undefined) {
+          const d = String(updates.occurred_at).trim();
+          if (!/^\d{4}-\d{2}-\d{2}$/.test(d)) {
+            return res.status(400).json({ success: false, message: 'Invalid date format. Expected YYYY-MM-DD' });
+          }
+        }
+      }
+
       // Single item approval with category/source validation
       let updatedItem = null;
       let newTransaction = null;
       let updatedState = null;
 
       const approveTxn = db.transaction(() => {
-        const item = db.prepare('SELECT * FROM pending_imports WHERE id = ? AND user_id = ? AND status = "pending"').get(id, req.user.id);
+        const item = db.prepare("SELECT * FROM pending_imports WHERE id = ? AND user_id = ? AND status = 'pending'").get(id, req.user.id);
         if (!item) return false;
 
         const targetCategory = updates?.category || item.category;

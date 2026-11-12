@@ -146,10 +146,26 @@ export function useFinanceStore() {
   }, [updateState]);
 
   const deleteTransaction = useCallback((id: string) => {
-    updateState((prev) => ({
-      ...prev,
-      transactions: prev.transactions.filter((t) => t.id !== id),
-    }));
+    updateState((prev) => {
+      const nextDeleted = [id, ...(prev.deletedTxIds || [])].slice(0, 500);
+      return {
+        ...prev,
+        transactions: prev.transactions.filter((t) => t.id !== id),
+        deletedTxIds: nextDeleted,
+      };
+    });
+  }, [updateState]);
+
+  const addTransactionWithId = useCallback((tx: Transaction) => {
+    updateState((prev) => {
+      if (prev.transactions.some((t) => t.id === tx.id)) {
+        return prev;
+      }
+      return {
+        ...prev,
+        transactions: [tx, ...prev.transactions],
+      };
+    });
   }, [updateState]);
 
   const addOrUpdateInvestment = useCallback((asset: InvestmentAsset) => {
@@ -332,6 +348,9 @@ export function useFinanceStore() {
       recurringBills: Array.isArray(cleaned.recurringBills) ? cleaned.recurringBills : (Array.isArray(prev.recurringBills) ? prev.recurringBills : []),
       monthlyBudgets: importedState.monthlyBudgets && typeof importedState.monthlyBudgets === 'object' ? importedState.monthlyBudgets : (prev.monthlyBudgets || {}),
       monthStartDay: typeof importedState.monthStartDay === 'number' ? importedState.monthStartDay : (prev.monthStartDay || 1),
+      deletedTxIds: Array.isArray(importedState.deletedTxIds)
+        ? Array.from(new Set([...(importedState.deletedTxIds || []), ...(prev.deletedTxIds || [])])).slice(0, 500)
+        : (prev.deletedTxIds || []),
     }));
   }, [updateState]);
 
@@ -339,6 +358,7 @@ export function useFinanceStore() {
     state,
     isHydrated,
     addTransaction,
+    addTransactionWithId,
     updateTransaction,
     deleteTransaction,
     addOrUpdateInvestment,

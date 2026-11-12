@@ -76,7 +76,7 @@ const paypayParser = {
       category,
       occurredAt,
       occurredTime,
-      confidence: 0.98,
+      confidence: 0.60,
       messageId,
       dedupHash,
       verificationStatus: "unverified_heuristic",
