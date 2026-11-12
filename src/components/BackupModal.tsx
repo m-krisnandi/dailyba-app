@@ -14,7 +14,9 @@ import {
   FileJson,
   FileSpreadsheet,
   Check,
+  Bell,
 } from 'lucide-react';
+import { scheduleDailyReminder } from '@/lib/localNotifications';
 
 interface BackupModalProps {
   isOpen: boolean;
@@ -24,6 +26,7 @@ interface BackupModalProps {
   onImportData: (data: Partial<FinanceState>) => void;
   onResetSample?: () => void;
   onClearAll: () => void;
+  onToggleReminder?: (enabled: boolean, time?: string) => void;
 }
 
 export function BackupModal({
@@ -33,6 +36,7 @@ export function BackupModal({
   state,
   onImportData,
   onClearAll,
+  onToggleReminder,
 }: BackupModalProps) {
   useBodyScrollLock(isOpen);
 
@@ -41,6 +45,24 @@ export function BackupModal({
   const [feedback, setFeedback] = useState<string | null>(null);
   const [isConfirmClearOpen, setIsConfirmClearOpen] = useState(false);
   const [isLegalModalOpen, setIsLegalModalOpen] = useState(false);
+  const [reminderEnabled, setReminderEnabled] = useState(Boolean(state.dailyReminderEnabled));
+  const [reminderTime, setReminderTime] = useState(state.dailyReminderTime || '20:00');
+  const [isScheduling, setIsScheduling] = useState(false);
+
+  const handleToggleReminder = async (enabled: boolean, timeVal?: string) => {
+    const targetTime = timeVal || reminderTime;
+    setIsScheduling(true);
+    const success = await scheduleDailyReminder(enabled, targetTime, language);
+    setIsScheduling(false);
+    if (success) {
+      setReminderEnabled(enabled);
+      if (onToggleReminder) onToggleReminder(enabled, targetTime);
+      setFeedback(enabled ? t.actions.reminderScheduled : t.actions.reminderDisabled);
+    } else {
+      setFeedback(t.actions.permissionDenied);
+    }
+    setTimeout(() => setFeedback(null), 3000);
+  };
 
   if (!isOpen) return null;
 
@@ -171,6 +193,53 @@ export function BackupModal({
                 <span>{language === "ja" ? "CSVレポート出力" : "Export CSV"}</span>
               </button>
             </div>
+          </div>
+
+          {/* Daily Reminder Setting */}
+          <div className="p-3.5 rounded-2xl border border-[var(--border-subtle)] bg-[var(--bg-subtle)] space-y-3">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center space-x-2.5 min-w-0 pr-2">
+                <div className="w-7 h-7 rounded-lg bg-emerald-500/10 border border-emerald-500/20 text-emerald-500 flex items-center justify-center shrink-0">
+                  <Bell className="w-3.5 h-3.5" />
+                </div>
+                <div className="min-w-0">
+                  <p className="text-xs font-bold text-[var(--text-main)] truncate">
+                    {t.actions.dailyReminder}
+                  </p>
+                  <p className="text-[10px] text-[var(--text-muted)] line-clamp-1">
+                    {t.actions.reminderDesc}
+                  </p>
+                </div>
+              </div>
+
+              <label className="relative inline-flex items-center cursor-pointer shrink-0">
+                <input
+                  type="checkbox"
+                  checked={reminderEnabled}
+                  disabled={isScheduling}
+                  onChange={(e) => handleToggleReminder(e.target.checked)}
+                  className="sr-only peer"
+                />
+                <div className="w-9 h-5 bg-[var(--border-strong)] peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-[var(--accent-emerald)]"></div>
+              </label>
+            </div>
+
+            {reminderEnabled && (
+              <div className="pt-2 border-t border-[var(--border-subtle)] flex items-center justify-between text-xs">
+                <span className="text-[11px] text-[var(--text-muted)] font-medium">
+                  {t.actions.reminderTime}
+                </span>
+                <input
+                  type="time"
+                  value={reminderTime}
+                  onChange={(e) => {
+                    setReminderTime(e.target.value);
+                    handleToggleReminder(true, e.target.value);
+                  }}
+                  className="px-2 py-1 rounded-lg bg-[var(--bg-surface-solid)] border border-[var(--border-subtle)] text-[var(--text-main)] font-mono text-xs focus:outline-none focus:border-emerald-500/50"
+                />
+              </div>
+            )}
           </div>
 
           {/* Import JSON */}

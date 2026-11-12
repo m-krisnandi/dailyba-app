@@ -21,6 +21,12 @@ export interface Translations {
     clear: string;
     export: string;
     import: string;
+    dailyReminder: string;
+    reminderDesc: string;
+    reminderTime: string;
+    reminderScheduled: string;
+    reminderDisabled: string;
+    permissionDenied: string;
     reset: string;
     confirmPay: string;
     paidThisMonth: string;
@@ -170,6 +176,15 @@ export interface Translations {
     amountInvested: string;
     customValuationToggle: string;
     customValuationHint: string;
+    searchPlaceholder: string;
+    allCategories: string;
+    noMatchingAssets: string;
+    sortHighestValue: string;
+    sortLowestValue: string;
+    sortHighestReturn: string;
+    sortLowestReturn: string;
+    sortNameAZ: string;
+    sortRecentAdded: string;
   };
   savings: {
     title: string;
@@ -240,6 +255,12 @@ export const translations: Record<Language, Translations> = {
       clear: 'Clear',
       export: 'Backup & Export',
       import: 'Import Data',
+      dailyReminder: 'Daily Log Reminder',
+      reminderDesc: 'Receive a gentle local reminder each evening to record your daily spending.',
+      reminderTime: 'Reminder Time',
+      reminderScheduled: 'Daily reminder scheduled successfully.',
+      reminderDisabled: 'Daily reminder turned off.',
+      permissionDenied: 'Notification permission was denied. Please allow notifications in device settings.',
       reset: 'Load Sample Data',
       confirmPay: 'Mark as Paid',
       paidThisMonth: 'Paid for this month',
@@ -413,6 +434,15 @@ export const translations: Record<Language, Translations> = {
       amountInvested: 'Amount Saved / Invested',
       customValuationToggle: 'Customize Market Valuation (Optional)',
       customValuationHint: 'Leave disabled if you just invested or market value equals your capital.',
+      searchPlaceholder: 'Search asset or ticker...',
+      allCategories: 'All Asset Classes',
+      noMatchingAssets: 'No assets match your search or filter.',
+      sortHighestValue: 'Highest Value',
+      sortLowestValue: 'Lowest Value',
+      sortHighestReturn: 'Highest Return (%)',
+      sortLowestReturn: 'Lowest Return (%)',
+      sortNameAZ: 'Name (A–Z)',
+      sortRecentAdded: 'Recently Added',
     },
     savings: {
       title: 'Savings & Reserve Vault',
@@ -481,6 +511,12 @@ export const translations: Record<Language, Translations> = {
       clear: 'クリア',
       export: 'データ出力・バックアップ',
       import: 'データ復元',
+      dailyReminder: '日次記録リマインダー',
+      reminderDesc: '毎晩、今日の支出の記録忘れを防ぐための通知を受け取ります。',
+      reminderTime: '通知時刻',
+      reminderScheduled: 'リマインダーを設定しました。',
+      reminderDisabled: 'リマインダーをオフにしました。',
+      permissionDenied: '通知の許可が得られませんでした。端末の設定で通知を許可してください。',
       reset: 'サンプルデータを読込',
       confirmPay: '支払済みにする',
       paidThisMonth: '今月分支払い済み',
@@ -654,6 +690,15 @@ export const translations: Record<Language, Translations> = {
       amountInvested: '投資・積立元本金額',
       customValuationToggle: '時価評価額を個別調整（任意）',
       customValuationHint: '新規積立時や時価が元本と同額の場合はチェック不要です。',
+      searchPlaceholder: '資産・銘柄名を検索...',
+      allCategories: '全資産クラス',
+      noMatchingAssets: '条件に一致する投資資産がありません。',
+      sortHighestValue: '評価額が高い順',
+      sortLowestValue: '評価額が低い順',
+      sortHighestReturn: 'リターンが高い順',
+      sortLowestReturn: 'リターンが低い順',
+      sortNameAZ: '名称順 (A-Z)',
+      sortRecentAdded: '最近追加順',
     },
     savings: {
       title: '貯蓄・準備資金管理',

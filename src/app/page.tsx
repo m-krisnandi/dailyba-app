@@ -55,6 +55,7 @@ export default function Home() {
     updateMonthStartDay,
     clearAllData,
     importData,
+    setDailyReminder,
   } = useFinanceStore();
 
   const {
@@ -327,7 +328,7 @@ export default function Home() {
         </div>
       </footer>
 
-      {/* Backup & Import Modal */}
+      {/* Backup, Settings & Daily Reminder Modal */}
       <BackupModal
         isOpen={isBackupModalOpen}
         onClose={() => setIsBackupModalOpen(false)}
@@ -335,6 +336,7 @@ export default function Home() {
         state={state}
         onImportData={importData}
         onClearAll={clearAllData}
+        onToggleReminder={setDailyReminder}
       />
 
       {/* Cloud Authentication & Sync Modal */}

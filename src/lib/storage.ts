@@ -18,6 +18,8 @@ export const DEFAULT_STATE: FinanceState = {
   recurringBills: [],
   monthlyBudgets: {},
   monthStartDay: 1,
+  dailyReminderEnabled: false,
+  dailyReminderTime: '20:00',
 };
 
 // Known mock identifiers to purge permanently
@@ -260,6 +262,17 @@ export function useFinanceStore() {
     }));
   }, [updateState]);
 
+  const setDailyReminder = useCallback(
+    (enabled: boolean, time?: string) => {
+      setState((prev) => ({
+        ...prev,
+        dailyReminderEnabled: enabled,
+        dailyReminderTime: time || prev.dailyReminderTime || '20:00',
+      }));
+    },
+    [setState]
+  );
+
   const updateMonthStartDay = useCallback((day: number) => {
     const safeDay = Math.max(1, Math.min(31, Math.round(day) || 1));
     updateState((prev) => ({
@@ -341,6 +354,7 @@ export function useFinanceStore() {
     setDailySpendTarget,
     updateMonthlyBudget,
     updateMonthStartDay,
+    setDailyReminder,
     resetToSampleData,
     clearAllData,
     importData,

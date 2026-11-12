@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useMemo, useState } from 'react';
-import { Currency, InvestmentAsset, Language } from '@/types/finance';
+import { Currency, InvestmentAsset, InvestmentSortOption, Language } from '@/types/finance';
 import { formatCurrency, translations } from '@/lib/i18n';
 import { convertCurrency, DEFAULT_RATES, ExchangeRates, formatNumberWithCommas, parseRawNumber } from '@/lib/currency';
 import { useBodyScrollLock } from '@/lib/useBodyScrollLock';
@@ -20,6 +20,11 @@ import {
   ShieldCheck,
   Building,
   Sparkles,
+  Search,
+  Clock,
+  ArrowDownWideNarrow,
+  ArrowUpNarrowWide,
+  SlidersHorizontal,
 } from 'lucide-react';
 
 function getCategoryIcon(cat: InvestmentAsset['category']) {
@@ -62,6 +67,136 @@ export function InvestmentBoard({
   useBodyScrollLock(isModalOpen);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [deletingAsset, setDeletingAsset] = useState<InvestmentAsset | null>(null);
+
+  // Filter, Search & Sort State
+  const [searchQuery, setSearchQuery] = useState('');
+  const [filterCategory, setFilterCategory] = useState<'all' | InvestmentAsset['category']>('all');
+  const [sortBy, setSortBy] = useState<InvestmentSortOption>('value-desc');
+
+  const filterCategoryOptions = useMemo<CustomSelectOption<InvestmentAsset['category'] | 'all'>[]>(() => {
+    return [
+      {
+        value: 'all',
+        label: t.investments.allCategories,
+        icon: SlidersHorizontal,
+      },
+      ...((['mutual_fund', 'stock', 'crypto', 'gold', 'deposit'] as InvestmentAsset['category'][]).map((cat) => {
+        const s = getInvestmentAssetBadgeStyle(cat);
+        const icon = getCategoryIcon(cat);
+        return {
+          value: cat,
+          label: t.investmentCategories[cat],
+          icon,
+          badgeClass: `${s.border} ${s.bg} ${s.text}`,
+        };
+      })),
+    ];
+  }, [t]);
+
+  const sortOptions = useMemo<CustomSelectOption<InvestmentSortOption>[]>(() => {
+    return [
+      {
+        value: 'value-desc',
+        label: t.investments.sortHighestValue,
+        icon: ArrowDownWideNarrow,
+      },
+      {
+        value: 'value-asc',
+        label: t.investments.sortLowestValue,
+        icon: ArrowUpNarrowWide,
+      },
+      {
+        value: 'return-desc',
+        label: t.investments.sortHighestReturn,
+        icon: TrendingUp,
+      },
+      {
+        value: 'return-asc',
+        label: t.investments.sortLowestReturn,
+        icon: TrendingDown,
+      },
+      {
+        value: 'recent-added',
+        label: t.investments.sortRecentAdded,
+        icon: Clock,
+      },
+      {
+        value: 'name-asc',
+        label: t.investments.sortNameAZ,
+        icon: SlidersHorizontal,
+      },
+    ];
+  }, [t]);
+
+  const isFiltered = searchQuery.trim() !== '' || filterCategory !== 'all' || sortBy !== 'value-desc';
+
+  const handleResetFilters = () => {
+    setSearchQuery('');
+    setFilterCategory('all');
+    setSortBy('value-desc');
+  };
+
+  // Filtered and Sorted Assets
+  const filteredInvestments = useMemo(() => {
+    const list = investments.filter((inv) => {
+      if (filterCategory !== 'all' && inv.category !== filterCategory) {
+        return false;
+      }
+      if (searchQuery.trim()) {
+        const q = searchQuery.toLowerCase().trim();
+        const nameMatch = inv.name.toLowerCase().includes(q);
+        const catLabel = (t.investmentCategories[inv.category] || '').toLowerCase();
+        const catMatch = inv.category.toLowerCase().includes(q) || catLabel.includes(q);
+        const noteMatch = inv.notes ? inv.notes.toLowerCase().includes(q) : false;
+        if (!nameMatch && !catMatch && !noteMatch) {
+          return false;
+        }
+      }
+      return true;
+    });
+
+    const indexed = list.map((asset, originalIndex) => ({ asset, originalIndex }));
+
+    indexed.sort((a, b) => {
+      const valA = convertCurrency(a.asset.currentValue, a.asset.currency, currency, rates);
+      const valB = convertCurrency(b.asset.currentValue, b.asset.currency, currency, rates);
+      const costA = convertCurrency(a.asset.costBasis, a.asset.currency, currency, rates);
+      const costB = convertCurrency(b.asset.costBasis, b.asset.currency, currency, rates);
+
+      const retPctA = costA > 0 ? (valA - costA) / costA : 0;
+      const retPctB = costB > 0 ? (valB - costB) / costB : 0;
+
+      if (sortBy === 'value-desc') {
+        const diff = valB - valA;
+        if (Math.abs(diff) > 0.001) return diff;
+        return a.originalIndex - b.originalIndex;
+      }
+      if (sortBy === 'value-asc') {
+        const diff = valA - valB;
+        if (Math.abs(diff) > 0.001) return diff;
+        return a.originalIndex - b.originalIndex;
+      }
+      if (sortBy === 'return-desc') {
+        const diff = retPctB - retPctA;
+        if (Math.abs(diff) > 0.0001) return diff;
+        return valB - valA;
+      }
+      if (sortBy === 'return-asc') {
+        const diff = retPctA - retPctB;
+        if (Math.abs(diff) > 0.0001) return diff;
+        return valA - valB;
+      }
+      if (sortBy === 'name-asc') {
+        return a.asset.name.localeCompare(b.asset.name);
+      }
+      if (sortBy === 'recent-added') {
+        return a.originalIndex - b.originalIndex;
+      }
+      return 0;
+    });
+
+    return indexed.map((item) => item.asset);
+  }, [investments, filterCategory, searchQuery, sortBy, currency, rates, t]);
 
   // Form State
   const [name, setName] = useState('');
@@ -269,17 +404,74 @@ export function InvestmentBoard({
         </div>
       </div>
 
-      {/* Holdings Asset List */}
-      <div className="rounded-3xl border border-[var(--border-subtle)] bg-[var(--bg-surface)]  p-5 sm:p-7 shadow-[var(--card-shadow)] space-y-4">
+      {/* Holdings Asset List (with Search, Category Filter, and Sort Order) */}
+      <div className="rounded-3xl border border-[var(--border-subtle)] bg-[var(--bg-surface)] p-5 sm:p-7 shadow-[var(--card-shadow)] space-y-4">
         <div className="flex items-center justify-between">
           <h3 className="text-sm font-bold text-[var(--text-main)] flex items-center space-x-2">
             <PieIcon className="w-4 h-4" />
             <span>{t.investments.holdingsBreakdown}</span>
           </h3>
-          <span className="text-xs text-[var(--text-muted)] font-mono">
-            {investments.length} {t.record.items}
-          </span>
+          <div className="flex items-center space-x-2">
+            <span className="text-xs text-[var(--text-muted)] font-mono">
+              {investments.length} {t.record.items}
+            </span>
+            {isFiltered && (
+              <button
+                type="button"
+                onClick={handleResetFilters}
+                className="text-xs text-emerald-500 hover:text-emerald-400 font-medium underline transition-colors cursor-pointer"
+              >
+                {t.record.resetFilters}
+              </button>
+            )}
+          </div>
         </div>
+
+        {/* Search & Filter Controls (Rendered when investments exist or filter is active) */}
+        {(investments.length > 0 || isFiltered) && (
+          <div className="space-y-2.5 pt-1">
+            <div className="flex flex-col sm:flex-row gap-2">
+              {/* Search input */}
+              <div className="relative flex-1 min-w-0">
+                <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-[var(--text-muted)] pointer-events-none" />
+                <input
+                  type="text"
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  placeholder={t.investments.searchPlaceholder}
+                  className="w-full pl-9 pr-8 py-2 rounded-xl text-xs bg-[var(--bg-subtle)] border border-[var(--border-subtle)] text-[var(--text-main)] placeholder-[var(--text-faint)] focus:outline-none focus:border-emerald-500/50 transition-all"
+                />
+                {searchQuery && (
+                  <button
+                    type="button"
+                    onClick={() => setSearchQuery('')}
+                    className="absolute right-2.5 top-1/2 -translate-y-1/2 text-[var(--text-faint)] hover:text-[var(--text-main)] transition-colors p-0.5 cursor-pointer"
+                  >
+                    <X className="w-3.5 h-3.5" />
+                  </button>
+                )}
+              </div>
+
+              {/* Category & Sort Dropdowns */}
+              <div className="grid grid-cols-2 sm:flex sm:items-center gap-2 shrink-0">
+                <div className="w-full sm:w-[155px]">
+                  <CustomSelect
+                    value={filterCategory}
+                    onChange={(val) => setFilterCategory(val as any)}
+                    options={filterCategoryOptions}
+                  />
+                </div>
+                <div className="w-full sm:w-[165px]">
+                  <CustomSelect
+                    value={sortBy}
+                    onChange={(val) => setSortBy(val as InvestmentSortOption)}
+                    options={sortOptions}
+                  />
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
 
         {investments.length === 0 ? (
           <div className="py-12 text-center border border-dashed border-[var(--border-subtle)] rounded-2xl p-6 bg-[var(--bg-subtle)]">
@@ -295,9 +487,22 @@ export function InvestmentBoard({
               <span>{t.investments.addAsset}</span>
             </button>
           </div>
+        ) : filteredInvestments.length === 0 ? (
+          <div className="py-8 text-center space-y-2">
+            <p className="text-xs text-[var(--text-muted)]">
+              {t.investments.noMatchingAssets}
+            </p>
+            <button
+              type="button"
+              onClick={handleResetFilters}
+              className="inline-flex items-center px-3 py-1.5 rounded-xl text-xs font-semibold bg-[var(--bg-subtle)] border border-[var(--border-subtle)] hover:border-emerald-500/50 text-[var(--text-main)] hover:text-emerald-500 transition-all cursor-pointer"
+            >
+              {t.record.resetFilters}
+            </button>
+          </div>
         ) : (
           <div className="space-y-2.5">
-            {investments.map((inv) => {
+            {filteredInvestments.map((inv) => {
               const Icon = getCategoryIcon(inv.category);
               const assetStyle = getInvestmentAssetBadgeStyle(inv.category);
               const costInCur = convertCurrency(inv.costBasis, inv.currency, currency, rates);

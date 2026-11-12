@@ -27,6 +27,14 @@ export type Currency = 'JPY' | 'IDR' | 'USD' | 'MMK';
 
 export type Language = 'en' | 'ja';
 
+export type InvestmentSortOption =
+  | 'value-desc'
+  | 'value-asc'
+  | 'return-desc'
+  | 'return-asc'
+  | 'name-asc'
+  | 'recent-added';
+
 export type TransactionSortOption =
   | 'date-desc'
   | 'date-asc'
@@ -88,4 +96,6 @@ export interface FinanceState {
   language: Language;
   monthlyBudgets?: Record<string, MonthlyBudgetPlan>; // Keyed by "YYYY-MM"
   monthStartDay?: number; // 1 to 31, default 1
+  dailyReminderEnabled?: boolean;
+  dailyReminderTime?: string; // "HH:MM", default "20:00"
 }
