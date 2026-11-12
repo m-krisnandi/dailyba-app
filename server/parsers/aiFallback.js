@@ -20,7 +20,7 @@ const aiFallbackParser = {
     // If Gemini API Key is configured, attempt intelligent zero-shot extraction
     const apiKey = process.env.GEMINI_API_KEY || process.env.GOOGLE_API_KEY;
     // Active Gemini model (configurable via env, defaults to current active production model)
-    const geminiModel = process.env.GEMINI_MODEL || 'gemini-2.5-flash';
+    const geminiModel = process.env.GEMINI_MODEL || 'gemini-3.8-flash';
 
     if (apiKey && (text.length > 20 || subject.length > 5)) {
       try {
