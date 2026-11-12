@@ -1,7 +1,7 @@
 import { Language } from '@/types/finance';
 
-export const APP_VERSION = '1.5.1';
-export const APP_BUILD = '20261110_2';
+export const APP_VERSION = '1.6.0';
+export const APP_BUILD = '20261112_1';
 
 export interface LocalizedChangelogItem {
   version: string;
@@ -11,6 +11,30 @@ export interface LocalizedChangelogItem {
 }
 
 export const APP_CHANGELOG: LocalizedChangelogItem[] = [
+  {
+    version: '1.6.0',
+    date: '2026-11-12',
+    title: {
+      en: 'Android Home Widget with 1-Tap AI Scanner, Local Daily Reminder, & Portfolio Search & Sort',
+      ja: '1タップAIスキャン対応ホーム画面ウィジェット、日次記録リマインダー通知、投資ポートフォリオ検索・並び替え',
+    },
+    highlights: {
+      en: [
+        'Android Home Screen Widget: Monitor remaining daily budget at a glance directly from your home screen with a dedicated 1-Tap Receipt Scanner button that launches camera recognition instantly.',
+        'Local Daily Reminder: Set an evening reminder notification to stay mindful and never forget logging everyday expenses. Runs 100% locally on device with zero external server dependencies.',
+        'Investment Portfolio Search & Sorting: Instantly search and sort investment assets by market valuation, return percentage, asset class, or name.',
+        'Transactions Feed Chronological Sort: Default feed ordering now strictly follows newest date first with quick sort options across both Record and Savings feeds.',
+        'Custom iOS URL Scheme: Added dailyba://app?action=scan for instant 1-tap receipt scanning via iOS Shortcuts and Action Button.',
+      ],
+      ja: [
+        'Androidホーム画面ウィジェット：今日の残り予算枠をホーム画面で常時確認可能に。さらに「1タップで即座にAIレシートスキャナーを起動」する専用アクションボタンを搭載。',
+        '日次記録リマインダー通知：夜間の支出記録忘れを防ぐ優しいリマインダー通知。サーバー不要で100%端末ローカルで動作しプライバシーを完全保護。',
+        '投資ポートフォリオ検索＆並び替え：評価額順、リターン（%）順、銘柄名順など自在なソート機能と検索フィルターを新設。',
+        '取引履歴の日付降順ソート：記録画面および貯金振替履歴の表示順を日付の新しい順に統一、日付や金額での柔軟な並び替えに対応。',
+        'iOSカスタムURLスキーム対応：ショートカットやアクションボタンから直接スキャナーを起動できる dailyba://app?action=scan を正式登録。',
+      ],
+    },
+  },
   {
     version: '1.5.1',
     date: '2026-11-10',

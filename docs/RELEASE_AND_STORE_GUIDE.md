@@ -9,8 +9,8 @@ Panduan resmi persiapan, tanda tangan rilis (signing), dan kepatuhan toko aplika
 Package Name / Bundle Identifier telah diselaraskan 100% di semua platform:
 * **Application ID / Package Name**: `com.dailyba.app`
 * **App Name**: `Dailyba`
-* **Version**: `1.5.1`
-* **Version Code / Build Number**: `151`
+* **Version**: `1.6.0`
+* **Version Code / Build Number**: `160`
 * **Lokasi Pengaturan**:
   * Capacitor: `capacitor.config.ts` (`appId: "com.dailyba.app"`)
   * Android: `android/app/build.gradle` (`applicationId "com.dailyba.app"`, `namespace "com.dailyba.app"`)
