@@ -99,3 +99,31 @@ export interface FinanceState {
   dailyReminderEnabled?: boolean;
   dailyReminderTime?: string; // "HH:MM", default "20:00"
 }
+
+export interface PendingImportItem {
+  id: string;
+  user_id: string;
+  message_id: string;
+  dedup_hash: string;
+  source: FundingSource;
+  provider: string;
+  merchant: string;
+  amount: number;
+  currency: Currency;
+  category: ExpenseCategory | string;
+  occurred_at: string; // YYYY-MM-DD
+  occurred_time?: string;
+  raw_snippet?: string;
+  confidence: number;
+  status: 'pending' | 'approved' | 'rejected';
+  created_at: string;
+}
+
+export interface EmailSyncStatus {
+  googleConfigured: boolean;
+  isConnected: boolean;
+  connectedEmail: string | null;
+  connectedAt: string | null;
+  lastSyncedAt: string | null;
+  pendingCount: number;
+}

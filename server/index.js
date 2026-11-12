@@ -5,6 +5,7 @@ const jwt = require('jsonwebtoken');
 const Database = require('better-sqlite3');
 const path = require('path');
 const crypto = require('crypto');
+const createEmailSyncRouter = require('./emailSyncRouter');
 require('dotenv').config();
 
 const PORT = process.env.PORT || 4000;
@@ -14,8 +15,6 @@ const DB_PATH = process.env.DB_PATH || path.join(__dirname, 'dailyba.db');
 // Initialize SQLite Database
 const db = new Database(DB_PATH);
 db.pragma('journal_mode = WAL');
-
-// Create tables
 
 // Ensure Store Reviewer demo account exists automatically on startup
 function initSeedAccounts() {
@@ -91,6 +90,9 @@ app.get('/api/health', (req, res) => {
     version: '1.0.0'
   });
 });
+
+// Email & Bank Automated Sync Routes
+app.use('/api/email-sync', createEmailSyncRouter(db, authenticateToken, JWT_SECRET));
 
 // 1. Register
 app.post('/api/auth/register', (req, res) => {
@@ -320,6 +322,8 @@ app.post('/api/sync', authenticateToken, (req, res) => {
 app.delete('/api/auth/account', authenticateToken, (req, res) => {
   try {
     const userId = req.user.id;
+    db.prepare('DELETE FROM pending_imports WHERE user_id = ?').run(userId);
+    db.prepare('DELETE FROM google_connections WHERE user_id = ?').run(userId);
     db.prepare('DELETE FROM user_data WHERE user_id = ?').run(userId);
     db.prepare('DELETE FROM users WHERE id = ?').run(userId);
     res.json({

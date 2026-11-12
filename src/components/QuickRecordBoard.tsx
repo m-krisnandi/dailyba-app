@@ -49,6 +49,7 @@ import {
   Search,
   ChevronLeft,
   ChevronRight,
+  Mail,
 } from 'lucide-react';
 
 interface QuickRecordBoardProps {
@@ -66,6 +67,8 @@ interface QuickRecordBoardProps {
   onUpdateRecurringBill?: (bill: RecurringBill) => void;
   onDeleteRecurringBill?: (id: string) => void;
   initialScanOpen?: boolean;
+  pendingEmailSyncCount?: number;
+  onOpenEmailSync?: () => void;
 }
 
 const ALL_EXPENSE_CATEGORIES: ExpenseCategory[] = [
@@ -106,6 +109,8 @@ export function QuickRecordBoard({
   onUpdateRecurringBill,
   onDeleteRecurringBill,
   initialScanOpen = false,
+  pendingEmailSyncCount = 0,
+  onOpenEmailSync,
 }: QuickRecordBoardProps) {
   const t = translations[language];
   const [editingTx, setEditingTx] = useState<Transaction | null>(null);
@@ -754,6 +759,36 @@ export function QuickRecordBoard({
           </div>
         </div>
       )}
+      {/* Pending Bank & Email Sync Banner */}
+      {Boolean(pendingEmailSyncCount && pendingEmailSyncCount > 0) && (
+        <div className="rounded-3xl border border-blue-500/30 bg-blue-500/10 p-4 sm:p-5 flex flex-col sm:flex-row sm:items-center justify-between gap-3 shadow-sm animate-fade-in">
+          <div className="flex items-center space-x-3">
+            <div className="w-9 h-9 rounded-2xl bg-blue-500/20 text-blue-400 flex items-center justify-center shrink-0 border border-blue-500/30">
+              <Mail className="w-4 h-4 stroke-[2]" />
+            </div>
+            <div>
+              <p className="text-xs sm:text-sm font-bold text-[var(--text-main)]">
+                {pendingEmailSyncCount} {t.emailSync.viewPendingBanner}
+              </p>
+              <p className="text-[11px] text-[var(--text-muted)] line-clamp-1">
+                {language === 'ja'
+                  ? '銀行や電子マネーから届いた決済通知を1クリックで確認・家計簿へ追加できます。'
+                  : 'Review extracted merchant, amount, and category before importing.'}
+              </p>
+            </div>
+          </div>
+          {onOpenEmailSync && (
+            <button
+              type="button"
+              onClick={onOpenEmailSync}
+              className="px-4 py-2 rounded-xl bg-blue-600 hover:bg-blue-500 text-white text-xs font-bold shrink-0 transition-all cursor-pointer shadow-sm active:scale-[0.98] self-start sm:self-center"
+            >
+              {t.emailSync.reviewAndImport}
+            </button>
+          )}
+        </div>
+      )}
+
       {/* Smart Quick Entry Card */}
       <div className="rounded-3xl border border-[var(--border-subtle)] bg-[var(--bg-surface)] p-5 sm:p-6 shadow-[var(--card-shadow)] relative transition-all duration-200">
         <form onSubmit={handleSmartTextSubmit} className="space-y-3">

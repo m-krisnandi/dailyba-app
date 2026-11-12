@@ -231,6 +231,44 @@ export interface Translations {
     withinTargetLegend: string;
     exceededLegend: string;
   };
+  emailSync: {
+    title: string;
+    subtitle: string;
+    connectGoogle: string;
+    disconnectGoogle: string;
+    googleConnectedAs: string;
+    googleNotConnected: string;
+    googleNotConfigured: string;
+    syncNow: string;
+    syncing: string;
+    syncSuccess: string;
+    lastSynced: string;
+    neverSynced: string;
+    pendingImports: string;
+    pendingCountBadge: string;
+    noPendingImports: string;
+    approve: string;
+    reject: string;
+    approveAll: string;
+    rejectAll: string;
+    confidence: string;
+    testReceiptTitle: string;
+    testReceiptDesc: string;
+    pasteEmailPlaceholder: string;
+    parseReceipt: string;
+    parsing: string;
+    viewPendingBanner: string;
+    reviewAndImport: string;
+    merchant: string;
+    amount: string;
+    category: string;
+    source: string;
+    date: string;
+    potentialDuplicate: string;
+    loadSampleJago: string;
+    loadSampleMandiri: string;
+    loadSamplePayPay: string;
+  };
 }
 
 export const translations: Record<Language, Translations> = {
@@ -489,6 +527,44 @@ export const translations: Record<Language, Translations> = {
       withinTargetLegend: 'Within Target',
       exceededLegend: 'Exceeded',
     },
+    emailSync: {
+      title: 'Bank & Email Sync',
+      subtitle: 'Automatically import and categorize transactions from bank and e-wallet email receipts.',
+      connectGoogle: 'Connect Google Account',
+      disconnectGoogle: 'Disconnect',
+      googleConnectedAs: 'Connected to Gmail:',
+      googleNotConnected: 'Google Account not connected',
+      googleNotConfigured: 'Google OAuth is not configured on this server. You can still test receipts manually below.',
+      syncNow: 'Sync Emails Now',
+      syncing: 'Syncing...',
+      syncSuccess: 'Sync completed successfully.',
+      lastSynced: 'Last synced:',
+      neverSynced: 'Never synced',
+      pendingImports: 'Pending Imports',
+      pendingCountBadge: 'pending for review',
+      noPendingImports: 'No pending bank or e-wallet imports. Everything is up to date.',
+      approve: 'Approve & Record',
+      reject: 'Dismiss',
+      approveAll: 'Approve All',
+      rejectAll: 'Dismiss All',
+      confidence: 'Confidence',
+      testReceiptTitle: 'Test or Paste Email Receipt',
+      testReceiptDesc: 'Paste an email confirmation from Bank Jago, Mandiri, BCA, PayPay, GoPay, etc. to test receipt extraction.',
+      pasteEmailPlaceholder: 'Paste full email subject or body text here...',
+      parseReceipt: 'Extract Transaction',
+      parsing: 'Extracting...',
+      viewPendingBanner: 'transactions imported from bank/wallet email waiting for review',
+      reviewAndImport: 'Review & Import',
+      merchant: 'Merchant',
+      amount: 'Amount',
+      category: 'Category',
+      source: 'Funding Source',
+      date: 'Date',
+      potentialDuplicate: 'Potential Duplicate',
+      loadSampleJago: 'Load Sample: Bank Jago',
+      loadSampleMandiri: 'Load Sample: Livin Mandiri',
+      loadSamplePayPay: 'Load Sample: PayPay Japan',
+    },
   },
   ja: {
     appTitle: 'Dailyba',
@@ -744,6 +820,44 @@ export const translations: Record<Language, Translations> = {
       overDays: '超過',
       withinTargetLegend: '目標内',
       exceededLegend: '目標超過',
+    },
+    emailSync: {
+      title: '銀行・メール連携同期',
+      subtitle: '銀行や電子マネー・決済通知メールから支出を自動抽出・分類して家計簿に記録します。',
+      connectGoogle: 'Googleアカウントと連携',
+      disconnectGoogle: '連携を解除',
+      googleConnectedAs: '連携中のGmail:',
+      googleNotConnected: 'Googleアカウントが未連携です',
+      googleNotConfigured: 'サーバー側でGoogle OAuthが未設定です。下の入力欄から手動テストをご利用いただけます。',
+      syncNow: 'メールを受信・同期',
+      syncing: '同期中...',
+      syncSuccess: 'メールの同期が完了しました。',
+      lastSynced: '最終同期:',
+      neverSynced: '未同期',
+      pendingImports: '承認待ちの明細',
+      pendingCountBadge: '件の確認待ち明細',
+      noPendingImports: '現在、承認待ちの明細はありません。すべて処理済みです。',
+      approve: '承認して家計簿に記録',
+      reject: 'スキップ',
+      approveAll: 'すべて承認',
+      rejectAll: 'すべてスキップ',
+      confidence: '判定信頼度',
+      testReceiptTitle: '明細メールの手動テスト・貼り付け',
+      testReceiptDesc: '銀行（Jago、Mandiri、BCA等）やPayPay・電子マネーの支払完了通知メールを貼り付けて抽出テストができます。',
+      pasteEmailPlaceholder: 'メールの件名または本文をここに貼り付けてください...',
+      parseReceipt: '明細を抽出',
+      parsing: '抽出処理中...',
+      viewPendingBanner: '件の決済通知メールが確認待ちです',
+      reviewAndImport: '確認して記録',
+      merchant: '利用先',
+      amount: '金額',
+      category: 'カテゴリー',
+      source: '支払元',
+      date: '決済日',
+      potentialDuplicate: '重複の可能性あり',
+      loadSampleJago: 'サンプル: Bank Jago',
+      loadSampleMandiri: 'サンプル: Livin Mandiri',
+      loadSamplePayPay: 'サンプル: PayPay Japan',
     },
   },
 };

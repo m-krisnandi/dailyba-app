@@ -1,7 +1,7 @@
 // Client API for Dailyba Cloud Sync & Authentication
 // Fully supports offline-first, mobile (iOS/Android Capacitor), and Web deployment.
 
-import { FinanceState } from '@/types/finance';
+import { EmailSyncStatus, FinanceState, PendingImportItem } from '@/types/finance';
 
 const DEFAULT_SERVER_URL =
   process.env.NEXT_PUBLIC_API_URL || 'https://dailyba.pdfumi.com';
@@ -27,6 +27,14 @@ export interface ApiResponse<T = any> {
   version?: number;
   syncedAt?: string;
   resetCode?: string;
+  authUrl?: string;
+  items?: PendingImportItem[];
+  approvedItem?: PendingImportItem;
+  approvedItems?: PendingImportItem[];
+  stagedItem?: PendingImportItem;
+  parsed?: any;
+  importedCount?: number;
+  duplicateCount?: number;
 }
 
 export function getApiBaseUrl(): string {
@@ -126,7 +134,7 @@ async function request<T = any>(
     return {
       success: false,
       message: isConnRefused
-        ? `Server Dailyba (${cleanBase}) belum aktif. Pastikan server dijalankan dengan 'npm run dev'.`
+        ? `Server Dailyba (${cleanBase}) is not reachable. Ensure the server is running.`
         : err.message || 'Cannot reach Dailyba server.',
     };
   }
@@ -195,6 +203,74 @@ export const dailybaApi = {
       setStoredUser(null);
     }
     return res;
+  },
+
+  // Email & Bank Sync endpoints
+  async getEmailSyncStatus(): Promise<ApiResponse<EmailSyncStatus>> {
+    return await request<EmailSyncStatus>('/api/email-sync/status', {
+      method: 'GET',
+    });
+  },
+
+  async getGoogleAuthUrl(): Promise<ApiResponse<{ authUrl: string }>> {
+    return await request('/api/email-sync/google-auth-url', {
+      method: 'GET',
+    });
+  },
+
+  async disconnectGoogle(): Promise<ApiResponse> {
+    return await request('/api/email-sync/disconnect', {
+      method: 'POST',
+    });
+  },
+
+  async triggerEmailSync(): Promise<ApiResponse> {
+    return await request('/api/email-sync/sync', {
+      method: 'POST',
+    });
+  },
+
+  async parseRawEmail(payload: {
+    text?: string;
+    subject?: string;
+    from?: string;
+    date?: string;
+    save?: boolean;
+  }): Promise<ApiResponse> {
+    return await request('/api/email-sync/parse-raw', {
+      method: 'POST',
+      body: JSON.stringify(payload),
+    });
+  },
+
+  async getPendingImports(): Promise<ApiResponse<{ items: PendingImportItem[] }>> {
+    return await request('/api/email-sync/pending', {
+      method: 'GET',
+    });
+  },
+
+  async approveImport(payload: {
+    id?: string;
+    all?: boolean;
+    updates?: Partial<PendingImportItem>;
+  }): Promise<ApiResponse> {
+    return await request('/api/email-sync/approve', {
+      method: 'POST',
+      body: JSON.stringify(payload),
+    });
+  },
+
+  async rejectImport(payload: { id?: string; all?: boolean }): Promise<ApiResponse> {
+    return await request('/api/email-sync/reject', {
+      method: 'POST',
+      body: JSON.stringify(payload),
+    });
+  },
+
+  async clearProcessedImports(): Promise<ApiResponse> {
+    return await request('/api/email-sync/clear', {
+      method: 'DELETE',
+    });
   },
 
   logout() {

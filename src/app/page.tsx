@@ -16,6 +16,9 @@ import { BackupModal } from '@/components/BackupModal';
 import { ChangelogModal } from '@/components/ChangelogModal';
 import { APP_VERSION } from '@/lib/version';
 import { AuthModal } from '@/components/AuthModal';
+import { BankEmailSyncModal } from '@/components/BankEmailSyncModal';
+import { dailybaApi } from '@/lib/api';
+import { Transaction } from '@/types/finance';
 import { getTodayLocalDate } from '@/lib/dateUtils';
 
 const VALID_TABS: TabKey[] = ['record', 'daily', 'monthly', 'yearly', 'investments', 'savings'];
@@ -94,6 +97,29 @@ export default function Home() {
   const [isBackupModalOpen, setIsBackupModalOpen] = useState(false);
   const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
   const [isChangelogModalOpen, setIsChangelogModalOpen] = useState(false);
+  const [isEmailSyncModalOpen, setIsEmailSyncModalOpen] = useState(false);
+  const [pendingEmailSyncCount, setPendingEmailSyncCount] = useState(0);
+
+  const refreshEmailSyncCount = () => {
+    if (typeof window !== 'undefined') {
+      dailybaApi.getEmailSyncStatus().then(res => {
+        if (res.success && res.data) {
+          setPendingEmailSyncCount(res.data.pendingCount);
+        }
+      }).catch(() => {});
+    }
+  };
+
+  useEffect(() => {
+    refreshEmailSyncCount();
+  }, [isAuthenticated]);
+
+  const handleApproveBankTransactions = (txs: Omit<Transaction, 'id'>[]) => {
+    for (const t of txs) {
+      addTransaction(t);
+    }
+    setPendingEmailSyncCount(prev => Math.max(0, prev - txs.length));
+  };
 
   // Cloud Sync Coordination
   const hasInitialSyncedRef = useRef(false);
@@ -221,6 +247,8 @@ export default function Home() {
         onCurrencyChange={setCurrency}
         onOpenBackup={() => setIsBackupModalOpen(true)}
         onOpenAuth={() => setIsAuthModalOpen(true)}
+        onOpenEmailSync={() => setIsEmailSyncModalOpen(true)}
+        pendingEmailSyncCount={pendingEmailSyncCount}
         onManualSync={handleManualSync}
       />
 
@@ -257,6 +285,8 @@ export default function Home() {
             transactions={state.transactions}
             hiddenCategories={state.hiddenCategories || []}
             recurringBills={state.recurringBills}
+            pendingEmailSyncCount={pendingEmailSyncCount}
+            onOpenEmailSync={() => setIsEmailSyncModalOpen(true)}
             onAddTransaction={addTransaction}
             onDeleteTransaction={deleteTransaction}
             onUpdateTransaction={updateTransaction}
@@ -380,6 +410,18 @@ export default function Home() {
         onClose={() => setIsChangelogModalOpen(false)}
       />
 
+
+      {/* Bank & Email Sync Modal */}
+      <BankEmailSyncModal
+        isOpen={isEmailSyncModalOpen}
+        onClose={() => {
+          setIsEmailSyncModalOpen(false);
+          refreshEmailSyncCount();
+        }}
+        language={state.language}
+        onApproveTransactions={handleApproveBankTransactions}
+        existingTransactions={state.transactions}
+      />
 
     </div>
   );

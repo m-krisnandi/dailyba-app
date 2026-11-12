@@ -24,6 +24,7 @@ import {
   User as UserIcon,
   Smartphone,
   Download,
+  Mail,
 } from 'lucide-react';
 
 interface HeaderProps {
@@ -34,6 +35,8 @@ interface HeaderProps {
   onCurrencyChange: (curr: Currency) => void;
   onOpenBackup: () => void;
   onOpenAuth: () => void;
+  onOpenEmailSync?: () => void;
+  pendingEmailSyncCount?: number;
   onManualSync?: () => void;
 }
 
@@ -52,6 +55,8 @@ export function Header({
   onCurrencyChange,
   onOpenBackup,
   onOpenAuth,
+  onOpenEmailSync,
+  pendingEmailSyncCount = 0,
   onManualSync,
 }: HeaderProps) {
   const [isDark, setIsDark] = useState(true);
@@ -320,6 +325,27 @@ export function Header({
                     </button>
                   )}
 
+                  {onOpenEmailSync && (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        onOpenEmailSync();
+                        setIsUserMenuOpen(false);
+                      }}
+                      className="w-full flex items-center justify-between px-2.5 py-2 rounded-xl text-xs text-[var(--text-muted)] hover:text-[var(--text-main)] hover:bg-[var(--bg-subtle)] transition-all cursor-pointer"
+                    >
+                      <div className="flex items-center space-x-2">
+                        <Mail className="w-3.5 h-3.5 text-blue-400" />
+                        <span>{language === 'ja' ? '銀行・決済メール連携' : 'Bank & Email Sync'}</span>
+                      </div>
+                      {Boolean(pendingEmailSyncCount > 0) && (
+                        <span className="px-1.5 py-0.2 rounded-full text-[9px] font-mono font-bold bg-blue-500/20 text-blue-400">
+                          {pendingEmailSyncCount}
+                        </span>
+                      )}
+                    </button>
+                  )}
+
                   <button
                     type="button"
                     onClick={() => {
@@ -376,6 +402,23 @@ export function Header({
               </div>
             )}
           </div>
+
+          {/* Bank & Email Sync Button */}
+          {onOpenEmailSync && (
+            <button
+              type="button"
+              onClick={onOpenEmailSync}
+              className="relative flex p-1.5 sm:p-2 rounded-xl border border-[var(--border-subtle)] bg-[var(--bg-subtle)] hover:bg-[var(--bg-subtle-hover)] text-[var(--text-muted)] hover:text-[var(--text-main)] transition-all cursor-pointer shrink-0"
+              title={language === 'ja' ? '銀行・決済メール連携' : 'Bank & Email Sync'}
+            >
+              <Mail className="w-4 h-4 stroke-[2]" />
+              {Boolean(pendingEmailSyncCount > 0) && (
+                <span className="absolute -top-1 -right-1 min-w-[16px] h-4 px-1 rounded-full bg-blue-600 text-white text-[9px] font-bold flex items-center justify-center shadow-sm">
+                  {pendingEmailSyncCount > 9 ? '9+' : pendingEmailSyncCount}
+                </span>
+              )}
+            </button>
+          )}
 
           {/* Settings & Reminder Button (Visible on both mobile & desktop) */}
           <button
