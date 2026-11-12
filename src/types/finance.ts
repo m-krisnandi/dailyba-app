@@ -109,6 +109,7 @@ export interface PendingImportItem {
   source: FundingSource;
   provider: string;
   merchant: string;
+  note?: string;
   amount: number;
   currency: Currency;
   category: ExpenseCategory | string;

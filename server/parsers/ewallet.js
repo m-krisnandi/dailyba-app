@@ -132,6 +132,14 @@ const ewalletParser = {
       return null;
     }
 
+    // Filter out dust/promo/admin noise (e.g. Rp 1 promos, cashback coins)
+    if (currency === "IDR" && amount < 500) {
+      return null;
+    }
+    if (currency === "JPY" && amount < 5) {
+      return null;
+    }
+
     const category = categorizeTransaction(`${merchant} ${subject}`);
     const messageId = email.messageId || `${provider}_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`;
     const dedupHash = createDedupHash(merchant, amount, occurredAt);

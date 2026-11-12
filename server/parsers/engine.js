@@ -36,6 +36,8 @@ async function parseEmailReceipt(email) {
       if (parser.matches(email)) {
         const result = await parser.parse(email);
         if (result && result.amount > 0) {
+          if (result.currency === "IDR" && result.amount < 500) continue;
+          if (result.currency === "JPY" && result.amount < 5) continue;
           return result;
         }
       }
@@ -48,6 +50,8 @@ async function parseEmailReceipt(email) {
   try {
     const fallbackResult = await aiFallbackParser.parse(email);
     if (fallbackResult && fallbackResult.amount > 0) {
+      if (fallbackResult.currency === "IDR" && fallbackResult.amount < 500) return null;
+      if (fallbackResult.currency === "JPY" && fallbackResult.amount < 5) return null;
       return fallbackResult;
     }
   } catch (err) {

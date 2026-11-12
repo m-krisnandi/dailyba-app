@@ -44,7 +44,7 @@ const CATEGORY_RULES = [
   {
     category: 'vps',
     patterns: [
-      /\b(vps|cloud|server|aws|amazon\s*web\s*services|google\s*cloud|gcp|azure|linode|akamai|digitalocean|vultr|hetzner|ovh|cloudflare|vercel|netlify|github|gitlab|namecheap|godaddy|domain|hosting)\b/i,
+      /\b(vps|cloud|server|aws|amazon\s*web\s*services|google\s*cloud|gcp|azure|linode|akamai|digitalocean|vultr|hetzner|ovh|cloudflare|vercel|netlify|github|gitlab|namecheap|godaddy|domain|hosting|xtra\s*pembayaran\s*aman|bisnix|domainnesia|niagahoster|idcloudhost|qwords)\b/i,
       /(サーバー|クラウド|ホスティング)/
     ]
   },

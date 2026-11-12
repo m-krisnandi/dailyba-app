@@ -92,7 +92,8 @@ app.get('/api/health', (req, res) => {
 });
 
 // Email & Bank Automated Sync Routes
-app.use('/api/email-sync', createEmailSyncRouter(db, authenticateToken, JWT_SECRET));
+const emailSyncRouter = createEmailSyncRouter(db, authenticateToken, JWT_SECRET);
+app.use('/api/email-sync', emailSyncRouter);
 
 // 1. Register
 app.post('/api/auth/register', (req, res) => {
@@ -382,4 +383,25 @@ app.delete('/api/auth/account', authenticateToken, (req, res) => {
 app.listen(PORT, () => {
   console.log(`[Dailyba API Server] Running on http://localhost:${PORT}`);
   console.log(`[Dailyba API Server] Database: ${DB_PATH}`);
+
+  // Background Periodic Gmail Sync (every 15 minutes)
+  const SYNC_INTERVAL_MS = 15 * 60 * 1000;
+  setInterval(async () => {
+    try {
+      const activeConnections = db.prepare('SELECT user_id FROM google_connections WHERE requires_reauth = 0').all();
+      for (const conn of activeConnections) {
+        try {
+          const syncRes = await emailSyncRouter.syncUserGmail(conn.user_id, { autoRecordHighConfidence: true });
+          if (syncRes.autoRecordedCount > 0) {
+            console.log(`[Auto-Sync] User ${conn.user_id}: ${syncRes.autoRecordedCount} verified receipts auto-recorded.`);
+          }
+        } catch (err) {
+          console.warn(`[Auto-Sync] User ${conn.user_id} sync error:`, err.message);
+        }
+      }
+    } catch (err) {
+      console.error('[Auto-Sync] Periodic interval exception:', err.message);
+    }
+  }, SYNC_INTERVAL_MS);
+  console.log('[Dailyba API Server] Periodic Gmail Auto-Sync scheduled (every 15 minutes).);
 });

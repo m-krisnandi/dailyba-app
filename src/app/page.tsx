@@ -80,13 +80,29 @@ export default function Home() {
 
   const refreshEmailSyncCount = useCallback(() => {
     if (typeof window !== 'undefined') {
-      dailybaApi.getEmailSyncStatus().then(res => {
-        if (res.success && res.data) {
-          setPendingEmailSyncCount(res.data.pendingCount);
+      dailybaApi.getEmailSyncStatus().then(async res => {
+        const data = res.data || (res as any);
+        if (data && typeof data.pendingCount !== 'undefined') {
+          setPendingEmailSyncCount(data.pendingCount);
+          // If Gmail is linked, automatically trigger background sync and pull new verified transactions
+          if (data.isConnected) {
+            const syncRes = await dailybaApi.triggerEmailSync().catch(() => null);
+            if (syncRes && syncRes.success) {
+              if ((syncRes as any).autoRecordedCount > 0) {
+                const cloudState = await pullStateFromCloud();
+                if (cloudState && Array.isArray(cloudState.transactions)) {
+                  importData(cloudState);
+                }
+              }
+              if (typeof (syncRes as any).pendingCount !== 'undefined') {
+                setPendingEmailSyncCount((syncRes as any).pendingCount);
+              }
+            }
+          }
         }
       }).catch(() => {});
     }
-  }, []);
+  }, [pullStateFromCloud, importData]);
 
   useEffect(() => {
     // Check initial URL params (e.g. ?action=scan)

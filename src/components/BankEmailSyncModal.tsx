@@ -88,6 +88,7 @@ export function BankEmailSyncModal({
   // Inline edit state for pending imports before approval
   const [itemCategories, setItemCategories] = useState<Record<string, string>>({});
   const [itemSources, setItemSources] = useState<Record<string, FundingSource>>({});
+  const [itemNotes, setItemNotes] = useState<Record<string, string>>({});
 
   const refreshData = async () => {
     setIsLoading(true);
@@ -225,9 +226,16 @@ export function BankEmailSyncModal({
       setFeedback(null);
       const res = await dailybaApi.triggerEmailSync();
       if (res.success) {
+        const autoCount = (res as any).autoRecordedCount || 0;
+        const msg = autoCount > 0
+          ? (language === 'ja'
+              ? `${autoCount}件の高信頼度取引を自動記録しました。`
+              : `${autoCount} verified transactions auto-recorded to Recent Transactions.`)
+          : `${t.emailSync.syncSuccess} (${res.importedCount ?? 0} ${t.emailSync.pendingCountBadge})`;
+
         setFeedback({
           type: 'success',
-          message: `${t.emailSync.syncSuccess} (${res.importedCount ?? 0} ${t.emailSync.pendingCountBadge})`,
+          message: msg,
         });
         await refreshData();
       } else {
@@ -273,6 +281,7 @@ export function BankEmailSyncModal({
   const handleApproveSingle = async (item: PendingImportItem) => {
     const finalCategory = itemCategories[item.id] || item.category;
     const finalSource = itemSources[item.id] || item.source;
+    const finalMerchant = itemNotes[item.id] !== undefined ? itemNotes[item.id].trim() : item.merchant;
 
     try {
       const res = await dailybaApi.approveImport({
@@ -280,6 +289,8 @@ export function BankEmailSyncModal({
         updates: {
           category: finalCategory,
           source: finalSource,
+          merchant: finalMerchant || undefined,
+          note: finalMerchant || undefined,
         },
       });
 
@@ -292,7 +303,7 @@ export function BankEmailSyncModal({
           source: finalSource,
           currency: item.currency,
           date: item.occurred_at,
-          note: `${item.provider.toUpperCase()}: ${item.merchant}`,
+          note: finalMerchant || `${item.provider.toUpperCase()}: ${item.merchant}`,
         };
         onApproveTransactions([canonicalTx]);
 
@@ -590,46 +601,63 @@ export function BankEmailSyncModal({
                           </div>
 
                           {/* Editable controls */}
-                          <div className="grid grid-cols-2 gap-2 pt-1 border-t border-[var(--border-subtle)]">
+                          <div className="space-y-2 pt-1.5 border-t border-[var(--border-subtle)]">
                             <div>
                               <label className="text-[10px] text-[var(--text-faint)] uppercase block mb-1">
-                                {t.emailSync.category}
+                                {language === "ja" ? "取引名 / メモ (編集可)" : "Description / Store (Editable)"}
                               </label>
-                              <select
-                                value={currentCategory}
+                              <input
+                                type="text"
+                                value={itemNotes[item.id] !== undefined ? itemNotes[item.id] : item.merchant}
                                 onChange={e =>
-                                  setItemCategories(prev => ({ ...prev, [item.id]: e.target.value }))
+                                  setItemNotes(prev => ({ ...prev, [item.id]: e.target.value }))
                                 }
-                                className="w-full bg-[var(--bg-card)] border border-[var(--border-subtle)] rounded-lg px-2 py-1 text-xs text-[var(--text-main)] focus:outline-none focus:border-blue-500"
-                              >
-                                {Object.keys(t.expenseCategories).map(catKey => (
-                                  <option key={catKey} value={catKey}>
-                                    {t.expenseCategories[catKey as ExpenseCategory]}
-                                  </option>
-                                ))}
-                              </select>
+                                className="w-full bg-[var(--bg-card)] border border-[var(--border-subtle)] rounded-lg px-2.5 py-1 text-xs text-[var(--text-main)] focus:outline-none focus:border-blue-500 font-medium"
+                                placeholder={item.merchant}
+                              />
                             </div>
 
-                            <div>
-                              <label className="text-[10px] text-[var(--text-faint)] uppercase block mb-1">
-                                {t.emailSync.source}
-                              </label>
-                              <select
-                                value={currentSource}
-                                onChange={e =>
-                                  setItemSources(prev => ({
-                                    ...prev,
-                                    [item.id]: e.target.value as FundingSource,
-                                  }))
-                                }
-                                className="w-full bg-[var(--bg-card)] border border-[var(--border-subtle)] rounded-lg px-2 py-1 text-xs text-[var(--text-main)] focus:outline-none focus:border-blue-500"
-                              >
-                                {(['bank', 'ewallet', 'credit_card', 'cash'] as FundingSource[]).map(src => (
-                                  <option key={src} value={src}>
-                                    {t.sources[src]}
-                                  </option>
-                                ))}
-                              </select>
+                            <div className="grid grid-cols-2 gap-2">
+                              <div>
+                                <label className="text-[10px] text-[var(--text-faint)] uppercase block mb-1">
+                                  {t.emailSync.category}
+                                </label>
+                                <select
+                                  value={currentCategory}
+                                  onChange={e =>
+                                    setItemCategories(prev => ({ ...prev, [item.id]: e.target.value }))
+                                  }
+                                  className="w-full bg-[var(--bg-card)] border border-[var(--border-subtle)] rounded-lg px-2 py-1 text-xs text-[var(--text-main)] focus:outline-none focus:border-blue-500"
+                                >
+                                  {Object.keys(t.expenseCategories).map(catKey => (
+                                    <option key={catKey} value={catKey}>
+                                      {t.expenseCategories[catKey as ExpenseCategory]}
+                                    </option>
+                                  ))}
+                                </select>
+                              </div>
+
+                              <div>
+                                <label className="text-[10px] text-[var(--text-faint)] uppercase block mb-1">
+                                  {t.emailSync.source}
+                                </label>
+                                <select
+                                  value={currentSource}
+                                  onChange={e =>
+                                    setItemSources(prev => ({
+                                      ...prev,
+                                      [item.id]: e.target.value as FundingSource,
+                                    }))
+                                  }
+                                  className="w-full bg-[var(--bg-card)] border border-[var(--border-subtle)] rounded-lg px-2 py-1 text-xs text-[var(--text-main)] focus:outline-none focus:border-blue-500"
+                                >
+                                  {(["bank", "ewallet", "credit_card", "cash"] as FundingSource[]).map(src => (
+                                    <option key={src} value={src}>
+                                      {t.sources[src]}
+                                    </option>
+                                  ))}
+                                </select>
+                              </div>
                             </div>
                           </div>
 

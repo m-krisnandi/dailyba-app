@@ -77,6 +77,9 @@ function createEmailSyncRouter(db, authenticateToken, jwtSecret) {
 
     CREATE INDEX IF NOT EXISTS idx_pending_user_status ON pending_imports (user_id, status);
     CREATE INDEX IF NOT EXISTS idx_pending_hash ON pending_imports (user_id, dedup_hash);
+
+    -- Purge dust promo/coin entries (less than 500 IDR or 5 JPY)
+    DELETE FROM pending_imports WHERE (currency = 'IDR' AND amount < 500) OR (currency = 'JPY' AND amount < 5);
   `);
 
   // Helper: check if Google OAuth is configured via environment
@@ -435,157 +438,174 @@ function createEmailSyncRouter(db, authenticateToken, jwtSecret) {
     }
   });
 
-  // 5. Trigger Gmail Sync (with incremental sync, tombstone deduplication, MIME decoding, and DKIM verification)
-  router.post('/sync', authenticateToken, async (req, res) => {
+  // Core Sync Engine: can be called by HTTP route /sync or by background interval
+  async function syncUserGmail(userId, options = { autoRecordHighConfidence: true }) {
     const syncStartTime = new Date().toISOString();
 
-    try {
-      const accessToken = await getValidAccessToken(req.user.id);
-      if (!accessToken) {
-        const conn = db.prepare('SELECT requires_reauth FROM google_connections WHERE user_id = ?').get(req.user.id);
-        const isReauth = Boolean(conn?.requires_reauth);
-        return res.status(400).json({
-          success: false,
-          requiresReauth: isReauth,
-          message: isReauth
-            ? 'Your Google authorization has expired (e.g. 7-day test token limit). Please reconnect your Google account.'
-            : 'Google account is not connected or token expired. Please connect your Google account.'
-        });
+    const accessToken = await getValidAccessToken(userId);
+    if (!accessToken) {
+      const conn = db.prepare('SELECT requires_reauth FROM google_connections WHERE user_id = ?').get(userId);
+      return {
+        success: false,
+        requiresReauth: Boolean(conn?.requires_reauth),
+        message: conn?.requires_reauth
+          ? 'Google authorization expired. Please reconnect your account.'
+          : 'Google account not connected.'
+      };
+    }
+
+    const conn = db.prepare('SELECT last_synced_at FROM google_connections WHERE user_id = ?').get(userId);
+    let incrementalFilter = '';
+    if (conn?.last_synced_at) {
+      const lastEpoch = Math.floor(new Date(conn.last_synced_at).getTime() / 1000);
+      const safeAfter = Math.max(0, lastEpoch - 300);
+      incrementalFilter = ` after:${safeAfter}`;
+    }
+
+    const baseQuery = [
+      '(from:(noreply@jago.com OR bankmandiri.co.id OR bca.co.id OR paypay.ne.jp OR gojek.com OR ovo.id OR shopee.co.id OR dana.id OR rakuten-card.co.jp OR vpass.ne.jp OR paypal.com)',
+      'OR subject:("You have made a payment" OR "Pembayaran Berhasil" OR "お支払い完了" OR "Payment receipt" OR "Bukti Transfer"))'
+    ].join(' ');
+
+    const query = `${baseQuery}${incrementalFilter}`;
+    const listUrl = `https://gmail.googleapis.com/gmail/v1/users/me/messages?` + new URLSearchParams({
+      q: query,
+      maxResults: '25'
+    }).toString();
+
+    const listRes = await fetch(listUrl, {
+      headers: { Authorization: `Bearer ${accessToken}` }
+    });
+
+    if (!listRes.ok) {
+      const errText = await listRes.text();
+      if (errText.includes('invalid_grant')) {
+        db.prepare('UPDATE google_connections SET requires_reauth = 1 WHERE user_id = ?').run(userId);
+        return { success: false, requiresReauth: true, message: 'Google authorization expired.' };
+      }
+      return { success: false, message: 'Failed to query Gmail messages: ' + errText };
+    }
+
+    const listData = await listRes.json();
+    const messages = listData.messages || [];
+
+    let importedCount = 0;
+    let autoRecordedCount = 0;
+    let pendingCount = 0;
+    let duplicateCount = 0;
+
+    const record = db.prepare('SELECT data_json, version FROM user_data WHERE user_id = ?').get(userId);
+    let userState = record && record.data_json ? JSON.parse(record.data_json) : { transactions: [] };
+    if (!Array.isArray(userState.transactions)) userState.transactions = [];
+    let stateModified = false;
+
+    function extractMimeParts(payload) {
+      if (!payload) return '';
+      let text = '';
+      if (payload.body && payload.body.data) {
+        try {
+          const decoded = Buffer.from(payload.body.data, 'base64url').toString('utf8');
+          text += cleanMimeText(decoded) + '\\n';
+        } catch {}
+      }
+      if (payload.parts && Array.isArray(payload.parts)) {
+        for (const p of payload.parts) {
+          text += extractMimeParts(p);
+        }
+      }
+      return text;
+    }
+
+    for (const msg of messages) {
+      const seen = db.prepare('SELECT 1 FROM imported_message_ids WHERE user_id = ? AND message_id = ?').get(userId, msg.id);
+      if (seen) {
+        duplicateCount++;
+        continue;
       }
 
-      // Check last synced timestamp for incremental sync
-      const conn = db.prepare('SELECT last_synced_at FROM google_connections WHERE user_id = ?').get(req.user.id);
-      let incrementalFilter = '';
-      if (conn?.last_synced_at) {
-        const lastEpoch = Math.floor(new Date(conn.last_synced_at).getTime() / 1000);
-        // Overlap buffer of 5 minutes (300 seconds) to avoid missing in-flight emails
-        const safeAfter = Math.max(0, lastEpoch - 300);
-        incrementalFilter = ` after:${safeAfter}`;
-      }
-
-      // Search Gmail for bank and payment notification emails
-      const baseQuery = [
-        '(from:(noreply@jago.com OR bankmandiri.co.id OR bca.co.id OR paypay.ne.jp OR gojek.com OR ovo.id OR shopee.co.id OR dana.id OR rakuten-card.co.jp OR vpass.ne.jp OR paypal.com)',
-        'OR subject:("You have made a payment" OR "Pembayaran Berhasil" OR "お支払い完了" OR "Payment receipt" OR "Bukti Transfer"))'
-      ].join(' ');
-
-      const query = `${baseQuery}${incrementalFilter}`;
-
-      const listUrl = `https://gmail.googleapis.com/gmail/v1/users/me/messages?` + new URLSearchParams({
-        q: query,
-        maxResults: '25'
-      }).toString();
-
-      const listRes = await fetch(listUrl, {
+      const msgUrl = `https://gmail.googleapis.com/gmail/v1/users/me/messages/${msg.id}?format=full`;
+      const msgRes = await fetch(msgUrl, {
         headers: { Authorization: `Bearer ${accessToken}` }
       });
+      if (!msgRes.ok) continue;
 
-      if (!listRes.ok) {
-        const errText = await listRes.text();
-        if (errText.includes('invalid_grant')) {
-          db.prepare('UPDATE google_connections SET requires_reauth = 1 WHERE user_id = ?').run(req.user.id);
-          return res.status(401).json({
-            success: false,
-            requiresReauth: true,
-            message: 'Google authorization expired. Please reconnect your account.'
-          });
-        }
-        return res.status(502).json({
-          success: false,
-          message: 'Failed to query Gmail messages: ' + errText
-        });
-      }
+      const msgData = await msgRes.json();
+      const headers = msgData.payload?.headers || [];
+      const fromHeader = headers.find(h => h.name.toLowerCase() === 'from')?.value || '';
+      const subjectHeader = headers.find(h => h.name.toLowerCase() === 'subject')?.value || '';
+      const dateHeader = headers.find(h => h.name.toLowerCase() === 'date')?.value || '';
+      const authResults = headers.find(h => h.name.toLowerCase() === 'authentication-results')?.value || '';
 
-      const listData = await listRes.json();
-      const messages = listData.messages || [];
+      const isDkimFailed = authResults.includes('dkim=fail') || authResults.includes('spf=fail');
+      const decodedBody = extractMimeParts(msgData.payload) || cleanMimeText(msgData.snippet || '');
 
-      let importedCount = 0;
-      let duplicateCount = 0;
+      const parsed = await parseEmailReceipt({
+        from: fromHeader,
+        subject: subjectHeader,
+        text: decodedBody,
+        date: dateHeader,
+        messageId: msg.id
+      });
 
-      for (const msg of messages) {
-        // 1. Permanent tombstone check: ensure this message was never imported before
-        const seen = db.prepare('SELECT 1 FROM imported_message_ids WHERE user_id = ? AND message_id = ?').get(req.user.id, msg.id);
-        if (seen) {
-          duplicateCount++;
+      const now = new Date().toISOString();
+
+      if (parsed && parsed.amount > 0) {
+        // Filter out dust/promo/admin noise (Rp 1 promos, cashback coins)
+        const isDust = (parsed.currency === 'IDR' && parsed.amount < 500) || (parsed.currency === 'JPY' && parsed.amount < 5);
+        if (isDust) {
+          db.prepare(`INSERT OR IGNORE INTO imported_message_ids (user_id, message_id, created_at) VALUES (?, ?, ?)`).run(userId, parsed.messageId, now);
           continue;
         }
 
-        // 2. Fetch full message detail
-        const msgUrl = `https://gmail.googleapis.com/gmail/v1/users/me/messages/${msg.id}?format=full`;
-        const msgRes = await fetch(msgUrl, {
-          headers: { Authorization: `Bearer ${accessToken}` }
-        });
-
-        if (!msgRes.ok) continue;
-
-        const msgData = await msgRes.json();
-        const headers = msgData.payload?.headers || [];
-        const fromHeader = headers.find(h => h.name.toLowerCase() === 'from')?.value || '';
-        const subjectHeader = headers.find(h => h.name.toLowerCase() === 'subject')?.value || '';
-        const dateHeader = headers.find(h => h.name.toLowerCase() === 'date')?.value || '';
-        const authResults = headers.find(h => h.name.toLowerCase() === 'authentication-results')?.value || '';
-
-        // DKIM / SPF verification: check if sender signature failed
-        const isDkimFailed = authResults.includes('dkim=fail') || authResults.includes('spf=fail');
-
-        // Extract and decode base64url MIME payload parts
-        function extractMimeParts(payload) {
-          if (!payload) return '';
-          let text = '';
-          if (payload.body && payload.body.data) {
-            try {
-              const decoded = Buffer.from(payload.body.data, 'base64url').toString('utf8');
-              text += cleanMimeText(decoded) + '\n';
-            } catch {}
-          }
-          if (payload.parts && Array.isArray(payload.parts)) {
-            for (const p of payload.parts) {
-              text += extractMimeParts(p);
-            }
-          }
-          return text;
+        let finalConfidence = parsed.confidence;
+        if (isDkimFailed) {
+          finalConfidence = 0.2;
         }
 
-        const decodedBody = extractMimeParts(msgData.payload) || cleanMimeText(msgData.snippet || '');
+        const insertId = 'imp_' + Date.now() + '_' + crypto.randomBytes(4).toString('hex');
+        const cleanSnippet = redactPII(parsed.rawSnippet || '').slice(0, 300);
 
-        const parsed = await parseEmailReceipt({
-          from: fromHeader,
-          subject: subjectHeader,
-          text: decodedBody,
-          date: dateHeader,
-          messageId: msg.id
-        });
+        // Check for existing transaction to prevent duplicate auto-recording
+        const isDuplicate = userState.transactions.some(
+          t => t.amount === parsed.amount && t.date === parsed.occurredAt
+        );
 
-        if (parsed && parsed.amount > 0) {
-          // If DKIM verification explicitly failed, downgrade confidence to require manual inspection
-          let finalConfidence = parsed.confidence;
-          if (isDkimFailed) {
-            finalConfidence = 0.2;
-            console.warn(`[Security] DKIM/SPF check failed for message ${msg.id} from ${fromHeader}`);
-          }
+        const canAutoApprove = options.autoRecordHighConfidence && finalConfidence >= 0.85 && !isDuplicate;
 
-          const insertId = 'imp_' + Date.now() + '_' + crypto.randomBytes(4).toString('hex');
-          const now = new Date().toISOString();
-          const cleanSnippet = redactPII(parsed.rawSnippet || '').slice(0, 300);
+        try {
+          db.transaction(() => {
+            db.prepare(`
+              INSERT OR IGNORE INTO imported_message_ids (user_id, message_id, created_at)
+              VALUES (?, ?, ?)
+            `).run(userId, parsed.messageId, now);
 
-          try {
-            db.transaction(() => {
-              // Register in permanent imported_message_ids tombstone table
-              db.prepare(`
-                INSERT OR IGNORE INTO imported_message_ids (user_id, message_id, created_at)
-                VALUES (?, ?, ?)
-              `).run(req.user.id, parsed.messageId, now);
+            if (canAutoApprove) {
+              const newTx = {
+                id: 'tx_email_' + insertId + '_' + crypto.randomBytes(3).toString('hex'),
+                type: 'expense',
+                amount: parsed.amount,
+                category: ALLOWED_CATEGORIES.has(parsed.category) ? parsed.category : 'others',
+                source: ALLOWED_SOURCES.has(parsed.source) ? parsed.source : 'bank',
+                currency: parsed.currency,
+                date: parsed.occurredAt,
+                note: `${parsed.provider.toUpperCase()}: ${parsed.merchant}`,
+                isEmailImported: true,
+                importPendingId: insertId
+              };
 
-              // Stage into pending_imports
+              userState.transactions.unshift(newTx);
+              stateModified = true;
+              autoRecordedCount++;
+
               db.prepare(`
                 INSERT OR IGNORE INTO pending_imports (
                   id, user_id, message_id, dedup_hash, source, provider,
                   merchant, amount, currency, category, occurred_at, occurred_time,
                   raw_snippet, confidence, status, created_at
-                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'pending', ?)
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'approved', ?)
               `).run(
                 insertId,
-                req.user.id,
+                userId,
                 parsed.messageId,
                 parsed.dedupHash,
                 parsed.source,
@@ -600,25 +620,77 @@ function createEmailSyncRouter(db, authenticateToken, jwtSecret) {
                 finalConfidence,
                 now
               );
-            })();
+            } else {
+              db.prepare(`
+                INSERT OR IGNORE INTO pending_imports (
+                  id, user_id, message_id, dedup_hash, source, provider,
+                  merchant, amount, currency, category, occurred_at, occurred_time,
+                  raw_snippet, confidence, status, created_at
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'pending', ?)
+              `).run(
+                insertId,
+                userId,
+                parsed.messageId,
+                parsed.dedupHash,
+                parsed.source,
+                parsed.provider,
+                parsed.merchant,
+                parsed.amount,
+                parsed.currency,
+                parsed.category,
+                parsed.occurredAt,
+                parsed.occurredTime || null,
+                cleanSnippet,
+                finalConfidence,
+                now
+              );
+              pendingCount++;
+            }
+          })();
 
-            importedCount++;
-          } catch (e) {
-            console.warn('[Sync] Insert skipped or duplicate:', e.message);
-          }
+          importedCount++;
+        } catch (e) {
+          console.warn('[Sync] Insert skipped or duplicate:', e.message);
         }
       }
+    }
 
-      // Update last synced watermark with syncStartTime only after successful query
-      db.prepare('UPDATE google_connections SET last_synced_at = ? WHERE user_id = ?').run(syncStartTime, req.user.id);
+    if (stateModified) {
+      const now = new Date().toISOString();
+      const version = (record?.version || 0) + 1;
+      db.prepare(`
+        INSERT INTO user_data (user_id, data_json, version, synced_at)
+        VALUES (?, ?, ?, ?)
+        ON CONFLICT(user_id) DO UPDATE SET
+          data_json = excluded.data_json,
+          version = user_data.version + 1,
+          synced_at = excluded.synced_at
+      `).run(userId, JSON.stringify(userState), version, now);
+    }
 
-      res.json({
-        success: true,
-        importedCount,
-        duplicateCount,
-        lastSyncedAt: syncStartTime,
-        message: `Sync complete. ${importedCount} new transactions imported to pending review.`
-      });
+    db.prepare('UPDATE google_connections SET last_synced_at = ? WHERE user_id = ?').run(syncStartTime, userId);
+
+    return {
+      success: true,
+      importedCount,
+      autoRecordedCount,
+      pendingCount,
+      duplicateCount,
+      lastSyncedAt: syncStartTime,
+      message: autoRecordedCount > 0
+        ? `Sync complete. ${autoRecordedCount} verified transactions auto-recorded to Recent Transactions.`
+        : `Sync complete. ${importedCount} items imported.`
+    };
+  }
+
+  // 5. Trigger Gmail Sync (HTTP endpoint)
+  router.post('/sync', authenticateToken, async (req, res) => {
+    try {
+      const result = await syncUserGmail(req.user.id, { autoRecordHighConfidence: true });
+      if (!result.success) {
+        return res.status(result.requiresReauth ? 401 : 500).json(result);
+      }
+      res.json(result);
     } catch (err) {
       console.error('Sync error:', err);
       res.status(500).json({ success: false, message: 'Server error during sync: ' + err.message });
@@ -882,6 +954,12 @@ function createEmailSyncRouter(db, authenticateToken, jwtSecret) {
         let state = record && record.data_json ? JSON.parse(record.data_json) : { transactions: [] };
         if (!Array.isArray(state.transactions)) state.transactions = [];
 
+        const finalNote = updates?.note
+          ? String(updates.note).trim().slice(0, 200)
+          : (updates?.merchant
+              ? String(updates.merchant).trim().slice(0, 100)
+              : `${item.provider.toUpperCase()}: ${finalMerchant}`);
+
         newTransaction = {
           id: 'tx_email_' + item.id + '_' + crypto.randomBytes(3).toString('hex'),
           type: 'expense',
@@ -890,7 +968,7 @@ function createEmailSyncRouter(db, authenticateToken, jwtSecret) {
           source: finalSource,
           currency: finalCurrency,
           date: finalDate,
-          note: `${item.provider.toUpperCase()}: ${finalMerchant}`,
+          note: finalNote,
           isEmailImported: true,
           importPendingId: item.id
         };
@@ -999,6 +1077,7 @@ function createEmailSyncRouter(db, authenticateToken, jwtSecret) {
     }
   });
 
+  router.syncUserGmail = syncUserGmail;
   return router;
 }
 
