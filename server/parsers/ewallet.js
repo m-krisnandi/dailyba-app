@@ -148,6 +148,7 @@ const ewalletParser = {
       confidence: 0.95,
       messageId,
       dedupHash,
+      verificationStatus: "unverified_heuristic",
       rawSnippet: text.slice(0, 300)
     };
   }

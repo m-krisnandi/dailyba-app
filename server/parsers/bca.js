@@ -88,6 +88,7 @@ const bcaParser = {
       confidence: 0.98,
       messageId,
       dedupHash,
+      verificationStatus: "unverified_heuristic",
       rawSnippet: text.slice(0, 300)
     };
   }

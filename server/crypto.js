@@ -70,15 +70,25 @@ function timingSafeEqual(a, b) {
 }
 
 /**
- * Removes personal greeting lines (e.g. "Halo MUHAMAD KRISNANDI ,") before sending to external LLM
+ * Removes personal greeting lines (e.g. "Halo User ,", "Yth. Nasabah", "様") before sending to external LLM
  * @param {string} text
+ * @param {string} [userName] Optional user account name to redact
  * @returns {string}
  */
-function stripGreetings(text) {
+function stripGreetings(text, userName = '') {
   if (!text) return '';
-  return String(text)
-    .replace(/^(?:Halo|Assalamu'alaikum|Dear|Hi|Hello|Kepada\s+Yth)[^\n\r]+[\n\r]+/gim, '')
-    .replace(/(?:Halo|Assalamu'alaikum|Dear|Hi|Hello|Kepada\s+Yth)\s+[A-Z\s]{3,30},/gi, '');
+  let str = String(text)
+    .replace(/^(?:Halo|Assalamu'alaikum|Dear|Hi|Hello|Kepada\s+Yth|Yth\.?)[^\n\r]+[\n\r]+/gim, '')
+    .replace(/(?:Halo|Assalamu'alaikum|Dear|Hi|Hello|Kepada\s+Yth|Yth\.?)\s+[A-Za-z\s]{2,40}[,、]/gi, '')
+    .replace(/^[^\n\r]+(?:様|さま)[^\n\r]*[\n\r]+/gim, '')
+    .replace(/(?:Nama\s+Pengirim|Nama\s+Nasabah|Customer\s+Name)[:：\s]+[^\n\r]+/gi, '');
+
+  if (userName && userName.length >= 3) {
+    const escaped = userName.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    str = str.replace(new RegExp(escaped, 'gi'), '[CUSTOMER_NAME]');
+  }
+
+  return str;
 }
 
 /**

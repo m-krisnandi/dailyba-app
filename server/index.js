@@ -287,7 +287,7 @@ app.get('/api/sync', authenticateToken, (req, res) => {
   }
 });
 
-// 6. Cloud Sync - Upload (POST /api/sync)
+// 6. Cloud Sync - Upload with Conflict-Safe Merge (POST /api/sync)
 app.post('/api/sync', authenticateToken, (req, res) => {
   try {
     const { state } = req.body;
@@ -295,22 +295,54 @@ app.post('/api/sync', authenticateToken, (req, res) => {
       return res.status(400).json({ success: false, message: 'State payload is required' });
     }
 
-    const dataJson = JSON.stringify(state);
     const now = new Date().toISOString();
+    let finalState = { ...state };
+    let hasMerged = false;
+
+    // Smart Merge: check if existing server state contains approved email transactions
+    // that the incoming client payload is missing (e.g. client recorded offline expenses,
+    // while web/server approved incoming bank emails).
+    const existingRecord = db.prepare('SELECT data_json, version FROM user_data WHERE user_id = ?').get(req.user.id);
+    if (existingRecord && existingRecord.data_json) {
+      try {
+        const serverState = JSON.parse(existingRecord.data_json);
+        if (Array.isArray(serverState.transactions) && Array.isArray(finalState.transactions)) {
+          const clientTxIds = new Set(finalState.transactions.map(t => t.id));
+
+          // Identify email-imported transactions on the server missing from client
+          const missingEmailTxs = serverState.transactions.filter(t => 
+            (t.isEmailImported || (typeof t.id === 'string' && t.id.startsWith('tx_email_'))) && !clientTxIds.has(t.id)
+          );
+
+          if (missingEmailTxs.length > 0) {
+            finalState.transactions = [...missingEmailTxs, ...finalState.transactions];
+            hasMerged = true;
+          }
+        }
+      } catch (mergeErr) {
+        console.warn('[Sync] Non-fatal merge warning:', mergeErr.message);
+      }
+    }
+
+    const dataJson = JSON.stringify(finalState);
+    const newVersion = (existingRecord?.version || 0) + 1;
 
     db.prepare(`
-      INSERT INTO user_data (user_id, data_json, synced_at)
-      VALUES (?, ?, ?)
+      INSERT INTO user_data (user_id, data_json, version, synced_at)
+      VALUES (?, ?, ?, ?)
       ON CONFLICT(user_id) DO UPDATE SET
         data_json = excluded.data_json,
         version = user_data.version + 1,
         synced_at = excluded.synced_at
-    `).run(req.user.id, dataJson, now);
+    `).run(req.user.id, dataJson, newVersion, now);
 
     res.json({
       success: true,
-      message: 'Cloud backup synced successfully',
-      syncedAt: now
+      hasMerged,
+      mergedState: hasMerged ? finalState : undefined,
+      version: newVersion,
+      syncedAt: now,
+      message: 'Cloud backup synced successfully'
     });
   } catch (err) {
     console.error('Save sync error:', err);

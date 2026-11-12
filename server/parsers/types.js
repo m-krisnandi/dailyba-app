@@ -113,6 +113,7 @@ function parseCurrencyAmount(rawInput, currencyHint = 'IDR') {
 /**
  * Decodes and sanitizes MIME HTML/text payloads received from Gmail API.
  * Converts HTML table layouts into readable text, decodes HTML entities, and strips tags.
+ * Caps length at 250 KB to guard against ReDoS and CPU exhaustion.
  *
  * @param {string} rawHtmlOrText
  * @returns {string} Clean plain text
@@ -120,6 +121,11 @@ function parseCurrencyAmount(rawInput, currencyHint = 'IDR') {
 function cleanMimeText(rawHtmlOrText) {
   if (!rawHtmlOrText) return '';
   let str = String(rawHtmlOrText);
+
+  // Guard against unbounded payload sizes (max 250 KB)
+  if (str.length > 250000) {
+    str = str.slice(0, 250000);
+  }
 
   // 1. Remove style, script, and head blocks
   str = str.replace(/<style[^>]*>[\s\S]*?<\/style>/gi, '');
@@ -153,10 +159,14 @@ function cleanMimeText(rawHtmlOrText) {
     return entities[match.toLowerCase()] ?? ' ';
   });
 
-  // Decode arbitrary decimal entities (e.g. &#8217;)
+  // Decode arbitrary decimal entities (e.g. &#8217;) with bounds check
   str = str.replace(/&#(\d+);/g, (m, dec) => {
     try {
-      return String.fromCharCode(parseInt(dec, 10));
+      const code = parseInt(dec, 10);
+      if (code > 0 && code <= 0x10ffff) {
+        return String.fromCodePoint(code);
+      }
+      return ' ';
     } catch {
       return ' ';
     }

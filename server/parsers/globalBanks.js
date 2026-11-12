@@ -139,6 +139,7 @@ const globalBanksParser = {
       confidence: 0.94,
       messageId,
       dedupHash,
+      verificationStatus: "unverified_heuristic",
       rawSnippet: text.slice(0, 300)
     };
   }

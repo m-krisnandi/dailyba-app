@@ -169,6 +169,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             try {
               localStorage.setItem(LAST_SYNCED_KEY, now);
             } catch {}
+
+            // If the server merged offline transactions with server-approved email transactions, notify app
+            if ((res as any).hasMerged && (res as any).mergedState && typeof window !== 'undefined') {
+              window.dispatchEvent(new CustomEvent('dailyba_cloud_merged', { detail: (res as any).mergedState }));
+            }
+
             resolve(true);
           } else {
             setSyncStatus('error');

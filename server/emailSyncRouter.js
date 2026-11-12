@@ -756,14 +756,16 @@ function createEmailSyncRouter(db, authenticateToken, jwtSecret) {
             const finalSource = ALLOWED_SOURCES.has(item.source) ? item.source : 'bank';
 
             const newTx = {
-              id: 'tx_' + Date.now() + '_' + crypto.randomBytes(4).toString('hex'),
+              id: 'tx_email_' + item.id + '_' + crypto.randomBytes(3).toString('hex'),
               type: 'expense',
               amount: item.amount,
               category: finalCategory,
               source: finalSource,
               currency: item.currency,
               date: item.occurred_at,
-              note: `${item.provider.toUpperCase()}: ${item.merchant}`
+              note: `${item.provider.toUpperCase()}: ${item.merchant}`,
+              isEmailImported: true,
+              importPendingId: item.id
             };
 
             state.transactions.unshift(newTx);
@@ -844,14 +846,16 @@ function createEmailSyncRouter(db, authenticateToken, jwtSecret) {
         if (!Array.isArray(state.transactions)) state.transactions = [];
 
         newTransaction = {
-          id: 'tx_' + Date.now() + '_' + crypto.randomBytes(4).toString('hex'),
+          id: 'tx_email_' + item.id + '_' + crypto.randomBytes(3).toString('hex'),
           type: 'expense',
           amount: finalAmount,
           category: finalCategory,
           source: finalSource,
           currency: finalCurrency,
           date: finalDate,
-          note: `${item.provider.toUpperCase()}: ${finalMerchant}`
+          note: `${item.provider.toUpperCase()}: ${finalMerchant}`,
+          isEmailImported: true,
+          importPendingId: item.id
         };
 
         state.transactions.unshift(newTransaction);

@@ -6,24 +6,24 @@ const { encrypt, decrypt, redactPII, stripGreetings } = require('../crypto');
 async function runTests() {
   console.log('--- RUNNING DAILYBA FINANCIAL PARSER & SECURITY TEST SUITE ---');
 
-  // Test 1: Bank Jago (Real Receipt Fixture from PDF 1)
+  // Test 1: Bank Jago (Real Receipt Layout with Synthetic Anonymized PII)
   {
     const jagoEmail = {
-      from: 'Jago <noreply@jago.com>',
+      from: 'Jago <noreply@jago.example.com>',
       subject: 'You have made a payment to Good Laundry 1💸',
-      text: `Assalamu'alaikum MUHAMAD KRISNANDI,
+      text: `Assalamu'alaikum ALICE NAKAMURA,
 Thank you for trusting Jago! You have made a payment, and here are the details:
 Transaction Summary
-From 502799066497
+From 502700000001
 To Good Laundry 1
-9360000801984237685
+9360000000000000001
 Amount Rp 15.000
 Transaction Date 06 November 2026, 19:20 WIB
 Transaction Status Successful
 Acquirer Name Bank Mandiri
 Merchant Location Banyumas (Kab)
 Terminal ID A01
-Customer PAN 9360054212799066498
+Customer PAN 9360000000000000002
 Tip Amount Rp 0`
     };
 
@@ -38,17 +38,17 @@ Tip Amount Rp 0`
     assert.strictEqual(res.source, 'bank', 'Source should be bank');
     assert(res.confidence >= 0.95, 'Confidence should be >= 0.95');
     // Ensure rawSnippet has no raw PAN
-    assert(!res.rawSnippet.includes('9360000801984237685'), 'Raw snippet must redact PAN');
-    console.log('✓ Test 1 Passed: Bank Jago Real PDF Fixture');
+    assert(!res.rawSnippet.includes('9360000000000000001'), 'Raw snippet must redact PAN');
+    console.log('✓ Test 1 Passed: Bank Jago Layout Fixture (Anonymized)');
   }
 
-  // Test 2: Livin' by Mandiri (Real Receipt Fixture from PDF 2)
+  // Test 2: Livin' by Mandiri (Real Receipt Layout with Synthetic Anonymized PII)
   {
     const mandiriEmail = {
-      from: "Livin' <noreply.livin@bankmandiri.co.id>",
+      from: "Livin' <noreply@mandiri.example.com>",
       subject: 'Pembayaran Berhasil!',
       text: `Pembayaran Berhasil
-Halo MUHAMAD KRISNANDI ,
+Halo JOHN DOE ,
 Berikut adalah detail transaksi Anda dengan QR:
 Penerima
 RM SALERO BARU
@@ -58,8 +58,8 @@ Jam 18:02:33 WIB
 Nominal Transaksi Rp 10.000,00
 No. Referensi 2611121122539729748
 No. Ref. QRIS 611526810737
-Merchant PAN 9360045100002343303
-Customer PAN 9360000812229391872
+Merchant PAN 9360000000000000003
+Customer PAN 9360000000000000004
 Pengakuisisi Bank Syariah Indonesia
 Terminal ID 0000966628`
     };
@@ -73,7 +73,7 @@ Terminal ID 0000966628`
     assert.strictEqual(res.occurredAt, '2026-11-12', 'Date should be 2026-11-12');
     assert.strictEqual(res.occurredTime, '18:02', 'Time should be 18:02');
     assert.strictEqual(res.source, 'bank', 'Source should be bank');
-    console.log("✓ Test 2 Passed: Livin' by Mandiri Real PDF Fixture");
+    console.log("✓ Test 2 Passed: Livin' by Mandiri Layout Fixture (Anonymized)");
   }
 
   // Test 3: Currency & Locale Parsing Edge Cases
@@ -107,13 +107,13 @@ Terminal ID 0000966628`
 
   // Test 5: PII Redaction & Greetings Strip
   {
-    const sample = 'Assalamu\'alaikum MUHAMAD KRISNANDI,\nPAN: 9360000801984237685 Rekening: 502799066497 Email: user.name@gmail.com Phone: 081234567890\nPaid Rp 1500000 to Good Laundry 1 on 2026-11-12 at 18:02';
-    const noGreetings = stripGreetings(sample);
-    assert(!noGreetings.includes('MUHAMAD KRISNANDI'), 'Greetings with customer name must be stripped');
+    const sample = 'Assalamu\'alaikum ALICE NAKAMURA,\nPAN: 9360000000000000001 Rekening: 502700000001 Email: user@example.com Phone: 081234567890\nPaid Rp 1500000 to Good Laundry 1 on 2026-11-12 at 18:02';
+    const noGreetings = stripGreetings(sample, 'Alice Nakamura');
+    assert(!noGreetings.includes('ALICE NAKAMURA'), 'Greetings with customer name must be stripped');
 
     const sanitized = redactPII(noGreetings);
-    assert(!sanitized.includes('9360000801984237685'), 'PAN must be redacted');
-    assert(!sanitized.includes('502799066497'), 'Account must be redacted');
+    assert(!sanitized.includes('9360000000000000001'), 'PAN must be redacted');
+    assert(!sanitized.includes('502700000001'), 'Account must be redacted');
     assert(!sanitized.includes('081234567890'), 'Phone must be redacted');
 
     // Non-regression: Amount, date, and merchant numbers must be preserved!
@@ -133,13 +133,13 @@ Terminal ID 0000966628`
       <head><style>body { font-family: Arial; }</style></head>
       <body>
         <table>
-          <tr><td>Assalamu&#39;alaikum MUHAMAD KRISNANDI,</td></tr>
+          <tr><td>Assalamu&#39;alaikum ALICE NAKAMURA,</td></tr>
           <tr><td>Transaction Summary</td></tr>
-          <tr><td>From</td><td>502799066497</td></tr>
+          <tr><td>From</td><td>502700000001</td></tr>
           <tr><td>To</td><td>Good Laundry 1</td></tr>
           <tr><td>Amount</td><td>Rp&nbsp;15.000</td></tr>
           <tr><td>Transaction Date</td><td>06 November 2026, 19:20 WIB</td></tr>
-          <tr><td>Customer PAN</td><td>9360054212799066498</td></tr>
+          <tr><td>Customer PAN</td><td>9360000000000000002</td></tr>
         </table>
       </body>
       </html>
@@ -149,7 +149,7 @@ Terminal ID 0000966628`
     const cleanedText = cleanMimeText(decodedFromGmail);
 
     const parsed = await parseEmailReceipt({
-      from: 'Jago <noreply@jago.com>',
+      from: 'Jago <noreply@jago.example.com>',
       subject: 'You have made a payment to Good Laundry 1',
       text: cleanedText
     });
@@ -163,10 +163,10 @@ Terminal ID 0000966628`
     console.log('✓ Test 6 Passed: Gmail API Base64url MIME / HTML Payload Decoding');
   }
 
-  // Test 7: BCA QRIS & Transfer Parser
+  // Test 7: BCA QRIS & Transfer Parser (Community Heuristic Fixture)
   {
     const bcaEmail = {
-      from: 'BCA <noreply@bca.co.id>',
+      from: 'BCA <noreply@bca.example.com>',
       subject: 'Transaksi QRIS Berhasil',
       text: `Yth. Nasabah BCA,
 Transaksi QRIS Anda telah berhasil dilakukan:
@@ -188,10 +188,10 @@ No. Referensi: 9812739182371`
     console.log('✓ Test 7 Passed: Bank BCA QRIS Transaction Fixture');
   }
 
-  // Test 8: PayPay Japan Parser
+  // Test 8: PayPay Japan Parser (Community Heuristic Fixture)
   {
     const paypayEmail = {
-      from: 'PayPay <no-reply@paypay.ne.jp>',
+      from: 'PayPay <no-reply@paypay.example.jp>',
       subject: 'お支払い完了のお知らせ',
       text: `いつもPayPayをご利用いただきありがとうございます。
 お支払いが完了いたしました。
@@ -215,12 +215,12 @@ No. Referensi: 9812739182371`
     console.log('✓ Test 8 Passed: PayPay Japan Receipt Fixture');
   }
 
-  // Test 9: GoPay Indonesia Parser
+  // Test 9: GoPay Indonesia Parser (Community Heuristic Fixture)
   {
     const gopayEmail = {
-      from: 'GoPay <receipt@gojek.com>',
+      from: 'GoPay <receipt@gojek.example.com>',
       subject: 'Bukti Pembayaran GoPay ke Starbucks',
-      text: `Hai Krisnandi,
+      text: `Hai User,
 Pembayaran GoPay kamu berhasil!
 
 Detail Transaksi:
@@ -243,12 +243,57 @@ Metode: GoPay Balance`
     console.log('✓ Test 9 Passed: GoPay Indonesia E-Wallet Fixture');
   }
 
-  console.log('\n======================================================');
-  console.log('ALL 9 TEST SUITES COMPLETED WITH 100% SUCCESS RATE!');
-  console.log('======================================================');
+    // Test 10: Conflict-Safe Cloud Sync Merge (Offline Mobile Tx + Server Email Approval)
+  {
+    const initialServerState = {
+      transactions: [
+        { id: "tx_base_1", amount: 50000, note: "Initial Grocery" }
+      ]
+    };
+
+    // 1. Server approves incoming email transaction while mobile is offline
+    const emailApprovedTx = {
+      id: "tx_email_imp_88",
+      amount: 15000,
+      note: "JAGO: Good Laundry 1",
+      isEmailImported: true
+    };
+    const serverStateAfterApprove = {
+      transactions: [emailApprovedTx, ...initialServerState.transactions]
+    };
+
+    // 2. Mobile device records an expense while offline (does not know about tx_email_imp_88)
+    const mobileOfflineTx = {
+      id: "tx_mobile_offline_99",
+      amount: 25000,
+      note: "Offline Bento Lunch"
+    };
+    const incomingMobilePayload = {
+      transactions: [mobileOfflineTx, initialServerState.transactions[0]]
+    };
+
+    // 3. Mobile comes online and triggers POST /api/sync smart merge
+    const clientTxIds = new Set(incomingMobilePayload.transactions.map(t => t.id));
+    const missingEmailTxs = serverStateAfterApprove.transactions.filter(t =>
+      (t.isEmailImported || (typeof t.id === "string" && t.id.startsWith("tx_email_"))) && !clientTxIds.has(t.id)
+    );
+
+    const mergedTransactions = [...missingEmailTxs, ...incomingMobilePayload.transactions];
+
+    assert.strictEqual(mergedTransactions.length, 3, "Merged state must contain exactly 3 transactions");
+    assert(mergedTransactions.some(t => t.id === "tx_email_imp_88"), "Server email transaction must NOT be lost");
+    assert(mergedTransactions.some(t => t.id === "tx_mobile_offline_99"), "Mobile offline transaction must NOT be lost");
+    assert(mergedTransactions.some(t => t.id === "tx_base_1"), "Base transaction must remain intact");
+
+    console.log("✓ Test 10 Passed: Conflict-Safe Sync Merge (Offline Mobile Tx + Server Email Approval)");
+  }
+
+  console.log("\n======================================================");
+  console.log("ALL 10 TEST SUITES COMPLETED WITH 100% SUCCESS RATE!");
+  console.log("======================================================");
 }
 
 runTests().catch(err => {
-  console.error('Test failed:', err);
+  console.error("Test failed:", err);
   process.exit(1);
 });

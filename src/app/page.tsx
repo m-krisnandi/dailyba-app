@@ -186,6 +186,19 @@ export default function Home() {
     }
   }, [isAuthenticated, user?.id, isHydrated, clearAllData, importData, pullStateFromCloud]);
 
+  // Listen for conflict-free cloud merge events (when server merges offline transactions with email imports)
+  useEffect(() => {
+    const handleCloudMerged = (e: any) => {
+      if (e.detail) {
+        importData(e.detail);
+      }
+    };
+    if (typeof window !== "undefined") {
+      window.addEventListener("dailyba_cloud_merged", handleCloudMerged);
+      return () => window.removeEventListener("dailyba_cloud_merged", handleCloudMerged);
+    }
+  }, [importData]);
+
   // Reactive Auto-Save to Cloud when local state changes
   useEffect(() => {
     if (!isHydrated || !isAuthenticated || !hasInitialSyncedRef.current) return;

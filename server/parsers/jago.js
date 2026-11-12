@@ -89,6 +89,7 @@ const jagoParser = {
       confidence: 0.98,
       messageId,
       dedupHash,
+      verificationStatus: "verified_with_fixture",
       rawSnippet: redactPII(text.slice(0, 300))
     };
   }
