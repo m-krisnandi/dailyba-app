@@ -89,3 +89,73 @@ Saat submit build via Xcode / Transporter:
    * **Tracking**: Nyatakan *"We do not track users across other companies' apps or websites"*.
 4. **Account Deletion Compliance (Guideline 5.1.1(v))**:
    * Sudah terpenuhi 100% via tombol in-app "Delete My Account & Cloud Data" yang mengeksekusi CASCADE delete di server PostgreSQL/SQLite.
+
+---
+
+## 7. Aset Banner & Gambar Promosi Toko
+
+* **Feature Graphic Google Play Store (1024 x 500 px)**:
+  * Lokasi: `public/dailyba-feature-graphic-1024x500.png`
+  * Rasio: Tepat 1024 x 500 piksel, memenuhi spesifikasi wajib Google Play Store tanpa kompresi blur.
+  * Preview & Desain: Menampilkan dark-mode liquid glass, mockup budgeting Kakeibo, logo Dailyba, dan scan receipt badge.
+
+---
+
+## 8. Akun Uji Coba Reviewer (App Store / Play Store Reviewer Credentials)
+
+Gunakan akun resmi ini saat diminta di kolom **App Review Information / Test Account**:
+* **Email**: `reviewer@dailyba.app`
+* **Password**: `DailybaReview2026!`
+* **Peran**: Demo Account (Secara otomatis di-seed oleh backend server `server/index.js` saat startup).
+* **Catatan Tambahan untuk Reviewer**:
+  > *"All core budgeting features work 100% offline without login. The credentials above are provided for testing optional multi-device cloud synchronization."*
+
+---
+
+## 9. Siap Copy-Paste: Deskripsi Toko Aplikasi (ASO & Store Listing Copy)
+
+### A. Google Play Store
+* **App Title (Maks 30 karakter)**:
+  `Dailyba - Kakeibo Daily Budget`
+* **Short Description (Maks 80 karakter)**:
+  `Mindful daily budgeting, Kakeibo money tracker & smart AI receipt scanner.`
+* **Full Description (Maks 4000 karakter)**:
+```text
+Dailyba is your mindful daily companion for financial clarity, combining the time-tested Japanese Kakeibo budgeting method with modern AI-powered receipt scanning.
+
+🌿 MINDFUL JAPANESE KAKEIBO BUDGETING
+Instead of complicated financial jargon, Dailyba divides your financial life into intuitive, mindful pillars:
+• Needs (Living essentials & groceries)
+• Wants (Dining out, entertainment & shopping)
+• Culture (Books, self-improvement & courses)
+• Unexpected (Medical, repairs & urgent fixes)
+
+🎯 DAILY SPENDING TARGET (STAY MINDFUL EVERY DAY)
+Set a realistic daily allowance and watch your balance adjust in real-time. Know exactly how much you can comfortably spend today without breaking your monthly savings goal.
+
+📸 SMART AI RECEIPT SCANNER
+Snap a photo of your receipt or invoice. Dailyba instantly extracts the total amount, merchant, date, and suggested category with zero typing.
+
+🏦 SMART RESERVE & EMERGENCY VAULT
+Track your savings goals with dedicated emergency reserves and bank transfer logging. Watch your financial cushion grow step-by-step.
+
+🔒 100% PRIVACY-FIRST & OFFLINE READY
+• Zero forced sign-ups: Track your finances entirely offline on your device from day one.
+• Optional Cloud Sync: Backup and synchronize seamlessly across devices whenever you choose.
+• Instant Account & Data Deletion: Retain full ownership of your data with one-tap permanent deletion.
+• Full Data Portability: Export and import your data anytime via JSON and CSV.
+
+🌍 MULTI-CURRENCY SUPPORT
+Seamlessly manage your money in IDR (Rp), JPY (¥), USD ($), or MMK (K) with built-in live exchange rates.
+
+Take control of your daily spending with peace of mind. Download Dailyba today!
+```
+
+### B. Apple App Store
+* **Name**: `Dailyba - Daily Kakeibo Budget`
+* **Subtitle (Maks 30 karakter)**:
+  `Mindful Daily Expense Tracker`
+* **Promotional Text (Maks 170 karakter)**:
+  `Track expenses the mindful Japanese way. Set daily budgets, scan receipts with AI, and grow your savings vault effortlessly.`
+* **Keywords (Maks 100 karakter)**:
+  `budget,kakeibo,expense tracker,daily budget,money manager,receipt scanner,saving,finance,spending`

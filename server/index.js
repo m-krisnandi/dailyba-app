@@ -16,6 +16,28 @@ const db = new Database(DB_PATH);
 db.pragma('journal_mode = WAL');
 
 // Create tables
+
+// Ensure Store Reviewer demo account exists automatically on startup
+function initSeedAccounts() {
+  try {
+    const reviewerEmail = 'reviewer@dailyba.app';
+    const existing = db.prepare('SELECT id FROM users WHERE email = ?').get(reviewerEmail);
+    if (!existing) {
+      const salt = bcrypt.genSaltSync(10);
+      const passwordHash = bcrypt.hashSync('DailybaReview2026!', salt);
+      const userId = 'usr_reviewer_official';
+      const now = new Date().toISOString();
+      db.prepare(`
+        INSERT INTO users (id, email, password_hash, name, created_at, updated_at)
+        VALUES (?, ?, ?, ?, ?, ?)
+      `).run(userId, reviewerEmail, passwordHash, 'App Store Reviewer', now, now);
+      console.log('[Seed] Official App Reviewer account seeded: reviewer@dailyba.app');
+    }
+  } catch (e) {
+    console.error('[Seed] Could not seed reviewer account:', e.message);
+  }
+}
+
 db.exec(`
   CREATE TABLE IF NOT EXISTS users (
     id TEXT PRIMARY KEY,
@@ -36,6 +58,8 @@ db.exec(`
     FOREIGN KEY(user_id) REFERENCES users(id) ON DELETE CASCADE
   );
 `);
+
+initSeedAccounts();
 
 const app = express();
 app.use(cors({ origin: '*' }));
