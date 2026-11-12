@@ -166,8 +166,7 @@ function createEmailSyncRouter(db, authenticateToken, jwtSecret) {
         WHERE user_id = ? AND status = 'pending'
       `).get(req.user.id);
 
-      res.json({
-        success: true,
+      const statusData = {
         googleConfigured: config.isConfigured,
         isConnected: Boolean(conn && !conn.requires_reauth),
         requiresReauth: Boolean(conn?.requires_reauth),
@@ -175,6 +174,12 @@ function createEmailSyncRouter(db, authenticateToken, jwtSecret) {
         connectedAt: conn?.connected_at || null,
         lastSyncedAt: conn?.last_synced_at || null,
         pendingCount: pendingCount?.count || 0
+      };
+
+      res.json({
+        success: true,
+        data: statusData,
+        ...statusData
       });
     } catch (err) {
       console.error('Status error:', err);

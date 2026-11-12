@@ -97,8 +97,11 @@ export function BankEmailSyncModal({
         dailybaApi.getPendingImports(),
       ]);
 
-      if (statusRes.success && statusRes.data) {
-        setStatus(statusRes.data);
+      if (statusRes.success) {
+        const data = statusRes.data || (statusRes as any);
+        if (data && typeof data.googleConfigured !== "undefined") {
+          setStatus(data);
+        }
       }
       if (pendingRes.success && pendingRes.items) {
         setPendingItems(pendingRes.items);
@@ -126,6 +129,17 @@ export function BankEmailSyncModal({
             ? 'Googleアカウントの連携が完了しました。'
             : 'Google Account successfully connected!',
         });
+        if (e.data?.email) {
+          setStatus((prev) => ({
+            googleConfigured: true,
+            isConnected: true,
+            requiresReauth: false,
+            connectedEmail: e.data.email,
+            connectedAt: new Date().toISOString(),
+            lastSyncedAt: prev?.lastSyncedAt || null,
+            pendingCount: prev?.pendingCount || 0,
+          }));
+        }
         refreshData();
       }
     };
