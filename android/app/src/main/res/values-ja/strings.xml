@@ -1,0 +1,13 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">Dailyba</string>
+    <string name="title_activity_main">Dailyba</string>
+    <string name="package_name">com.dailyba.app</string>
+    <string name="custom_url_scheme">com.dailyba.app</string>
+    <string name="widget_description">1日の残り予算枠と素早い支出記録・レシートスキャンへのショートカットを表示します。</string>
+    <string name="widget_title">Dailyba • 日次予算</string>
+    <string name="widget_today_remaining">本日の残り</string>
+    <string name="widget_within_target">目標内</string>
+    <string name="widget_btn_record">+ 記録</string>
+    <string name="widget_btn_scan">スキャン</string>
+</resources>

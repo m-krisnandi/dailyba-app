@@ -4,5 +4,10 @@
     <string name="title_activity_main">Dailyba</string>
     <string name="package_name">com.dailyba.app</string>
     <string name="custom_url_scheme">com.dailyba.app</string>
-    <string name="widget_description">Shows your remaining daily budget and quick access to record transactions.</string>
+    <string name="widget_description">Shows your remaining daily budget and quick access to record transactions and scan receipts.</string>
+    <string name="widget_title">Dailyba • Daily Budget</string>
+    <string name="widget_today_remaining">Today Remaining</string>
+    <string name="widget_within_target">Within Target</string>
+    <string name="widget_btn_record">+ Record</string>
+    <string name="widget_btn_scan">Scan Receipt</string>
 </resources>
