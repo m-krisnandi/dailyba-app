@@ -19,7 +19,7 @@ export async function requestNotificationPermission(): Promise<boolean> {
     }
   }
 
-  // Web Browser fallback
+  // Web Browser fallback (Standard HTML5 Notification API)
   if (typeof window !== 'undefined' && 'Notification' in window) {
     try {
       const perm = await Notification.requestPermission();
@@ -52,6 +52,7 @@ export async function scheduleDailyReminder(
       ? '今日の支出や使ったお金は記録しましたか？1分でサッと記録して、日々のバランスを保ちましょう。'
       : 'Did you record your spending today? Take a quick minute to log and stay within your target.';
 
+  // 1. Native Mobile (Android & iOS)
   if (Capacitor.isNativePlatform()) {
     try {
       const granted = await requestNotificationPermission();
@@ -85,6 +86,59 @@ export async function scheduleDailyReminder(
     }
   }
 
+  // 2. Web Browser Fallback
+  if (typeof window !== 'undefined' && 'Notification' in window) {
+    try {
+      const granted = await requestNotificationPermission();
+      if (!granted) return false;
+
+      const now = new Date();
+      const target = new Date();
+      target.setHours(hour, minute, 0, 0);
+      if (target.getTime() <= now.getTime()) {
+        target.setDate(target.getDate() + 1);
+      }
+      const delayMs = target.getTime() - now.getTime();
+
+      // Store in window timer for the session
+      const win = window as unknown as { __dailyba_reminder_timer?: ReturnType<typeof setTimeout> };
+      if (win.__dailyba_reminder_timer) {
+        clearTimeout(win.__dailyba_reminder_timer);
+      }
+
+      win.__dailyba_reminder_timer = setTimeout(() => {
+        try {
+          new Notification(title, {
+            body,
+            icon: '/icon.png',
+          });
+        } catch (e) {
+          console.warn('Browser notification trigger failed:', e);
+        }
+      }, delayMs);
+
+      // Instant confirmation toast notification so web users immediately verify it works
+      try {
+        const confirmTitle = language === 'ja' ? 'Dailyba • 通知リマインダーが有効化されました' : 'Dailyba • Daily Reminder Activated';
+        const confirmBody =
+          language === 'ja'
+            ? `毎日 ${timeStr} にリマインダー通知をお届けします。`
+            : `Daily reminder scheduled for ${timeStr} each evening.`;
+        new Notification(confirmTitle, {
+          body: confirmBody,
+          icon: '/icon.png',
+        });
+      } catch {
+        // Ignored if permission was silent
+      }
+
+      return true;
+    } catch (e) {
+      console.warn('Web notification schedule failed:', e);
+      return false;
+    }
+  }
+
   return true;
 }
 
@@ -94,6 +148,11 @@ export async function cancelDailyReminder(): Promise<void> {
       await LocalNotifications.cancel({ notifications: [{ id: NOTIFICATION_ID }] });
     } catch (e) {
       console.warn('Failed to cancel native notification:', e);
+    }
+  } else if (typeof window !== 'undefined') {
+    const win = window as unknown as { __dailyba_reminder_timer?: ReturnType<typeof setTimeout> };
+    if (win.__dailyba_reminder_timer) {
+      clearTimeout(win.__dailyba_reminder_timer);
     }
   }
 }

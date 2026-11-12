@@ -16,6 +16,7 @@ import {
   ArrowRightLeft,
   ChevronDown,
   Check,
+  Bell,
   LogIn,
   RefreshCw,
   LogOut,
@@ -376,14 +377,14 @@ export function Header({
             )}
           </div>
 
-          {/* Backup / Export (Desktop & Tablet) */}
+          {/* Settings & Reminder Button (Visible on both mobile & desktop) */}
           <button
             type="button"
             onClick={onOpenBackup}
-            className="hidden sm:flex p-2 rounded-xl border border-[var(--border-subtle)] bg-[var(--bg-subtle)] hover:bg-[var(--bg-subtle-hover)] text-[var(--text-muted)] hover:text-[var(--text-main)] transition-all cursor-pointer shrink-0"
-            title={t.actions.export}
+            className="flex p-1.5 sm:p-2 rounded-xl border border-[var(--border-subtle)] bg-[var(--bg-subtle)] hover:bg-[var(--bg-subtle-hover)] text-[var(--text-muted)] hover:text-[var(--text-main)] transition-all cursor-pointer shrink-0"
+            title={language === 'ja' ? '設定 & 通知リマインダー' : 'Settings & Daily Reminder'}
           >
-            <Database className="w-4 h-4 stroke-[2]" />
+            <Bell className="w-4 h-4 stroke-[2]" />
           </button>
 
           {/* Theme Toggle (Light <-> Dark) */}
