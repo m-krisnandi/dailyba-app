@@ -1,5 +1,6 @@
 const { normalizeDate, createDedupHash } = require('./types');
 const { categorizeTransaction } = require('./categorizer');
+const { redactPII } = require('../crypto');
 
 /**
  * Universal AI Fallback & Heuristic Parser for arbitrary bank or e-wallet receipts.
@@ -18,14 +19,21 @@ const aiFallbackParser = {
 
     // If Gemini API Key is configured, attempt intelligent zero-shot extraction
     const apiKey = process.env.GEMINI_API_KEY || process.env.GOOGLE_API_KEY;
+    // Active Gemini model (configurable via env, defaults to current active production model)
+    const geminiModel = process.env.GEMINI_MODEL || 'gemini-2.5-flash';
+
     if (apiKey && (text.length > 20 || subject.length > 5)) {
       try {
+        // Redact PII (account numbers, card PANs, phone numbers) before sending to external API
+        const sanitizedText = redactPII(text.slice(0, 1500));
+        const sanitizedSubject = redactPII(subject);
+
         const prompt = `You are a financial transaction extractor for the Dailyba app.
 Extract the transaction details from this email receipt:
 FROM: ${from}
-SUBJECT: ${subject}
+SUBJECT: ${sanitizedSubject}
 BODY:
-${text.slice(0, 1500)}
+${sanitizedText}
 
 Respond ONLY with valid JSON with these exact keys:
 {
@@ -38,10 +46,15 @@ Respond ONLY with valid JSON with these exact keys:
   "confidence": number (between 0.5 and 0.99)
 }`;
 
+        // 5-second timeout to prevent hanging on network delays
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 5000);
+
         const geminiRes = await fetch(
-          `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${apiKey}`,
+          `https://generativelanguage.googleapis.com/v1beta/models/${geminiModel}:generateContent?key=${apiKey}`,
           {
             method: 'POST',
+            signal: controller.signal,
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
               contents: [{ parts: [{ text: prompt }] }],
@@ -52,6 +65,8 @@ Respond ONLY with valid JSON with these exact keys:
             })
           }
         );
+
+        clearTimeout(timeoutId);
 
         if (geminiRes.ok) {
           const geminiData = await geminiRes.json();
@@ -72,13 +87,15 @@ Respond ONLY with valid JSON with these exact keys:
                 confidence: parsed.confidence || 0.85,
                 messageId,
                 dedupHash: createDedupHash(parsed.merchant, parsed.amount, occurredAt),
-                rawSnippet: text.slice(0, 300)
+                rawSnippet: redactPII(text.slice(0, 300))
               };
             }
           }
+        } else {
+          console.warn(`[AIFallback] Gemini ${geminiModel} returned status ${geminiRes.status}, falling back to heuristic regex.`);
         }
       } catch (err) {
-        console.warn('[AIFallback] Gemini extraction failed, using heuristic regex:', err.message);
+        console.warn('[AIFallback] Gemini extraction bypassed or timed out, using heuristic regex:', err.message);
       }
     }
 
@@ -153,7 +170,7 @@ function heuristicParse(email) {
     confidence: 0.7,
     messageId,
     dedupHash,
-    rawSnippet: text.slice(0, 300)
+    rawSnippet: redactPII(text.slice(0, 300))
   };
 }
 

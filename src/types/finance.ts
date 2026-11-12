@@ -122,6 +122,7 @@ export interface PendingImportItem {
 export interface EmailSyncStatus {
   googleConfigured: boolean;
   isConnected: boolean;
+  requiresReauth?: boolean;
   connectedEmail: string | null;
   connectedAt: string | null;
   lastSyncedAt: string | null;

@@ -34,6 +34,83 @@ function createDedupHash(merchant, amount, occurredAt) {
 }
 
 /**
+ * Safely parses currency string amounts handling Indonesian, Japanese, and US/European number formats.
+ *
+ * Examples:
+ * - "15.000" (IDR) -> 15000
+ * - "10.000,00" (IDR) -> 10000
+ * - "1.500.000,50" (IDR) -> 1500001
+ * - "1,500" (JPY) -> 1500
+ * - "12.50" (USD) -> 12.5
+ * - "1,500.50" (USD) -> 1500.5
+ *
+ * @param {string|number} rawInput
+ * @param {'IDR'|'JPY'|'USD'|'MMK'} [currencyHint='IDR']
+ * @returns {number}
+ */
+function parseCurrencyAmount(rawInput, currencyHint = 'IDR') {
+  if (typeof rawInput === 'number') return rawInput;
+  if (!rawInput) return 0;
+
+  let clean = String(rawInput).trim().replace(/[^0-9.,]/g, '');
+  if (!clean) return 0;
+
+  // Case 1: contains both '.' and ','
+  if (clean.includes('.') && clean.includes(',')) {
+    const lastDot = clean.lastIndexOf('.');
+    const lastComma = clean.lastIndexOf(',');
+    if (lastComma > lastDot) {
+      // European/Indonesian style: 1.500.000,50 -> dot is thousand, comma is decimal
+      clean = clean.replace(/\./g, '').replace(',', '.');
+    } else {
+      // US/UK style: 1,500,000.50 -> comma is thousand, dot is decimal
+      clean = clean.replace(/,/g, '');
+    }
+    const val = parseFloat(clean);
+    return isNaN(val) ? 0 : (currencyHint === 'JPY' || currencyHint === 'IDR' ? Math.round(val) : val);
+  }
+
+  // Case 2: contains only '.'
+  if (clean.includes('.')) {
+    // If currency is IDR or JPY and matches thousands format (e.g. 15.000, 1.500.000)
+    if (currencyHint === 'IDR' || currencyHint === 'JPY') {
+      const parts = clean.split('.');
+      const isThousandPattern = parts.slice(1).every(p => p.length === 3);
+      if (isThousandPattern) {
+        clean = clean.replace(/\./g, '');
+        return Math.round(parseFloat(clean)) || 0;
+      }
+    }
+    // Otherwise standard decimal point (e.g. 12.50)
+    const val = parseFloat(clean);
+    return isNaN(val) ? 0 : val;
+  }
+
+  // Case 3: contains only ','
+  if (clean.includes(',')) {
+    // If followed by 2 digits and currency is IDR (e.g. 10000,00) -> decimal
+    if (currencyHint === 'IDR' && /,\d{2}$/.test(clean)) {
+      clean = clean.replace(',', '.');
+      return Math.round(parseFloat(clean)) || 0;
+    }
+    // If followed by 3 digits -> thousands separator (e.g. 1,500 or 15,000)
+    const parts = clean.split(',');
+    const isThousandPattern = parts.slice(1).every(p => p.length === 3);
+    if (isThousandPattern) {
+      clean = clean.replace(/,/g, '');
+      return Math.round(parseFloat(clean)) || 0;
+    }
+    clean = clean.replace(',', '.');
+    const val = parseFloat(clean);
+    return isNaN(val) ? 0 : val;
+  }
+
+  // Plain integer
+  const val = parseFloat(clean);
+  return isNaN(val) ? 0 : val;
+}
+
+/**
  * Converts various date formats (e.g. "06 November 2026", "12 Nov 2026", "2026/11/12", "2026年11月12日")
  * into ISO "YYYY-MM-DD".
  *
@@ -98,5 +175,6 @@ function normalizeDate(rawDate) {
 
 module.exports = {
   createDedupHash,
+  parseCurrencyAmount,
   normalizeDate
 };

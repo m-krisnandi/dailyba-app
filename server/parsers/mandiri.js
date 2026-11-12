@@ -1,5 +1,6 @@
-const { normalizeDate, createDedupHash } = require('./types');
+const { normalizeDate, createDedupHash, parseCurrencyAmount } = require('./types');
 const { categorizeTransaction } = require('./categorizer');
+const { redactPII } = require('../crypto');
 
 /**
  * Livin' by Mandiri Email Parser
@@ -49,25 +50,14 @@ const mandiriParser = {
     }
 
     // 2. Extract Amount
-    // e.g. "Nominal Transaksi Rp 10.000,00" or "Nominal Rp 50.000"
     let amount = 0;
     const amountMatch = text.match(/Nominal(?:\s+Transaksi)?\s*(?:Rp\.?|IDR)?\s*([0-9.,]+)/i) ||
                         text.match(/Total\s*(?:Rp\.?|IDR)?\s*([0-9.,]+)/i) ||
-                        text.match(/(?:Rp\.?|IDR)\s*([0-9]{1,3}(?:\.[0-9]{3})+(?:,[0-9]{2})?)/i);
+                        text.match(/(?:Rp\.?|IDR)\s*([0-9]{1,3}(?:\.[0-9]{3})+(?:,[0-9]{2})?)/i) ||
+                        text.match(/(?:Rp\.?|IDR)\s*([0-9.,]+)/i);
 
     if (amountMatch) {
-      let raw = amountMatch[1].trim();
-      // If it contains comma as decimal (Rp 10.000,00)
-      if (raw.includes(',') && raw.includes('.')) {
-        raw = raw.replace(/\./g, '').replace(',', '.');
-      } else if (raw.includes('.')) {
-        // e.g. 10.000
-        raw = raw.replace(/\./g, '');
-      } else if (raw.includes(',')) {
-        // e.g. 10000,00
-        raw = raw.replace(',', '.');
-      }
-      amount = Math.round(parseFloat(raw)) || 0;
+      amount = parseCurrencyAmount(amountMatch[1], 'IDR');
     }
 
     // 3. Extract Date & Time
@@ -106,7 +96,7 @@ const mandiriParser = {
       confidence: 0.98,
       messageId,
       dedupHash,
-      rawSnippet: text.slice(0, 300)
+      rawSnippet: redactPII(text.slice(0, 300))
     };
   }
 };

@@ -1,5 +1,6 @@
-const { normalizeDate, createDedupHash } = require('./types');
+const { normalizeDate, createDedupHash, parseCurrencyAmount } = require('./types');
 const { categorizeTransaction } = require('./categorizer');
+const { redactPII } = require('../crypto');
 
 /**
  * Bank Jago / Jago Syariah Email Parser
@@ -47,13 +48,12 @@ const jagoParser = {
     }
 
     // 2. Extract Amount
-    // e.g. "Amount Rp 15.000" or "Rp 15.000,00"
     let amount = 0;
     const amountMatch = text.match(/Amount\s*(?:Rp\.?|IDR)?\s*([0-9.,]+)/i) ||
-                        text.match(/(?:Rp\.?|IDR)\s*([0-9]{1,3}(?:\.[0-9]{3})+)/i);
+                        text.match(/(?:Rp\.?|IDR)\s*([0-9]{1,3}(?:\.[0-9]{3})+(?:,[0-9]{2})?)/i) ||
+                        text.match(/(?:Rp\.?|IDR)\s*([0-9.,]+)/i);
     if (amountMatch) {
-      const rawNum = amountMatch[1].replace(/\./g, '').replace(',', '.');
-      amount = Math.round(parseFloat(rawNum)) || 0;
+      amount = parseCurrencyAmount(amountMatch[1], 'IDR');
     }
 
     // 3. Extract Date & Time
@@ -89,7 +89,7 @@ const jagoParser = {
       confidence: 0.98,
       messageId,
       dedupHash,
-      rawSnippet: text.slice(0, 300)
+      rawSnippet: redactPII(text.slice(0, 300))
     };
   }
 };

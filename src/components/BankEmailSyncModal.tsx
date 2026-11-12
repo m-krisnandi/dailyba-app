@@ -130,7 +130,25 @@ export function BankEmailSyncModal({
       }
     };
     window.addEventListener('message', handleMessage);
-    return () => window.removeEventListener('message', handleMessage);
+
+    // Capacitor App resume listener for native system browser OAuth
+    let removeSub: (() => void) | null = null;
+    if (typeof window !== 'undefined' && (window as any).Capacitor?.isNativePlatform?.()) {
+      import('@capacitor/app').then(({ App }) => {
+        App.addListener('appStateChange', (state) => {
+          if (state.isActive) {
+            refreshData();
+          }
+        }).then(sub => {
+          removeSub = () => sub.remove();
+        });
+      }).catch(() => {});
+    }
+
+    return () => {
+      window.removeEventListener('message', handleMessage);
+      if (removeSub) removeSub();
+    };
   }, [language]);
 
   if (!isOpen) return null;
@@ -150,7 +168,12 @@ export function BankEmailSyncModal({
       setIsLoading(true);
       const res = await dailybaApi.getGoogleAuthUrl();
       if (res.success && res.authUrl) {
-        window.open(res.authUrl, 'DailybaGoogleAuth', 'width=520,height=640,menubar=no,toolbar=no');
+        if (typeof window !== 'undefined' && (window as any).Capacitor?.isNativePlatform?.()) {
+          const { Browser } = await import('@capacitor/browser');
+          await Browser.open({ url: res.authUrl, windowName: '_system' });
+        } else {
+          window.open(res.authUrl, 'DailybaGoogleAuth', 'width=520,height=640,menubar=no,toolbar=no');
+        }
       } else {
         setFeedback({
           type: 'error',
@@ -380,12 +403,14 @@ export function BankEmailSyncModal({
               <div className="flex items-center space-x-3">
                 <div
                   className={`w-3 h-3 rounded-full shrink-0 ${
-                    status?.isConnected ? 'bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.5)]' : 'bg-slate-500'
+                    status?.requiresReauth ? 'bg-amber-400 animate-pulse' : status?.isConnected ? 'bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.5)]' : 'bg-slate-500'
                   }`}
                 />
                 <div>
                   <p className="text-xs font-semibold text-[var(--text-main)]">
-                    {status?.isConnected
+                    {status?.requiresReauth
+                      ? (language === 'ja' ? 'Google認証が期限切れです。再連携してください。' : 'Google authorization expired. Please reconnect.')
+                      : status?.isConnected
                       ? `${t.emailSync.googleConnectedAs} ${status.connectedEmail || ''}`
                       : t.emailSync.googleNotConnected}
                   </p>
@@ -398,7 +423,7 @@ export function BankEmailSyncModal({
               </div>
 
               <div className="flex items-center space-x-2 shrink-0">
-                {status?.isConnected ? (
+                {status?.isConnected && !status?.requiresReauth ? (
                   <>
                     <button
                       type="button"
