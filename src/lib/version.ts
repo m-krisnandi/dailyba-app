@@ -1,7 +1,7 @@
 import { Language } from '@/types/finance';
 
-export const APP_VERSION = '1.7.0';
-export const APP_BUILD = '20261113_1';
+export const APP_VERSION = '1.7.1';
+export const APP_BUILD = '20261113_2';
 
 export interface LocalizedChangelogItem {
   version: string;
@@ -11,6 +11,26 @@ export interface LocalizedChangelogItem {
 }
 
 export const APP_CHANGELOG: LocalizedChangelogItem[] = [
+  {
+    version: '1.7.1',
+    date: '2026-11-13',
+    title: {
+      en: 'Real-Time Sync Badge Reliability & Clean Workspace Polish',
+      ja: 'リアルタイム通知バッジ同期の安定化とワークスペース改善',
+    },
+    highlights: {
+      en: [
+        'Persistent Email Sync Badge: Fixed an issue where the unread pending count badge on the topbar email icon could momentarily disappear upon background auto-syncing.',
+        'Real-Time In-Modal Sync: Approving or dismissing pending receipts now decrements the badge count immediately without requiring a page reload.',
+        'De-Cluttered Main Board: Removed temporary banner flashes from the main dashboard to keep financial overview clean and distraction-free.',
+      ],
+      ja: [
+        '通知バッジ表示の安定化: バックグラウンド自動同期時にトップバーの未確認バッジが一時的に非表示になる問題を解消しました。',
+        'モーダル内リアルタイム同期: 明細の承認・却下操作が即座にトップバーのバッジ件数へ反映されるようになりました。',
+        'メインボードの表示最適化: メイン画面の一時バナー表示を整理し、よりすっきりとしたダッシュボード構成に改善しました。',
+      ],
+    },
+  },
   {
     version: '1.7.0',
     date: '2026-11-13',

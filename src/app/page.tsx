@@ -79,7 +79,7 @@ export default function Home() {
   const [pendingEmailSyncCount, setPendingEmailSyncCount] = useState(0);
 
   const refreshEmailSyncCount = useCallback(() => {
-    if (typeof window !== 'undefined') {
+    if (typeof window !== 'undefined' && isAuthenticated) {
       dailybaApi.getEmailSyncStatus().then(async res => {
         const data = res.data || (res as any);
         if (data && typeof data.pendingCount !== 'undefined') {
@@ -102,7 +102,7 @@ export default function Home() {
         }
       }).catch(() => {});
     }
-  }, [pullStateFromCloud, importData]);
+  }, [isAuthenticated, pullStateFromCloud, importData]);
 
   useEffect(() => {
     // Check initial URL params (e.g. ?action=scan)
@@ -134,6 +134,10 @@ export default function Home() {
   }, [refreshEmailSyncCount]);
 
   useEffect(() => {
+    if (!isAuthenticated) {
+      setPendingEmailSyncCount(0);
+      return;
+    }
     refreshEmailSyncCount();
   }, [isAuthenticated, refreshEmailSyncCount]);
 
