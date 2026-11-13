@@ -203,7 +203,6 @@ export function QuickRecordBoard({
   const [selectedExpenseCat, setSelectedExpenseCat] = useState<ExpenseCategory>('food_drinks');
   const [selectedIncomeCat, setSelectedIncomeCat] = useState<IncomeCategory>('salary');
   const [source, setSource] = useState<FundingSource>('cash');
-  const [destSource, setDestSource] = useState<FundingSource>('ewallet');
   const [date, setDate] = useState<string>('');
   const [note, setNote] = useState('');
   const [smartText, setSmartText] = useState('');
@@ -294,8 +293,6 @@ export function QuickRecordBoard({
         ? selectedExpenseCat
         : type === 'income'
         ? selectedIncomeCat
-        : type === 'transfer'
-        ? 'transfer'
         : 'savings';
 
     onAddTransaction({
@@ -303,7 +300,6 @@ export function QuickRecordBoard({
       amount: parsedAmount,
       category,
       source,
-      destinationSource: type === 'transfer' ? destSource : undefined,
       currency,
       date: date || getTodayLocalDate(),
       note: note.trim() || undefined,
@@ -775,17 +771,17 @@ export function QuickRecordBoard({
       {/* Main Fast Input Board */}
       <div className="rounded-3xl border border-[var(--border-subtle)] bg-[var(--bg-surface)] p-4 sm:p-7 shadow-[var(--card-shadow)] space-y-5 sm:space-y-6 relative">
         {/* Type Selector (Expense vs Income vs Savings) */}
-        <div className="grid grid-cols-2 sm:grid-cols-4 gap-1.5 sm:gap-2 p-1.5 bg-[var(--bg-subtle)] rounded-2xl border border-[var(--border-subtle)]">
+        <div className="grid grid-cols-3 gap-1.5 sm:gap-2 p-1.5 bg-[var(--bg-subtle)] rounded-2xl border border-[var(--border-subtle)]">
           <button
             type="button"
             onClick={() => setType('expense')}
-            className={`py-2 px-1.5 sm:py-2.5 sm:px-3 rounded-xl text-xs sm:text-sm font-bold flex items-center justify-center space-x-1 sm:space-x-1.5 transition-all cursor-pointer min-w-0 whitespace-nowrap ${
+            className={`py-2.5 px-2 sm:py-3 sm:px-4 rounded-xl text-xs sm:text-sm font-bold flex items-center justify-center space-x-1.5 sm:space-x-2 transition-all cursor-pointer min-w-0 whitespace-nowrap ${
               type === 'expense'
                 ? 'bg-[var(--bg-surface-solid)] text-rose-500 border border-rose-500/30 shadow-xs'
                 : 'text-[var(--text-muted)] hover:text-[var(--text-main)]'
             }`}
           >
-            <ArrowDownRight className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-rose-500 shrink-0" />
+            <ArrowDownRight className="w-4 h-4 text-rose-500 shrink-0" />
             <span className="truncate">{t.record.typeExpense}</span>
           </button>
           <button
@@ -794,13 +790,13 @@ export function QuickRecordBoard({
               setType('income');
               if (source === 'credit_card') setSource('bank');
             }}
-            className={`py-2 px-1.5 sm:py-2.5 sm:px-3 rounded-xl text-xs sm:text-sm font-bold flex items-center justify-center space-x-1 sm:space-x-1.5 transition-all cursor-pointer min-w-0 whitespace-nowrap ${
+            className={`py-2.5 px-2 sm:py-3 sm:px-4 rounded-xl text-xs sm:text-sm font-bold flex items-center justify-center space-x-1.5 sm:space-x-2 transition-all cursor-pointer min-w-0 whitespace-nowrap ${
               type === 'income'
                 ? 'bg-[var(--bg-surface-solid)] text-emerald-500 border border-emerald-500/30 shadow-xs'
                 : 'text-[var(--text-muted)] hover:text-[var(--text-main)]'
             }`}
           >
-            <ArrowUpRight className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-emerald-500 shrink-0" />
+            <ArrowUpRight className="w-4 h-4 text-emerald-500 shrink-0" />
             <span className="truncate">{t.record.typeIncome}</span>
           </button>
           <button
@@ -809,31 +805,14 @@ export function QuickRecordBoard({
               setType('savings');
               if (source === 'credit_card') setSource('bank');
             }}
-            className={`py-2 px-1.5 sm:py-2.5 sm:px-3 rounded-xl text-xs sm:text-sm font-bold flex items-center justify-center space-x-1 sm:space-x-1.5 transition-all cursor-pointer min-w-0 whitespace-nowrap ${
+            className={`py-2.5 px-2 sm:py-3 sm:px-4 rounded-xl text-xs sm:text-sm font-bold flex items-center justify-center space-x-1.5 sm:space-x-2 transition-all cursor-pointer min-w-0 whitespace-nowrap ${
               type === 'savings'
                 ? 'bg-[var(--bg-surface-solid)] text-amber-500 border border-amber-500/30 shadow-xs'
                 : 'text-[var(--text-muted)] hover:text-[var(--text-main)]'
             }`}
           >
-            <Wallet className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-amber-500 shrink-0" />
+            <Wallet className="w-4 h-4 text-amber-500 shrink-0" />
             <span className="truncate">{language === 'en' ? 'Savings' : t.record.typeSavings}</span>
-          </button>
-          <button
-            type="button"
-            onClick={() => {
-              setType('transfer');
-              if (source === destSource) {
-                setDestSource(source === 'bank' ? 'ewallet' : 'bank');
-              }
-            }}
-            className={`py-2 px-1.5 sm:py-2.5 sm:px-3 rounded-xl text-xs sm:text-sm font-bold flex items-center justify-center space-x-1 sm:space-x-1.5 transition-all cursor-pointer min-w-0 whitespace-nowrap ${
-              type === 'transfer'
-                ? 'bg-[var(--bg-surface-solid)] text-indigo-400 border border-indigo-500/30 shadow-xs'
-                : 'text-[var(--text-muted)] hover:text-[var(--text-main)]'
-            }`}
-          >
-            <ArrowRightLeft className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-indigo-400 shrink-0" />
-            <span className="truncate">{t.record.typeTransfer}</span>
           </button>
         </div>
 
@@ -981,120 +960,39 @@ export function QuickRecordBoard({
           </div>
         )}
 
-        {/* Transfer Route Selector (From Source -> To Destination Source) */}
-        {type === 'transfer' && (
-          <div className="space-y-3 p-3.5 sm:p-4 rounded-2xl bg-[var(--bg-subtle)] border border-[var(--border-subtle)]">
-            <div className="flex items-center space-x-2 text-xs text-[var(--text-muted)]">
-              <ArrowRightLeft className="w-4 h-4 text-indigo-400 shrink-0" />
-              <span>{t.record.transferDesc}</span>
-            </div>
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-1">
-              <div>
-                <label className="text-[11px] font-semibold text-[var(--text-muted)] uppercase tracking-wider block mb-1.5">
-                  {t.record.fromSource}
-                </label>
-                <div className="grid grid-cols-2 gap-1.5">
-                  {(['bank', 'cash', 'credit_card', 'ewallet'] as FundingSource[]).map((src) => {
-                    const Icon = FUNDING_SOURCE_ICONS[src];
-                    const isSel = source === src;
-                    const badge = getFundingSourceBadgeStyle(src);
-                    return (
-                      <button
-                        key={`from-${src}`}
-                        type="button"
-                        onClick={() => {
-                          setSource(src);
-                          if (destSource === src) {
-                            setDestSource(src === 'bank' ? 'ewallet' : 'bank');
-                          }
-                        }}
-                        className={`p-2 rounded-xl border text-xs font-medium flex items-center space-x-1.5 transition-all cursor-pointer ${
-                          isSel
-                            ? 'border-indigo-500 bg-[var(--bg-surface-solid)] text-[var(--text-main)] font-bold shadow-xs'
-                            : 'border-[var(--border-subtle)] bg-[var(--bg-surface)] text-[var(--text-muted)] hover:text-[var(--text-main)]'
-                        }`}
-                      >
-                        <div className={`w-4 h-4 rounded flex items-center justify-center shrink-0 border ${badge.border} ${badge.bg} ${badge.text}`}>
-                          <Icon className="w-2.5 h-2.5" />
-                        </div>
-                        <span className="truncate">{t.sources[src]}</span>
-                      </button>
-                    );
-                  })}
-                </div>
-              </div>
-              <div>
-                <label className="text-[11px] font-semibold text-[var(--text-muted)] uppercase tracking-wider block mb-1.5">
-                  {t.record.toSource}
-                </label>
-                <div className="grid grid-cols-2 gap-1.5">
-                  {(['bank', 'cash', 'ewallet'] as FundingSource[]).map((src) => {
-                    const Icon = FUNDING_SOURCE_ICONS[src];
-                    const isSel = destSource === src;
-                    const badge = getFundingSourceBadgeStyle(src);
-                    const isSame = src === source;
-                    return (
-                      <button
-                        key={`to-${src}`}
-                        type="button"
-                        disabled={isSame}
-                        onClick={() => setDestSource(src)}
-                        className={`p-2 rounded-xl border text-xs font-medium flex items-center space-x-1.5 transition-all ${
-                          isSame
-                            ? 'opacity-30 cursor-not-allowed border-transparent bg-transparent text-[var(--text-faint)]'
-                            : isSel
-                            ? 'border-indigo-500 bg-[var(--bg-surface-solid)] text-[var(--text-main)] font-bold shadow-xs cursor-pointer'
-                            : 'border-[var(--border-subtle)] bg-[var(--bg-surface)] text-[var(--text-muted)] hover:text-[var(--text-main)] cursor-pointer'
-                        }`}
-                      >
-                        <div className={`w-4 h-4 rounded flex items-center justify-center shrink-0 border ${badge.border} ${badge.bg} ${badge.text}`}>
-                          <Icon className="w-2.5 h-2.5" />
-                        </div>
-                        <span className="truncate">{t.sources[src]}</span>
-                      </button>
-                    );
-                  })}
-                </div>
-              </div>
-            </div>
-          </div>
-        )}
-
         {/* Funding Source Selector */}
-        {type !== 'transfer' && (
-          <div className="space-y-2.5">
-            <label className="text-xs font-semibold text-[var(--text-muted)] uppercase tracking-wider">
-              {type === 'income' ? (language === 'ja' ? '受取先口座' : 'Deposit Account') : type === 'savings' ? (language === 'ja' ? '積立先口座' : 'Savings Destination') : t.record.fundingSource}
-            </label>
-            <div className={`grid gap-1.5 sm:gap-2 ${type === 'expense' ? 'grid-cols-2 sm:grid-cols-4' : 'grid-cols-3'}`}>
-              {(type === 'expense'
-                ? (['cash', 'bank', 'credit_card', 'ewallet'] as FundingSource[])
-                : (['bank', 'cash', 'ewallet'] as FundingSource[])
-              ).map((src) => {
-                const Icon = FUNDING_SOURCE_ICONS[src];
-                const isSelected = source === src;
-                const sourceStyle = getFundingSourceBadgeStyle(src);
-                return (
-                  <button
-                    key={src}
-                    type="button"
-                    onClick={() => setSource(src)}
-                    className={`px-2 py-2.5 sm:px-3 rounded-xl border text-center flex items-center justify-center space-x-1 sm:space-x-1.5 min-w-0 transition-all cursor-pointer ${
-                      isSelected
-                        ? 'border-[var(--border-strong)] bg-[var(--bg-surface-solid)] text-[var(--text-main)] font-bold shadow-xs'
-                        : 'border-[var(--border-subtle)] bg-[var(--bg-subtle)] hover:bg-[var(--bg-subtle-hover)] text-[var(--text-muted)]'
-                    }`}
-                  >
-                    <div className={`w-5 h-5 rounded-md flex items-center justify-center shrink-0 border ${sourceStyle.border} ${sourceStyle.bg} ${sourceStyle.text}`}>
-                      <Icon className="w-3 h-3" />
-                    </div>
-                    <span className="text-xs truncate">{t.sources[src]}</span>
-                  </button>
-                );
-              })}
-            </div>
+        <div className="space-y-2.5">
+          <label className="text-xs font-semibold text-[var(--text-muted)] uppercase tracking-wider">
+            {type === 'income' ? (language === 'ja' ? '受取先口座' : 'Deposit Account') : type === 'savings' ? (language === 'ja' ? '積立先口座' : 'Savings Destination') : t.record.fundingSource}
+          </label>
+          <div className={`grid gap-1.5 sm:gap-2 ${type === 'expense' ? 'grid-cols-2 sm:grid-cols-4' : 'grid-cols-3'}`}>
+            {(type === 'expense'
+              ? (['cash', 'bank', 'credit_card', 'ewallet'] as FundingSource[])
+              : (['bank', 'cash', 'ewallet'] as FundingSource[])
+            ).map((src) => {
+              const Icon = FUNDING_SOURCE_ICONS[src];
+              const isSelected = source === src;
+              const sourceStyle = getFundingSourceBadgeStyle(src);
+              return (
+                <button
+                  key={src}
+                  type="button"
+                  onClick={() => setSource(src)}
+                  className={`px-2 py-2.5 sm:px-3 rounded-xl border text-center flex items-center justify-center space-x-1 sm:space-x-1.5 min-w-0 transition-all cursor-pointer ${
+                    isSelected
+                      ? 'border-[var(--border-strong)] bg-[var(--bg-surface-solid)] text-[var(--text-main)] font-bold shadow-xs'
+                      : 'border-[var(--border-subtle)] bg-[var(--bg-subtle)] hover:bg-[var(--bg-subtle-hover)] text-[var(--text-muted)]'
+                  }`}
+                >
+                  <div className={`w-5 h-5 rounded-md flex items-center justify-center shrink-0 border ${sourceStyle.border} ${sourceStyle.bg} ${sourceStyle.text}`}>
+                    <Icon className="w-3 h-3" />
+                  </div>
+                  <span className="text-xs truncate">{t.sources[src]}</span>
+                </button>
+              );
+            })}
           </div>
-        )}
+        </div>
 
         {/* Date & Note Inputs */}
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
