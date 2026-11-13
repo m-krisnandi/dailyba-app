@@ -3,6 +3,7 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { CustomSelect, CustomSelectOption } from './CustomSelect';
 import { CustomDatePicker } from '@/components/CustomDatePicker';
+import { FormattedAmountInput } from '@/components/FormattedAmountInput';
 import {
   Currency,
   ExpenseCategory,
@@ -215,14 +216,9 @@ export function EditTransactionModal({
               {t.record.amountLabel} ({txCurrency})
             </label>
             <div className="relative">
-              <input
-                type="text"
-                inputMode="decimal"
+              <FormattedAmountInput
                 value={amountStr}
-                onChange={(e) => {
-                  const raw = e.target.value.replace(/[^0-9.]/g, '');
-                  setAmountStr(formatNumberWithCommas(raw));
-                }}
+                onChange={(val) => setAmountStr(val)}
                 placeholder="0"
                 className="w-full bg-[var(--bg-subtle)] border border-[var(--border-subtle)] focus:border-[var(--border-strong)] rounded-2xl pl-4 pr-16 py-3 text-base font-bold text-[var(--text-main)] outline-none tabular-numbers font-mono"
                 required

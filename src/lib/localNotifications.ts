@@ -2,7 +2,7 @@
 
 import { Capacitor } from '@capacitor/core';
 import { LocalNotifications } from '@capacitor/local-notifications';
-import { Language } from '@/types/finance';
+import { Language, RecurringBill } from '@/types/finance';
 
 const NOTIFICATION_ID = 202611;
 
@@ -154,5 +154,60 @@ export async function cancelDailyReminder(): Promise<void> {
     if (win.__dailyba_reminder_timer) {
       clearTimeout(win.__dailyba_reminder_timer);
     }
+  }
+}
+
+const BILL_NOTIFICATION_BASE_ID = 30000;
+
+export async function scheduleBillDueReminders(
+  bills: RecurringBill[],
+  language: Language = 'en'
+): Promise<void> {
+  if (!Capacitor.isNativePlatform()) return;
+
+  try {
+    const granted = await requestNotificationPermission();
+    if (!granted) return;
+
+    // First cancel previous bill notifications
+    const idsToCancel = Array.from({ length: 50 }, (_, i) => ({ id: BILL_NOTIFICATION_BASE_ID + i }));
+    await LocalNotifications.cancel({ notifications: idsToCancel }).catch(() => {});
+
+    if (!Array.isArray(bills) || bills.length === 0) return;
+
+    const notifications = bills.slice(0, 50).map((bill, index) => {
+      const dueDay = Math.max(1, Math.min(31, bill.dayOfMonth || 1));
+      // Remind H-2: 2 days before due date
+      const remindDay = dueDay > 2 ? dueDay - 2 : (dueDay === 2 ? 30 : 28);
+
+      const title = language === 'ja'
+        ? `Dailyba • 請求予定: ${bill.name}`
+        : `Dailyba • Upcoming Bill: ${bill.name}`;
+      const body = language === 'ja'
+        ? `${bill.name} の引き落とし日（${dueDay}日）が2日後に迫っています。残高をご確認ください。`
+        : `Your recurring payment for ${bill.name} is due in 2 days (on the ${dueDay}th).`;
+
+      return {
+        id: BILL_NOTIFICATION_BASE_ID + index,
+        title,
+        body,
+        schedule: {
+          on: {
+            day: remindDay,
+            hour: 9,
+            minute: 0,
+          },
+          allowWhileIdle: true,
+        },
+        smallIcon: 'ic_launcher_round',
+        iconColor: '#6366f1',
+      };
+    });
+
+    if (notifications.length > 0) {
+      await LocalNotifications.schedule({ notifications });
+    }
+  } catch (e) {
+    console.warn('Failed to schedule bill reminders:', e);
   }
 }

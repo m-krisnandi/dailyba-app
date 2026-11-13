@@ -17,6 +17,9 @@ import { ChangelogModal } from '@/components/ChangelogModal';
 import { APP_VERSION } from '@/lib/version';
 import { AuthModal } from '@/components/AuthModal';
 import { BankEmailSyncModal } from '@/components/BankEmailSyncModal';
+import { AppLockOverlay } from '@/components/AppLockOverlay';
+import { isAppLockEnabled } from '@/lib/biometricAuth';
+import { scheduleBillDueReminders } from '@/lib/localNotifications';
 import { dailybaApi } from '@/lib/api';
 import { Transaction } from '@/types/finance';
 import { getTodayLocalDate } from '@/lib/dateUtils';
@@ -71,6 +74,7 @@ export default function Home() {
 
   const [activeTab, setActiveTab] = useState<TabKey>('record');
   const [autoOpenScanner, setAutoOpenScanner] = useState(false);
+  const [isAppLocked, setIsAppLocked] = useState(false);
   const [isMounted, setIsMounted] = useState(false);
   const [isBackupModalOpen, setIsBackupModalOpen] = useState(false);
   const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
@@ -113,8 +117,14 @@ export default function Home() {
       }
     }
 
-    // Capacitor App URL Open listener for deep links (dailyba://app?action=scan or dailyba://app?emailSync=connected)
+    // Capacitor App URL Open listener for deep links & app state change for security lock
     import('@capacitor/app').then(({ App }) => {
+      App.addListener('appStateChange', (appState) => {
+        if (appState.isActive && isAppLockEnabled()) {
+          setIsAppLocked(true);
+        }
+      });
+
       App.addListener('appUrlOpen', (data) => {
         if (data.url.includes('action=scan') || data.url.includes('scan')) {
           setActiveTab('record');
@@ -140,6 +150,12 @@ export default function Home() {
     }
     refreshEmailSyncCount();
   }, [isAuthenticated, refreshEmailSyncCount]);
+
+  useEffect(() => {
+    if (state.recurringBills && state.recurringBills.length > 0) {
+      scheduleBillDueReminders(state.recurringBills, state.language).catch(() => {});
+    }
+  }, [state.recurringBills, state.language]);
 
   const handleApproveBankTransactions = (txs: Transaction[]) => {
     for (const t of txs) {
@@ -461,6 +477,13 @@ export default function Home() {
         onApproveTransactions={handleApproveBankTransactions}
         onPendingCountChange={setPendingEmailSyncCount}
         existingTransactions={state.transactions}
+      />
+
+      {/* Biometric & PIN Security App Lock Overlay */}
+      <AppLockOverlay
+        isLocked={isAppLocked}
+        onUnlock={() => setIsAppLocked(false)}
+        language={state.language}
       />
 
     </div>

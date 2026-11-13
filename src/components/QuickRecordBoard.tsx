@@ -21,6 +21,7 @@ import { TransactionDetailModal } from '@/components/TransactionDetailModal';
 import { ConfirmDeleteModal } from '@/components/ConfirmDeleteModal';
 import { ReceiptScannerModal } from '@/components/ReceiptScannerModal';
 import { CustomSelect, CustomSelectOption } from '@/components/CustomSelect';
+import { FormattedAmountInput } from '@/components/FormattedAmountInput';
 import { useBodyScrollLock } from '@/lib/useBodyScrollLock';
 import { getTodayLocalDate } from '@/lib/dateUtils';
 import {
@@ -36,6 +37,7 @@ import {
   Sparkles,
   ScanText,
   ArrowDownRight,
+  ArrowRightLeft,
   ArrowUpRight,
   Wallet,
   CornerDownLeft,
@@ -200,6 +202,7 @@ export function QuickRecordBoard({
   const [selectedExpenseCat, setSelectedExpenseCat] = useState<ExpenseCategory>('food_drinks');
   const [selectedIncomeCat, setSelectedIncomeCat] = useState<IncomeCategory>('salary');
   const [source, setSource] = useState<FundingSource>('cash');
+  const [destSource, setDestSource] = useState<FundingSource>('ewallet');
   const [date, setDate] = useState<string>('');
   const [note, setNote] = useState('');
   const [smartText, setSmartText] = useState('');
@@ -290,6 +293,8 @@ export function QuickRecordBoard({
         ? selectedExpenseCat
         : type === 'income'
         ? selectedIncomeCat
+        : type === 'transfer'
+        ? 'transfer'
         : 'savings';
 
     onAddTransaction({
@@ -297,6 +302,7 @@ export function QuickRecordBoard({
       amount: parsedAmount,
       category,
       source,
+      destinationSource: type === 'transfer' ? destSource : undefined,
       currency,
       date: date || getTodayLocalDate(),
       note: note.trim() || undefined,
@@ -655,12 +661,19 @@ export function QuickRecordBoard({
             ? t.expenseCategories[tx.category as ExpenseCategory] || ''
             : tx.type === 'income'
             ? t.incomeCategories[tx.category as IncomeCategory] || ''
+            : tx.type === 'transfer'
+            ? t.record.typeTransfer
             : t.record.typeSavings
         ).toLowerCase();
         const catMatch = catRaw.includes(query) || catLabel.includes(query);
 
         const sourceLabel = (t.sources[tx.source] || '').toLowerCase();
-        const sourceMatch = (tx.source || '').toLowerCase().includes(query) || sourceLabel.includes(query);
+        const destLabel = tx.destinationSource ? (t.sources[tx.destinationSource] || '').toLowerCase() : '';
+        const sourceMatch =
+          (tx.source || '').toLowerCase().includes(query) ||
+          sourceLabel.includes(query) ||
+          (tx.destinationSource || '').toLowerCase().includes(query) ||
+          destLabel.includes(query);
 
         if (!noteMatch && !dateMatch && !amountMatch && !catMatch && !sourceMatch) {
           return false;
@@ -807,7 +820,7 @@ export function QuickRecordBoard({
       {/* Main Fast Input Board */}
       <div className="rounded-3xl border border-[var(--border-subtle)] bg-[var(--bg-surface)] p-4 sm:p-7 shadow-[var(--card-shadow)] space-y-5 sm:space-y-6 relative">
         {/* Type Selector (Expense vs Income vs Savings) */}
-        <div className="grid grid-cols-3 gap-1.5 sm:gap-2 p-1.5 bg-[var(--bg-subtle)] rounded-2xl border border-[var(--border-subtle)]">
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-1.5 sm:gap-2 p-1.5 bg-[var(--bg-subtle)] rounded-2xl border border-[var(--border-subtle)]">
           <button
             type="button"
             onClick={() => setType('expense')}
@@ -823,9 +836,9 @@ export function QuickRecordBoard({
           <button
             type="button"
             onClick={() => {
-            setType('income');
-            if (source === 'credit_card') setSource('bank');
-          }}
+              setType('income');
+              if (source === 'credit_card') setSource('bank');
+            }}
             className={`py-2 px-1.5 sm:py-2.5 sm:px-3 rounded-xl text-xs sm:text-sm font-bold flex items-center justify-center space-x-1 sm:space-x-1.5 transition-all cursor-pointer min-w-0 whitespace-nowrap ${
               type === 'income'
                 ? 'bg-[var(--bg-surface-solid)] text-emerald-500 border border-emerald-500/30 shadow-xs'
@@ -838,9 +851,9 @@ export function QuickRecordBoard({
           <button
             type="button"
             onClick={() => {
-            setType('savings');
-            if (source === 'credit_card') setSource('bank');
-          }}
+              setType('savings');
+              if (source === 'credit_card') setSource('bank');
+            }}
             className={`py-2 px-1.5 sm:py-2.5 sm:px-3 rounded-xl text-xs sm:text-sm font-bold flex items-center justify-center space-x-1 sm:space-x-1.5 transition-all cursor-pointer min-w-0 whitespace-nowrap ${
               type === 'savings'
                 ? 'bg-[var(--bg-surface-solid)] text-amber-500 border border-amber-500/30 shadow-xs'
@@ -848,8 +861,24 @@ export function QuickRecordBoard({
             }`}
           >
             <Wallet className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-amber-500 shrink-0" />
-            <span className="truncate sm:hidden">{language === 'en' ? 'Savings' : t.record.typeSavings}</span>
-            <span className="hidden sm:inline truncate">{t.record.typeSavings}</span>
+            <span className="truncate">{language === 'en' ? 'Savings' : t.record.typeSavings}</span>
+          </button>
+          <button
+            type="button"
+            onClick={() => {
+              setType('transfer');
+              if (source === destSource) {
+                setDestSource(source === 'bank' ? 'ewallet' : 'bank');
+              }
+            }}
+            className={`py-2 px-1.5 sm:py-2.5 sm:px-3 rounded-xl text-xs sm:text-sm font-bold flex items-center justify-center space-x-1 sm:space-x-1.5 transition-all cursor-pointer min-w-0 whitespace-nowrap ${
+              type === 'transfer'
+                ? 'bg-[var(--bg-surface-solid)] text-indigo-400 border border-indigo-500/30 shadow-xs'
+                : 'text-[var(--text-muted)] hover:text-[var(--text-main)]'
+            }`}
+          >
+            <ArrowRightLeft className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-indigo-400 shrink-0" />
+            <span className="truncate">{t.record.typeTransfer}</span>
           </button>
         </div>
 
@@ -871,16 +900,11 @@ export function QuickRecordBoard({
           </div>
 
           <div className="relative">
-            <input
-              type="text"
-              inputMode="decimal"
+            <FormattedAmountInput
               value={amountStr}
-              onChange={(e) => {
-                const raw = e.target.value.replace(/[^0-9.]/g, '');
-                setAmountStr(formatNumberWithCommas(raw));
-              }}
+              onChange={(val) => setAmountStr(val)}
               placeholder="0"
-              className="w-full bg-[var(--bg-subtle)] border border-[var(--border-subtle)] focus:border-[var(--border-strong)] rounded-2xl pl-4 sm:pl-5 pr-14 sm:pr-16 py-3.5 sm:py-4 text-2xl sm:text-4xl font-extrabold tracking-tight text-[var(--text-main)] placeholder-[var(--text-faint)] outline-none tabular-numbers transition-all"
+              className="w-full bg-[var(--bg-subtle)] border border-[var(--border-subtle)] focus:border-[var(--border-strong)] rounded-2xl pl-4 sm:pl-5 pr-14 sm:pr-16 py-3.5 sm:py-4 text-2xl sm:text-4xl font-extrabold tracking-tight text-[var(--text-main)] placeholder-[var(--text-faint)] outline-none tabular-numbers transition-all font-mono"
             />
             <div className="absolute right-5 top-1/2 -translate-y-1/2 text-sm font-mono font-bold text-[var(--text-muted)] pointer-events-none select-none tracking-wide">
               {currency}
@@ -1002,39 +1026,120 @@ export function QuickRecordBoard({
           </div>
         )}
 
-        {/* Funding Source Selector */}
-        <div className="space-y-2.5">
-          <label className="text-xs font-semibold text-[var(--text-muted)] uppercase tracking-wider">
-            {type === 'income' ? (language === 'ja' ? '受取先口座' : 'Deposit Account') : type === 'savings' ? (language === 'ja' ? '積立先口座' : 'Savings Destination') : t.record.fundingSource}
-          </label>
-          <div className={`grid gap-1.5 sm:gap-2 ${type === 'expense' ? 'grid-cols-2 sm:grid-cols-4' : 'grid-cols-3'}`}>
-            {(type === 'expense'
-              ? (['cash', 'bank', 'credit_card', 'ewallet'] as FundingSource[])
-              : (['bank', 'cash', 'ewallet'] as FundingSource[])
-            ).map((src) => {
-              const Icon = FUNDING_SOURCE_ICONS[src];
-              const isSelected = source === src;
-              const sourceStyle = getFundingSourceBadgeStyle(src);
-              return (
-                <button
-                  key={src}
-                  type="button"
-                  onClick={() => setSource(src)}
-                  className={`px-2 py-2.5 sm:px-3 rounded-xl border text-center flex items-center justify-center space-x-1 sm:space-x-1.5 min-w-0 transition-all cursor-pointer ${
-                    isSelected
-                      ? 'border-[var(--border-strong)] bg-[var(--bg-surface-solid)] text-[var(--text-main)] font-bold shadow-xs'
-                      : 'border-[var(--border-subtle)] bg-[var(--bg-subtle)] hover:bg-[var(--bg-subtle-hover)] text-[var(--text-muted)]'
-                  }`}
-                >
-                  <div className={`w-5 h-5 rounded-md flex items-center justify-center shrink-0 border ${sourceStyle.border} ${sourceStyle.bg} ${sourceStyle.text}`}>
-                    <Icon className="w-3 h-3" />
-                  </div>
-                  <span className="text-xs truncate">{t.sources[src]}</span>
-                </button>
-              );
-            })}
+        {/* Transfer Route Selector (From Source -> To Destination Source) */}
+        {type === 'transfer' && (
+          <div className="space-y-3 p-3.5 sm:p-4 rounded-2xl bg-[var(--bg-subtle)] border border-[var(--border-subtle)]">
+            <div className="flex items-center space-x-2 text-xs text-[var(--text-muted)]">
+              <ArrowRightLeft className="w-4 h-4 text-indigo-400 shrink-0" />
+              <span>{t.record.transferDesc}</span>
+            </div>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-1">
+              <div>
+                <label className="text-[11px] font-semibold text-[var(--text-muted)] uppercase tracking-wider block mb-1.5">
+                  {t.record.fromSource}
+                </label>
+                <div className="grid grid-cols-2 gap-1.5">
+                  {(['bank', 'cash', 'credit_card', 'ewallet'] as FundingSource[]).map((src) => {
+                    const Icon = FUNDING_SOURCE_ICONS[src];
+                    const isSel = source === src;
+                    const badge = getFundingSourceBadgeStyle(src);
+                    return (
+                      <button
+                        key={`from-${src}`}
+                        type="button"
+                        onClick={() => {
+                          setSource(src);
+                          if (destSource === src) {
+                            setDestSource(src === 'bank' ? 'ewallet' : 'bank');
+                          }
+                        }}
+                        className={`p-2 rounded-xl border text-xs font-medium flex items-center space-x-1.5 transition-all cursor-pointer ${
+                          isSel
+                            ? 'border-indigo-500 bg-[var(--bg-surface-solid)] text-[var(--text-main)] font-bold shadow-xs'
+                            : 'border-[var(--border-subtle)] bg-[var(--bg-surface)] text-[var(--text-muted)] hover:text-[var(--text-main)]'
+                        }`}
+                      >
+                        <div className={`w-4 h-4 rounded flex items-center justify-center shrink-0 border ${badge.border} ${badge.bg} ${badge.text}`}>
+                          <Icon className="w-2.5 h-2.5" />
+                        </div>
+                        <span className="truncate">{t.sources[src]}</span>
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+              <div>
+                <label className="text-[11px] font-semibold text-[var(--text-muted)] uppercase tracking-wider block mb-1.5">
+                  {t.record.toSource}
+                </label>
+                <div className="grid grid-cols-2 gap-1.5">
+                  {(['bank', 'cash', 'ewallet'] as FundingSource[]).map((src) => {
+                    const Icon = FUNDING_SOURCE_ICONS[src];
+                    const isSel = destSource === src;
+                    const badge = getFundingSourceBadgeStyle(src);
+                    const isSame = src === source;
+                    return (
+                      <button
+                        key={`to-${src}`}
+                        type="button"
+                        disabled={isSame}
+                        onClick={() => setDestSource(src)}
+                        className={`p-2 rounded-xl border text-xs font-medium flex items-center space-x-1.5 transition-all ${
+                          isSame
+                            ? 'opacity-30 cursor-not-allowed border-transparent bg-transparent text-[var(--text-faint)]'
+                            : isSel
+                            ? 'border-indigo-500 bg-[var(--bg-surface-solid)] text-[var(--text-main)] font-bold shadow-xs cursor-pointer'
+                            : 'border-[var(--border-subtle)] bg-[var(--bg-surface)] text-[var(--text-muted)] hover:text-[var(--text-main)] cursor-pointer'
+                        }`}
+                      >
+                        <div className={`w-4 h-4 rounded flex items-center justify-center shrink-0 border ${badge.border} ${badge.bg} ${badge.text}`}>
+                          <Icon className="w-2.5 h-2.5" />
+                        </div>
+                        <span className="truncate">{t.sources[src]}</span>
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+            </div>
           </div>
-        </div>
+        )}
+
+        {/* Funding Source Selector */}
+        {type !== 'transfer' && (
+          <div className="space-y-2.5">
+            <label className="text-xs font-semibold text-[var(--text-muted)] uppercase tracking-wider">
+              {type === 'income' ? (language === 'ja' ? '受取先口座' : 'Deposit Account') : type === 'savings' ? (language === 'ja' ? '積立先口座' : 'Savings Destination') : t.record.fundingSource}
+            </label>
+            <div className={`grid gap-1.5 sm:gap-2 ${type === 'expense' ? 'grid-cols-2 sm:grid-cols-4' : 'grid-cols-3'}`}>
+              {(type === 'expense'
+                ? (['cash', 'bank', 'credit_card', 'ewallet'] as FundingSource[])
+                : (['bank', 'cash', 'ewallet'] as FundingSource[])
+              ).map((src) => {
+                const Icon = FUNDING_SOURCE_ICONS[src];
+                const isSelected = source === src;
+                const sourceStyle = getFundingSourceBadgeStyle(src);
+                return (
+                  <button
+                    key={src}
+                    type="button"
+                    onClick={() => setSource(src)}
+                    className={`px-2 py-2.5 sm:px-3 rounded-xl border text-center flex items-center justify-center space-x-1 sm:space-x-1.5 min-w-0 transition-all cursor-pointer ${
+                      isSelected
+                        ? 'border-[var(--border-strong)] bg-[var(--bg-surface-solid)] text-[var(--text-main)] font-bold shadow-xs'
+                        : 'border-[var(--border-subtle)] bg-[var(--bg-subtle)] hover:bg-[var(--bg-subtle-hover)] text-[var(--text-muted)]'
+                    }`}
+                  >
+                    <div className={`w-5 h-5 rounded-md flex items-center justify-center shrink-0 border ${sourceStyle.border} ${sourceStyle.bg} ${sourceStyle.text}`}>
+                      <Icon className="w-3 h-3" />
+                    </div>
+                    <span className="text-xs truncate">{t.sources[src]}</span>
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+        )}
 
         {/* Date & Note Inputs */}
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
@@ -1352,6 +1457,17 @@ export function QuickRecordBoard({
               >
                 {t.record.typeSavings}
               </button>
+              <button
+                type="button"
+                onClick={() => handleFilterTypeChange('transfer')}
+                className={`px-3 py-1.5 rounded-lg text-xs font-semibold whitespace-nowrap transition-all cursor-pointer ${
+                  txFilterType === 'transfer'
+                    ? 'bg-indigo-500/20 text-indigo-400 border border-indigo-500/40 shadow-sm'
+                    : 'bg-[var(--bg-subtle)] text-[var(--text-muted)] hover:text-[var(--text-main)] border border-[var(--border-subtle)]'
+                }`}
+              >
+                {t.record.typeTransfer}
+              </button>
             </div>
           </div>
         )}
@@ -1379,14 +1495,19 @@ export function QuickRecordBoard({
             {paginatedTransactions.map((tx) => {
               const isExpense = tx.type === 'expense';
               const isIncome = tx.type === 'income';
+              const isTransfer = tx.type === 'transfer';
 
-              const catLabel = isExpense
+              const catLabel = isTransfer
+                ? t.record.typeTransfer
+                : isExpense
                 ? t.expenseCategories[tx.category as ExpenseCategory] || tx.category
                 : isIncome
                 ? t.incomeCategories[tx.category as IncomeCategory] || tx.category
                 : t.record.typeSavings;
 
-              const Icon = isExpense
+              const Icon = isTransfer
+                ? ArrowRightLeft
+                : isExpense
                 ? EXPENSE_CATEGORY_ICONS[tx.category as ExpenseCategory] || AlertCircle
                 : isIncome
                 ? INCOME_CATEGORY_ICONS[tx.category as IncomeCategory] || ArrowUpRight
@@ -1398,7 +1519,13 @@ export function QuickRecordBoard({
                 currency,
                 rates
               );
-              const catStyle = getCategoryBadgeStyle(tx.type, tx.category);
+              const catStyle = isTransfer
+                ? { bg: 'bg-indigo-500/15', text: 'text-indigo-400', border: 'border-indigo-500/30' }
+                : getCategoryBadgeStyle(tx.type, tx.category);
+
+              const subLabel = isTransfer
+                ? `${tx.date} • ${t.sources[tx.source]} → ${tx.destinationSource ? t.sources[tx.destinationSource] : '?'}${tx.note ? ` • ${tx.note}` : ''}`
+                : `${tx.date} • ${t.sources[tx.source]}${tx.note ? ` • ${tx.note}` : ''}`;
 
               return (
                 <div
@@ -1418,8 +1545,7 @@ export function QuickRecordBoard({
                         {catLabel}
                       </p>
                       <p className="text-[11px] text-[var(--text-muted)] truncate">
-                        {tx.date} • {t.sources[tx.source]}
-                        {tx.note ? ` • ${tx.note}` : ''}
+                        {subLabel}
                       </p>
                     </div>
                   </div>
@@ -1427,14 +1553,16 @@ export function QuickRecordBoard({
                   <div className="flex items-center space-x-1.5 sm:space-x-3 shrink-0 ml-2">
                     <span
                       className={`text-xs sm:text-sm font-bold tabular-numbers font-mono whitespace-nowrap ${
-                        isExpense
+                        isTransfer
+                          ? 'text-indigo-600 dark:text-indigo-400'
+                          : isExpense
                           ? 'text-rose-600 dark:text-rose-400'
                           : isIncome
                           ? 'text-emerald-600 dark:text-emerald-400'
                           : 'text-amber-600 dark:text-amber-400'
                       }`}
                     >
-                      {isExpense ? '-' : '+'}
+                      {isTransfer ? '' : isExpense ? '-' : '+'}
                       {formatCurrency(convertedAmount, currency)}
                     </span>
                     {onUpdateTransaction && (
@@ -1704,15 +1832,10 @@ export function QuickRecordBoard({
                 <label className="text-xs font-semibold text-[var(--text-muted)]">
                   {t.record.billAmount}
                 </label>
-                <input
-                  type="text"
-                  inputMode="decimal"
+                <FormattedAmountInput
                   required
                   value={billAmountStr}
-                  onChange={(e) => {
-                    const raw = e.target.value.replace(/[^0-9.]/g, '');
-                    setBillAmountStr(formatNumberWithCommas(raw));
-                  }}
+                  onChange={(val) => setBillAmountStr(val)}
                   placeholder="0"
                   className="w-full bg-[var(--bg-subtle)] border border-[var(--border-subtle)] focus:border-[var(--border-strong)] rounded-xl px-4 py-2.5 text-xs text-[var(--text-main)] font-mono outline-none tabular-numbers"
                 />

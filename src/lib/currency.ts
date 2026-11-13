@@ -51,16 +51,38 @@ export function saveCachedRates(rates: ExchangeRates) {
 
 export async function fetchLiveExchangeRates(): Promise<ExchangeRates | null> {
   try {
-    // 1. Fetch international interbank rates (JPY base)
-    const res = await fetch('https://open.er-api.com/v6/latest/JPY', {
-      headers: { Accept: 'application/json' },
-    });
-    
     let jpyRates: any = null;
-    if (res.ok) {
-      const data = await res.json();
-      if (data && data.result === 'success' && data.rates) {
-        jpyRates = data.rates;
+
+    // 1. Primary: open.er-api.com
+    try {
+      const res = await fetch('https://open.er-api.com/v6/latest/JPY', {
+        headers: { Accept: 'application/json' },
+      });
+      if (res.ok) {
+        const data = await res.json();
+        if (data && data.result === 'success' && data.rates) {
+          jpyRates = data.rates;
+        }
+      }
+    } catch {
+      // ignore, fallback to secondary
+    }
+
+    // 2. Secondary fallback: fawazahmed0 currency api on jsdelivr CDN
+    if (!jpyRates) {
+      try {
+        const fallbackRes = await fetch('https://cdn.jsdelivr.net/npm/@fawazahmed0/currency-api@latest/v1/currencies/jpy.json');
+        if (fallbackRes.ok) {
+          const fbData = await fallbackRes.json();
+          if (fbData && fbData.jpy) {
+            jpyRates = {
+              IDR: fbData.jpy.idr,
+              USD: fbData.jpy.usd,
+            };
+          }
+        }
+      } catch {
+        // ignore
       }
     }
 
@@ -119,10 +141,22 @@ export function useExchangeRates(): ExchangeRates {
     const cached = getCachedRates();
     setRates(cached);
 
-    // 2. Fetch live in background
-    fetchLiveExchangeRates().then((live) => {
-      if (live) setRates(live);
-    });
+    // 2. Automatic refresh if cache is older than 12 hours or on startup
+    const checkAndRefresh = () => {
+      const current = getCachedRates();
+      const lastUpdate = current.updatedAt ? new Date(current.updatedAt).getTime() : 0;
+      const isStale = Date.now() - lastUpdate > 12 * 60 * 60 * 1000;
+      if (isStale) {
+        fetchLiveExchangeRates().then((live) => {
+          if (live) setRates(live);
+        });
+      }
+    };
+
+    checkAndRefresh();
+
+    // Periodic 12-hour background updater interval
+    const interval = setInterval(checkAndRefresh, 12 * 60 * 60 * 1000);
 
     const handleUpdate = () => {
       setRates(getCachedRates());
@@ -130,6 +164,7 @@ export function useExchangeRates(): ExchangeRates {
 
     window.addEventListener('kakeibo_rates_updated', handleUpdate);
     return () => {
+      clearInterval(interval);
       window.removeEventListener('kakeibo_rates_updated', handleUpdate);
     };
   }, []);

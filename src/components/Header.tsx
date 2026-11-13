@@ -5,6 +5,7 @@ import { Currency, Language } from '@/types/finance';
 import { translations } from '@/lib/i18n';
 import { ExchangeRates, DEFAULT_RATES } from '@/lib/currency';
 import { KakeiboLogo } from '@/components/KakeiboLogo';
+import { SecuritySettingsModal } from '@/components/SecuritySettingsModal';
 import { useAuth } from '@/lib/authContext';
 import { APP_VERSION } from '@/lib/version';
 import { Capacitor } from '@capacitor/core';
@@ -23,6 +24,7 @@ import {
   Trash2,
   User as UserIcon,
   Smartphone,
+  Shield,
   Download,
   Mail,
 } from 'lucide-react';
@@ -63,6 +65,7 @@ export function Header({
   const [isCurrencyDropdownOpen, setIsCurrencyDropdownOpen] = useState(false);
   const [isMounted, setIsMounted] = useState(false);
   const [isUserMenuOpen, setIsUserMenuOpen] = useState(false);
+  const [isSecurityModalOpen, setIsSecurityModalOpen] = useState(false);
   const [isNativeApp, setIsNativeApp] = useState(true); // default true to avoid SSR layout shift, checked upon mount
   const currencyDropdownRef = useRef<HTMLDivElement>(null);
   const userMenuRef = useRef<HTMLDivElement>(null);
@@ -72,19 +75,50 @@ export function Header({
 
   useEffect(() => {
     const saved = localStorage.getItem('kakeibo_theme');
+    let effectiveDark = true;
     if (saved === 'light') {
-      document.documentElement.classList.remove('dark');
-      setIsDark(false);
+      effectiveDark = false;
+    } else if (saved === 'dark') {
+      effectiveDark = true;
     } else {
+      // Default to device OS preference if not explicitly set manually by user
+      effectiveDark = Boolean(typeof window !== 'undefined' && window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches);
+    }
+
+    if (effectiveDark) {
       document.documentElement.classList.add('dark');
       setIsDark(true);
+    } else {
+      document.documentElement.classList.remove('dark');
+      setIsDark(false);
     }
+
+    // If user has not explicitly chosen a manual theme yet, dynamically follow OS theme changes
+    const mediaQuery = typeof window !== 'undefined' && window.matchMedia ? window.matchMedia('(prefers-color-scheme: dark)') : null;
+    const handleSystemThemeChange = (e: MediaQueryListEvent) => {
+      const currentSaved = localStorage.getItem('kakeibo_theme');
+      if (!currentSaved) {
+        if (e.matches) {
+          document.documentElement.classList.add('dark');
+          setIsDark(true);
+        } else {
+          document.documentElement.classList.remove('dark');
+          setIsDark(false);
+        }
+      }
+    };
+    mediaQuery?.addEventListener('change', handleSystemThemeChange);
+
     try {
       setIsNativeApp(Capacitor.isNativePlatform());
     } catch {
       setIsNativeApp(false);
     }
     setIsMounted(true);
+
+    return () => {
+      mediaQuery?.removeEventListener('change', handleSystemThemeChange);
+    };
   }, []);
 
   // Dismiss dropdowns on click outside
@@ -457,6 +491,18 @@ export function Header({
                   <button
                     type="button"
                     onClick={() => {
+                      setIsSecurityModalOpen(true);
+                      setIsUserMenuOpen(false);
+                    }}
+                    className="w-full flex items-center space-x-2 px-2.5 py-2 rounded-xl text-xs text-[var(--text-muted)] hover:text-[var(--text-main)] hover:bg-[var(--bg-subtle)] transition-all cursor-pointer"
+                  >
+                    <Shield className="w-3.5 h-3.5 text-indigo-400" />
+                    <span>{language === 'ja' ? '生体認証 & アプリロック' : 'Security & App Lock'}</span>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => {
                       onOpenAuth();
                       setIsUserMenuOpen(false);
                     }}
@@ -528,6 +574,11 @@ export function Header({
           </button>
         </div>
       </div>
+          <SecuritySettingsModal
+        isOpen={isSecurityModalOpen}
+        onClose={() => setIsSecurityModalOpen(false)}
+        language={language}
+      />
     </header>
   );
 }

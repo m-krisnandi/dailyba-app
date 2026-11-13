@@ -42,6 +42,10 @@ export interface Translations {
     typeExpense: string;
     typeIncome: string;
     typeSavings: string;
+    typeTransfer: string;
+    fromSource: string;
+    toSource: string;
+    transferDesc: string;
     fundingSource: string;
     selectCategory: string;
     date: string;
@@ -148,6 +152,17 @@ export interface Translations {
     withinBudget: string;
     overBudget: string;
     targetVsActual: string;
+    exportStatement: string;
+    exportCsv: string;
+    exportPdf: string;
+  };
+  security: {
+    biometricLock: string;
+    biometricLockDesc: string;
+    unlockApp: string;
+    lockNow: string;
+    enterPin: string;
+    securitySettings: string;
   };
   investments: {
     title: string;
@@ -314,6 +329,10 @@ export const translations: Record<Language, Translations> = {
       typeExpense: 'Expense',
       typeIncome: 'Income',
       typeSavings: 'Save to Reserves',
+      typeTransfer: 'Transfer',
+      fromSource: 'From',
+      toSource: 'To',
+      transferDesc: 'Move funds between your accounts without affecting monthly expense',
       fundingSource: 'Funding Source',
       selectCategory: 'Category',
       date: 'Date',
@@ -444,6 +463,17 @@ export const translations: Record<Language, Translations> = {
       withinBudget: 'Within Budget',
       overBudget: 'Over Budget',
       targetVsActual: 'Planned vs Actual Spent',
+      exportStatement: 'Export Statement',
+      exportCsv: 'Export CSV (.csv)',
+      exportPdf: 'Print / Save as PDF',
+    },
+    security: {
+      biometricLock: 'Biometric & App Lock',
+      biometricLockDesc: 'Lock Dailyba with Fingerprint, Face ID, or PIN',
+      unlockApp: 'Unlock Dailyba',
+      lockNow: 'Lock App Now',
+      enterPin: 'Enter 4-digit PIN',
+      securitySettings: 'Security & App Lock',
     },
     investments: {
       title: 'Investment Portfolio',
@@ -608,6 +638,10 @@ export const translations: Record<Language, Translations> = {
       typeExpense: '支出',
       typeIncome: '収入',
       typeSavings: '貯金振替',
+      typeTransfer: '口座間振替',
+      fromSource: '振替元',
+      toSource: '振替先',
+      transferDesc: '月次支出に影響を与えずに口座間で資金を移動します',
       fundingSource: '支出元口座',
       selectCategory: 'カテゴリー選択',
       date: '日付',
@@ -738,6 +772,17 @@ export const translations: Record<Language, Translations> = {
       withinBudget: '予算内',
       overBudget: '予算超過',
       targetVsActual: '計画予算と実支出',
+      exportStatement: '明細書出力',
+      exportCsv: 'CSV出力 (.csv)',
+      exportPdf: '印刷 / PDF保存',
+    },
+    security: {
+      biometricLock: '生体認証・アプリロック',
+      biometricLockDesc: '指紋・顔認証またはPINでDailybaを保護',
+      unlockApp: 'Dailybaのロック解除',
+      lockNow: '今すぐロック',
+      enterPin: '4桁のPINを入力',
+      securitySettings: 'セキュリティ & アプリロック',
     },
     investments: {
       title: '資産運用ポートフォリオ',

@@ -1,4 +1,5 @@
 'use client';
+import { FormattedAmountInput } from '@/components/FormattedAmountInput';
 
 import React, { useMemo, useState } from 'react';
 import { Currency, ExpenseCategory, Language, Transaction } from '@/types/finance';
@@ -369,14 +370,9 @@ export function DailySpendBoard({
             </div>
             <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2.5">
               <div className="relative flex-1">
-                <input
-                  type="text"
-                  inputMode="decimal"
+                <FormattedAmountInput
                   value={targetInputStr}
-                  onChange={(e) => {
-                    const raw = e.target.value.replace(/[^0-9.]/g, '');
-                    setTargetInputStr(formatNumberWithCommas(raw));
-                  }}
+                  onChange={(val: string) => setTargetInputStr(val)}
                   placeholder="0"
                   className="w-full bg-[var(--bg-surface-solid)] border border-[var(--border-subtle)] focus:border-[var(--border-strong)] rounded-xl pl-4 pr-16 py-3 sm:py-2.5 text-base sm:text-sm font-bold text-[var(--text-main)] outline-none tabular-numbers font-mono"
                 />

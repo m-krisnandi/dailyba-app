@@ -31,6 +31,7 @@ import {
   TrendingUp,
   Wallet,
   Tag,
+  ArrowRightLeft,
 } from 'lucide-react';
 
 interface TransactionDetailModalProps {
@@ -64,14 +65,19 @@ export function TransactionDetailModal({
 
   const isExpense = transaction.type === 'expense';
   const isIncome = transaction.type === 'income';
+  const isTransfer = transaction.type === 'transfer';
 
-  const catLabel = isExpense
+  const catLabel = isTransfer
+    ? `${t.sources[transaction.source] || transaction.source} → ${t.sources[transaction.destinationSource || 'ewallet'] || transaction.destinationSource || 'E-Wallet'}`
+    : isExpense
     ? t.expenseCategories[transaction.category as ExpenseCategory] || transaction.category
     : isIncome
     ? t.incomeCategories[transaction.category as IncomeCategory] || transaction.category
     : t.record.typeSavings;
 
-  const Icon = isExpense
+  const Icon = isTransfer
+    ? ArrowRightLeft
+    : isExpense
     ? EXPENSE_CATEGORY_ICONS[transaction.category as ExpenseCategory] || Tag
     : isIncome
     ? INCOME_CATEGORY_ICONS[transaction.category as IncomeCategory] || TrendingUp
@@ -118,7 +124,9 @@ export function TransactionDetailModal({
         {/* Hero Amount & Type Card */}
         <div
           className={`p-5 rounded-2xl border text-center space-y-2 ${
-            isExpense
+            isTransfer
+              ? 'bg-indigo-500/5 border-indigo-500/20'
+              : isExpense
               ? 'bg-rose-500/5 border-rose-500/20'
               : isIncome
               ? 'bg-emerald-500/5 border-emerald-500/20'
@@ -135,7 +143,12 @@ export function TransactionDetailModal({
                   : 'bg-amber-500/20 text-amber-500'
               }`}
             >
-              {isExpense ? (
+              {isTransfer ? (
+                <>
+                  <ArrowRightLeft className="w-3.5 h-3.5" />
+                  <span>{t.record.typeTransfer}</span>
+                </>
+              ) : isExpense ? (
                 <>
                   <TrendingDown className="w-3.5 h-3.5" />
                   <span>{t.record.typeExpense}</span>
@@ -156,14 +169,16 @@ export function TransactionDetailModal({
 
           <h2
             className={`text-3xl sm:text-4xl font-black tabular-numbers font-mono tracking-tight ${
-              isExpense
+              isTransfer
+                ? 'text-indigo-400'
+                : isExpense
                 ? 'text-rose-600 dark:text-rose-400'
                 : isIncome
                 ? 'text-emerald-600 dark:text-emerald-400'
                 : 'text-amber-600 dark:text-amber-400'
             }`}
           >
-            {isExpense ? '-' : '+'}
+            {isTransfer ? '' : isExpense ? '-' : '+'}
             {formatCurrency(convertedAmount, currency)}
           </h2>
 

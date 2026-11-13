@@ -1,7 +1,7 @@
 import { Language } from '@/types/finance';
 
-export const APP_VERSION = '1.7.1';
-export const APP_BUILD = '20261113_2';
+export const APP_VERSION = '1.8.0';
+export const APP_BUILD = '20261113_3';
 
 export interface LocalizedChangelogItem {
   version: string;
@@ -11,6 +11,34 @@ export interface LocalizedChangelogItem {
 }
 
 export const APP_CHANGELOG: LocalizedChangelogItem[] = [
+  {
+    version: '1.8.0',
+    date: '2026-11-13',
+    title: {
+      en: 'Internal Account Transfers, Biometric Vault Lock, Statement Export & Native Polish',
+      ja: '口座間振替、生体認証アプリロック、月次明細エクスポート、及び操作性刷新',
+    },
+    highlights: {
+      en: [
+        'Internal Account Transfer: Seamlessly move funds between Bank, E-Wallet, and Cash without inflating monthly spending or distorting net wealth.',
+        'Precision Mid-String Cursor Editing: Easily position cursor anywhere inside formatted amounts (e.g. edit 10,000 to 11,000 directly) without annoying cursor jumps.',
+        'Device OS Theme Auto-Detection: Automatically syncs with system Dark/Light mode on initial launch, while permanently preserving manual user preferences.',
+        'Monthly Statement Export (CSV & PDF): One-click download of monthly statements formatted as UTF-8 BOM CSV or printable executive PDF reports.',
+        'Biometric & PIN App Lock: Secure sensitive financial records with native Fingerprint / Face ID and 4-digit PIN fallback when returning from background.',
+        'Recurring Bill & Subscription Reminders: Proactive local notifications delivered 2 days before due date at 09:00 AM so you never miss recurring payments.',
+        'Live FX Currency Auto-Updater: Multi-tier fallback background updater refreshing JPY, IDR, USD, and MMK rates every 12 hours.',
+      ],
+      ja: [
+        '口座間振替（資金移動）機能: 銀行、電子マネー、現金間の資金移動を月次支出に含めず、純資産を正確に維持したまま記録可能になりました。',
+        '金額入力カーソル位置の自由移動: カンマ付き金額の途中（例: 10,000の0を直接1に打ち換えて11,000にする等）をカーソルが末尾に飛ばず快適に編集できます。',
+        '端末OSテーマ連動: 初回起動時に端末のダーク/ライトモード設定を自動検知し、手動切替時は設定を永続保存します。',
+        '月次明細エクスポート（CSV & PDF）: 月次収支データをExcel対応のUTF-8 BOM CSVまたは印刷・保存用PDFとしてワンタップで出力可能になりました。',
+        '生体認証 & 暗証番号アプリロック: 指紋認証/Face IDおよび4桁PINによるバックグラウンド復帰時の自動ロックで機密な収支データを保護します。',
+        '定期請求・サブスクリプション通知: 支払期日の2日前（午前9時）にプッシュリマインダーを配信し、支払い忘れを防止します。',
+        '為替レート自動更新エンジン: 12時間ごとにマルチティアフォールバックで為替レート（JPY/IDR/USD/MMK）を自動更新します。',
+      ],
+    },
+  },
   {
     version: '1.7.1',
     date: '2026-11-13',

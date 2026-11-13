@@ -92,6 +92,13 @@ export function getFundingSourceBadgeStyle(source: FundingSource | string): Cate
 }
 
 export function getCategoryBadgeStyle(type: TransactionType | string, category?: string): CategoryStyle {
+  if (type === 'transfer') {
+    return {
+      bg: 'bg-indigo-500/15',
+      text: 'text-indigo-400 dark:text-indigo-400',
+      border: 'border-indigo-500/30',
+    };
+  }
   if (type === 'savings') {
     return {
       bg: 'bg-amber-500/15',

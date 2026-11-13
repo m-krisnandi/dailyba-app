@@ -1,4 +1,5 @@
 'use client';
+import { FormattedAmountInput } from '@/components/FormattedAmountInput';
 
 import React, { useMemo, useState } from 'react';
 import { Currency, InvestmentAsset, InvestmentSortOption, Language } from '@/types/finance';
@@ -457,14 +458,14 @@ export function InvestmentBoard({
                 <div className="w-full sm:w-[155px]">
                   <CustomSelect
                     value={filterCategory}
-                    onChange={(val) => setFilterCategory(val as any)}
+                    onChange={(val: string) => setFilterCategory(val as any)}
                     options={filterCategoryOptions}
                   />
                 </div>
                 <div className="w-full sm:w-[165px]">
                   <CustomSelect
                     value={sortBy}
-                    onChange={(val) => setSortBy(val as InvestmentSortOption)}
+                    onChange={(val: string) => setSortBy(val as InvestmentSortOption)}
                     options={sortOptions}
                   />
                 </div>
@@ -653,7 +654,7 @@ export function InvestmentBoard({
                 </label>
                 <CustomSelect
                   value={category}
-                  onChange={(val) => setCategory(val)}
+                  onChange={(val) => setCategory(val as any)}
                   options={assetCategoryOptions}
                 />
               </div>
@@ -664,16 +665,13 @@ export function InvestmentBoard({
                   {t.investments.amountInvested} ({currency})
                 </label>
                 <div className="relative">
-                  <input
-                    type="text"
-                    inputMode="decimal"
+                  <FormattedAmountInput
                     required
                     value={costBasisStr}
-                    onChange={(e) => {
-                      const raw = e.target.value.replace(/[^0-9.]/g, '');
-                      setCostBasisStr(formatNumberWithCommas(raw));
+                    onChange={(val: string) => {
+                      setCostBasisStr(val);
                       if (!isCustomValuation) {
-                        setCurrentValueStr(formatNumberWithCommas(raw));
+                        setCurrentValueStr(val);
                       }
                     }}
                     placeholder="0"
@@ -710,14 +708,9 @@ export function InvestmentBoard({
                       {t.investments.currentValue} ({currency})
                     </label>
                     <div className="relative">
-                      <input
-                        type="text"
-                        inputMode="decimal"
+                      <FormattedAmountInput
                         value={currentValueStr}
-                        onChange={(e) => {
-                          const raw = e.target.value.replace(/[^0-9.]/g, '');
-                          setCurrentValueStr(formatNumberWithCommas(raw));
-                        }}
+                        onChange={(val: string) => setCurrentValueStr(val)}
                         placeholder={costBasisStr || '0'}
                         className="w-full bg-[var(--bg-surface-solid)] border border-[var(--border-subtle)] focus:border-[var(--border-strong)] rounded-xl pl-3 pr-14 py-2 text-xs font-bold text-[var(--text-main)] tabular-numbers font-mono outline-none"
                       />

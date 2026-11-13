@@ -1,4 +1,4 @@
-export type TransactionType = 'expense' | 'income' | 'savings' | 'investment';
+export type TransactionType = 'expense' | 'income' | 'savings' | 'investment' | 'transfer';
 
 export type ExpenseCategory =
   | 'food_drinks'
@@ -48,6 +48,7 @@ export interface Transaction {
   amount: number;
   category: ExpenseCategory | IncomeCategory | string;
   source: FundingSource;
+  destinationSource?: FundingSource;
   currency: Currency;
   date: string; // YYYY-MM-DD
   note?: string;

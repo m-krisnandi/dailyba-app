@@ -1,4 +1,5 @@
 'use client';
+import { FormattedAmountInput } from '@/components/FormattedAmountInput';
 
 import React, { useMemo, useState, useEffect } from 'react';
 import { Currency, Language, Transaction, TransactionSortOption } from '@/types/finance';
@@ -303,14 +304,9 @@ export function SavingsBoard({
             </div>
             <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2.5">
               <div className="relative flex-1">
-                <input
-                  type="text"
-                  inputMode="decimal"
+                <FormattedAmountInput
                   value={goalInput}
-                  onChange={(e) => {
-                    const raw = e.target.value.replace(/[^0-9.]/g, '');
-                    setGoalInput(formatNumberWithCommas(raw));
-                  }}
+                  onChange={(val: string) => setGoalInput(val)}
                   placeholder="0"
                   className="w-full bg-[var(--bg-surface-solid)] border border-[var(--border-subtle)] focus:border-[var(--border-strong)] rounded-xl pl-4 pr-16 py-3 sm:py-2.5 text-base sm:text-sm font-bold text-[var(--text-main)] outline-none tabular-numbers font-mono"
                 />
@@ -479,14 +475,9 @@ export function SavingsBoard({
         {/* Custom Save Form (Live Comma Formatted) */}
         <form onSubmit={handleCustomSubmit} className="pt-2 space-y-3">
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
-            <input
-              type="text"
-              inputMode="decimal"
+            <FormattedAmountInput
               value={customAmountStr}
-              onChange={(e) => {
-                const raw = e.target.value.replace(/[^0-9.]/g, '');
-                setCustomAmountStr(formatNumberWithCommas(raw));
-              }}
+              onChange={(val: string) => setCustomAmountStr(val)}
               placeholder={language === 'ja' ? '任意の貯蓄金額を入力...' : 'Custom savings amount...'}
               className="bg-[var(--bg-subtle)] border border-[var(--border-subtle)] focus:border-[var(--accent-amber)] rounded-xl px-4 py-3 text-xs sm:text-sm text-[var(--text-main)] placeholder-[var(--text-faint)] outline-none tabular-numbers font-mono transition-all"
             />
@@ -559,7 +550,7 @@ export function SavingsBoard({
               <div className="shrink-0 w-full sm:w-[170px]">
                 <CustomSelect
                   value={savingsSortBy}
-                  onChange={(val) => handleSavingsSortChange(val as TransactionSortOption)}
+                  onChange={(val: string) => handleSavingsSortChange(val as TransactionSortOption)}
                   options={sortOptions}
                 />
               </div>
