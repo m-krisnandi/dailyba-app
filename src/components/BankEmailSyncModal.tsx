@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import {
   ExpenseCategory,
   FundingSource,
@@ -13,6 +13,13 @@ import { translations, formatCurrency } from '@/lib/i18n';
 import { dailybaApi } from '@/lib/api';
 import { useAuth } from '@/lib/authContext';
 import { useBodyScrollLock } from '@/lib/useBodyScrollLock';
+import { CustomSelect, CustomSelectOption } from '@/components/CustomSelect';
+import {
+  EXPENSE_CATEGORY_ICONS,
+  FUNDING_SOURCE_ICONS,
+  getCategoryBadgeStyle,
+  getFundingSourceBadgeStyle,
+} from '@/lib/constants';
 import {
   X,
   RefreshCw,
@@ -90,6 +97,32 @@ export function BankEmailSyncModal({
   const [itemSources, setItemSources] = useState<Record<string, FundingSource>>({});
   const [itemNotes, setItemNotes] = useState<Record<string, string>>({});
 
+  // Consistent liquid-glass custom dropdown options
+  const categoryOptions = useMemo<CustomSelectOption<ExpenseCategory>[]>(() => {
+    return (Object.keys(EXPENSE_CATEGORY_ICONS) as ExpenseCategory[]).map((cat) => {
+      const style = getCategoryBadgeStyle('expense', cat);
+      return {
+        value: cat,
+        label: t.expenseCategories[cat] || cat,
+        icon: EXPENSE_CATEGORY_ICONS[cat],
+        badgeClass: `${style.border} ${style.bg} ${style.text}`,
+      };
+    });
+  }, [t]);
+
+  const sourceOptions = useMemo<CustomSelectOption<FundingSource>[]>(() => {
+    const sources: FundingSource[] = ['bank', 'ewallet', 'credit_card', 'cash'];
+    return sources.map((src) => {
+      const style = getFundingSourceBadgeStyle(src);
+      return {
+        value: src,
+        label: t.sources[src] || src,
+        icon: FUNDING_SOURCE_ICONS[src],
+        badgeClass: `${style.border} ${style.bg} ${style.text}`,
+      };
+    });
+  }, [t]);
+
   const refreshData = async () => {
     setIsLoading(true);
     try {
@@ -100,7 +133,7 @@ export function BankEmailSyncModal({
 
       if (statusRes.success) {
         const data = statusRes.data || (statusRes as any);
-        if (data && typeof data.googleConfigured !== "undefined") {
+        if (data && typeof data.googleConfigured !== 'undefined') {
           setStatus(data);
         }
       }
@@ -551,9 +584,9 @@ export function BankEmailSyncModal({
                   </div>
 
                   <div className="space-y-2.5">
-                    {pendingItems.map(item => {
+                    {pendingItems.map((item) => {
                       const isPotentialDuplicate = existingTransactions.some(
-                        tx => tx.amount === item.amount && tx.date === item.occurred_at
+                        (tx) => tx.amount === item.amount && tx.date === item.occurred_at
                       );
                       const currentCategory = itemCategories[item.id] || item.category;
                       const currentSource = itemSources[item.id] || item.source;
@@ -574,7 +607,7 @@ export function BankEmailSyncModal({
                                 </span>
                                 <h3 className="text-sm font-bold text-[var(--text-main)]">{item.merchant}</h3>
                                 {item.parsed_by === 'ai' && (
-                                  <span className="px-1.5 py-0.5 text-[9px] font-bold rounded bg-sky-500/15 text-sky-300 border border-sky-500/30 flex items-center space-x-1">
+                                   <span className="px-1.5 py-0.5 text-[9px] font-bold rounded bg-sky-500/15 text-sky-300 border border-sky-500/30 flex items-center space-x-1">
                                     <Sparkles className="w-2.5 h-2.5" />
                                     <span>{language === 'ja' ? 'AI抽出' : 'AI-Extracted'}</span>
                                   </span>
@@ -586,7 +619,7 @@ export function BankEmailSyncModal({
                                 )}
                                 {item.confidence < 0.8 && item.parsed_by !== 'ai' && (
                                   <span className="px-1.5 py-0.5 text-[9px] font-bold rounded bg-purple-500/15 text-purple-300 border border-purple-500/30">
-                                    {language === "ja" ? "未検証・要確認" : "Unverified • Review Required"}
+                                    {language === 'ja' ? '未検証・要確認' : 'Unverified • Review Required'}
                                   </span>
                                 )}
                                 {isPotentialDuplicate && (
@@ -629,7 +662,7 @@ export function BankEmailSyncModal({
                           <div className="space-y-2 pt-1.5 border-t border-[var(--border-subtle)]">
                             <div>
                               <label className="text-[10px] text-[var(--text-faint)] uppercase block mb-1">
-                                {language === "ja" ? "取引名 / メモ (編集可)" : "Description / Store (Editable)"}
+                                {language === 'ja' ? '取引名 / メモ (編集可)' : 'Description / Store (Editable)'}
                               </label>
                               <input
                                 type="text"
@@ -642,46 +675,37 @@ export function BankEmailSyncModal({
                               />
                             </div>
 
-                            <div className="grid grid-cols-2 gap-2">
+                            {/* Consistent Custom Dropdowns */}
+                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
                               <div>
                                 <label className="text-[10px] text-[var(--text-faint)] uppercase block mb-1">
                                   {t.emailSync.category}
                                 </label>
-                                <select
-                                  value={currentCategory}
-                                  onChange={e =>
-                                    setItemCategories(prev => ({ ...prev, [item.id]: e.target.value }))
+                                <CustomSelect<ExpenseCategory>
+                                  value={currentCategory as ExpenseCategory}
+                                  onChange={(val) =>
+                                    setItemCategories((prev) => ({ ...prev, [item.id]: val }))
                                   }
-                                  className="w-full bg-[var(--bg-card)] border border-[var(--border-subtle)] rounded-lg px-2 py-1 text-xs text-[var(--text-main)] focus:outline-none focus:border-blue-500"
-                                >
-                                  {Object.keys(t.expenseCategories).map(catKey => (
-                                    <option key={catKey} value={catKey}>
-                                      {t.expenseCategories[catKey as ExpenseCategory]}
-                                    </option>
-                                  ))}
-                                </select>
+                                  options={categoryOptions}
+                                  size="sm"
+                                />
                               </div>
 
                               <div>
                                 <label className="text-[10px] text-[var(--text-faint)] uppercase block mb-1">
                                   {t.emailSync.source}
                                 </label>
-                                <select
-                                  value={currentSource}
-                                  onChange={e =>
-                                    setItemSources(prev => ({
+                                <CustomSelect<FundingSource>
+                                  value={currentSource as FundingSource}
+                                  onChange={(val) =>
+                                    setItemSources((prev) => ({
                                       ...prev,
-                                      [item.id]: e.target.value as FundingSource,
+                                      [item.id]: val,
                                     }))
                                   }
-                                  className="w-full bg-[var(--bg-card)] border border-[var(--border-subtle)] rounded-lg px-2 py-1 text-xs text-[var(--text-main)] focus:outline-none focus:border-blue-500"
-                                >
-                                  {(["bank", "ewallet", "credit_card", "cash"] as FundingSource[]).map(src => (
-                                    <option key={src} value={src}>
-                                      {t.sources[src]}
-                                    </option>
-                                  ))}
-                                </select>
+                                  options={sourceOptions}
+                                  size="sm"
+                                />
                               </div>
                             </div>
                           </div>

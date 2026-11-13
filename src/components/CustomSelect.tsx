@@ -21,6 +21,7 @@ interface CustomSelectProps<T extends string = string> {
   menuClassName?: string;
   disabled?: boolean;
   dropUp?: boolean;
+  size?: 'sm' | 'md';
 }
 
 export function CustomSelect<T extends string = string>({
@@ -32,6 +33,7 @@ export function CustomSelect<T extends string = string>({
   menuClassName = '',
   disabled = false,
   dropUp = false,
+  size = 'md',
 }: CustomSelectProps<T>) {
   const [isOpen, setIsOpen] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
@@ -74,6 +76,7 @@ export function CustomSelect<T extends string = string>({
   );
 
   const SelectedIcon = selectedOption?.icon;
+  const isSm = size === 'sm';
 
   return (
     <div className={`relative ${className}`} ref={containerRef}>
@@ -82,7 +85,9 @@ export function CustomSelect<T extends string = string>({
         type="button"
         disabled={disabled}
         onClick={() => !disabled && setIsOpen((prev) => !prev)}
-        className={`w-full flex items-center justify-between px-3.5 py-2.5 rounded-2xl bg-[var(--bg-subtle)] border text-xs font-bold text-[var(--text-main)] transition-all cursor-pointer shadow-xs select-none outline-none ${
+        className={`w-full flex items-center justify-between ${
+          isSm ? 'px-2.5 py-1.5 rounded-xl text-xs font-semibold' : 'px-3.5 py-2.5 rounded-2xl text-xs font-bold'
+        } bg-[var(--bg-subtle)] border text-[var(--text-main)] transition-all cursor-pointer shadow-xs select-none outline-none ${
           isOpen
             ? 'border-[var(--accent-emerald)] ring-2 ring-[var(--accent-emerald)]/15 bg-[var(--bg-surface-solid)]'
             : 'border-[var(--border-subtle)] hover:border-[var(--border-strong)] hover:bg-[var(--bg-subtle-hover)]'
@@ -90,11 +95,16 @@ export function CustomSelect<T extends string = string>({
         aria-haspopup="listbox"
         aria-expanded={isOpen}
       >
-        <div className="flex items-center space-x-2.5 min-w-0 pr-2">
+        <div className="flex items-center space-x-2 min-w-0 pr-1.5">
           {SelectedIcon && (
-            <div className={`w-6 h-6 rounded-lg flex items-center justify-center shrink-0 shadow-2xs border ${selectedOption?.badgeClass || "bg-[var(--bg-surface)] border-[var(--border-subtle)] text-[var(--text-main)]"}`}>
-
-              <SelectedIcon className="w-3.5 h-3.5" />
+            <div
+              className={`${
+                isSm ? 'w-5 h-5 rounded-md' : 'w-6 h-6 rounded-lg'
+              } flex items-center justify-center shrink-0 shadow-2xs border ${
+                selectedOption?.badgeClass || 'bg-[var(--bg-surface)] border-[var(--border-subtle)] text-[var(--text-main)]'
+              }`}
+            >
+              <SelectedIcon className={isSm ? 'w-3 h-3' : 'w-3.5 h-3.5'} />
             </div>
           )}
           <span className="truncate text-xs font-bold text-[var(--text-main)]">
@@ -108,7 +118,7 @@ export function CustomSelect<T extends string = string>({
         </div>
 
         <ChevronDown
-          className={`w-3.5 h-3.5 text-[var(--text-muted)] shrink-0 transition-transform duration-200 ${
+          className={`${isSm ? 'w-3 h-3' : 'w-3.5 h-3.5'} text-[var(--text-muted)] shrink-0 transition-transform duration-200 ${
             isOpen ? 'rotate-180 text-[var(--accent-emerald)]' : ''
           }`}
         />
@@ -133,7 +143,9 @@ export function CustomSelect<T extends string = string>({
                 role="option"
                 aria-selected={isSelected}
                 onClick={() => handleSelect(opt.value)}
-                className={`w-full flex items-center justify-between px-3 py-2 rounded-xl text-xs transition-all cursor-pointer select-none text-left ${
+                className={`w-full flex items-center justify-between ${
+                  isSm ? 'px-2.5 py-1.5 rounded-lg text-xs' : 'px-3 py-2 rounded-xl text-xs'
+                } transition-all cursor-pointer select-none text-left ${
                   isSelected
                     ? 'bg-[var(--bg-subtle)] text-[var(--text-main)] font-bold shadow-2xs border border-[var(--border-subtle)]'
                     : 'text-[var(--text-muted)] hover:text-[var(--text-main)] hover:bg-[var(--bg-subtle-hover)] font-medium border border-transparent'
@@ -142,13 +154,16 @@ export function CustomSelect<T extends string = string>({
                 <div className="flex items-center space-x-2.5 min-w-0 pr-2">
                   {OptIcon && (
                     <div
-                      className={`w-6 h-6 rounded-lg flex items-center justify-center shrink-0 border transition-colors ${
-                        opt.badgeClass || (isSelected
+                      className={`${
+                        isSm ? 'w-5 h-5 rounded-md' : 'w-6 h-6 rounded-lg'
+                      } flex items-center justify-center shrink-0 border transition-colors ${
+                        opt.badgeClass ||
+                        (isSelected
                           ? 'bg-[var(--bg-surface)] border-[var(--border-strong)] text-[var(--accent-emerald)]'
                           : 'bg-[var(--bg-subtle)] border-[var(--border-subtle)] text-[var(--text-muted)]')
                       }`}
                     >
-                      <OptIcon className="w-3.5 h-3.5" />
+                      <OptIcon className={isSm ? 'w-3 h-3' : 'w-3.5 h-3.5'} />
                     </div>
                   )}
                   <div className="min-w-0">
