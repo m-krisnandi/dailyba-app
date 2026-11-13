@@ -61,7 +61,7 @@ export function TransactionDetailModal({
   if (!isOpen || !transaction) return null;
 
   const t = translations[language];
-  const isJa = language === 'ja';
+
 
   const isExpense = transaction.type === 'expense';
   const isIncome = transaction.type === 'income';
@@ -109,7 +109,7 @@ export function TransactionDetailModal({
         <div className="flex items-center justify-between border-b border-[var(--border-subtle)] pb-3">
           <div className="flex items-center space-x-2">
             <span className="text-xs font-bold uppercase tracking-wider text-[var(--text-muted)]">
-              {isJa ? '取引明細' : 'Transaction Details'}
+              {t.txDetail.title}
             </span>
           </div>
           <button
@@ -184,7 +184,7 @@ export function TransactionDetailModal({
 
           {isDifferentCurrency && (
             <p className="text-xs font-mono text-[var(--text-muted)]">
-              {isJa ? '元金額: ' : 'Original: '}
+              {t.txDetail.original} 
               {formatCurrency(transaction.amount, transaction.currency || 'JPY')}
             </p>
           )}
@@ -194,14 +194,14 @@ export function TransactionDetailModal({
         <div className="p-4 rounded-2xl bg-[var(--bg-subtle)] border border-[var(--border-subtle)] space-y-1.5">
           <div className="flex items-center space-x-1.5 text-xs font-bold text-[var(--text-muted)]">
             <FileText className="w-3.5 h-3.5 text-[var(--accent-emerald)]" />
-            <span>{isJa ? '説明・メモ' : 'Note & Description'}</span>
+            <span>{t.txDetail.note}</span>
           </div>
           <p className="text-xs sm:text-sm text-[var(--text-main)] font-medium whitespace-pre-wrap break-words leading-relaxed select-text">
             {transaction.note && transaction.note.trim() ? (
               transaction.note
             ) : (
               <span className="text-[var(--text-faint)] italic">
-                {isJa ? 'メモはありません' : 'No description provided'}
+                {t.txDetail.noNote}
               </span>
             )}
           </p>
@@ -213,7 +213,7 @@ export function TransactionDetailModal({
           <div className="p-3 rounded-2xl bg-[var(--bg-subtle)] border border-[var(--border-subtle)] flex items-center justify-between">
             <div className="flex items-center space-x-2 text-xs text-[var(--text-muted)]">
               <Tag className="w-3.5 h-3.5" />
-              <span>{isJa ? 'カテゴリー' : 'Category'}</span>
+              <span>{t.txDetail.category}</span>
             </div>
             <div className="flex items-center space-x-2">
               <div className={`w-6 h-6 rounded-lg border flex items-center justify-center shrink-0 ${catStyle.border} ${catStyle.bg} ${catStyle.text}`}>
@@ -227,7 +227,7 @@ export function TransactionDetailModal({
           <div className="p-3 rounded-2xl bg-[var(--bg-subtle)] border border-[var(--border-subtle)] flex items-center justify-between">
             <div className="flex items-center space-x-2 text-xs text-[var(--text-muted)]">
               <CreditCard className="w-3.5 h-3.5" />
-              <span>{isJa ? '支出元・口座' : 'Payment Source'}</span>
+              <span>{t.txDetail.paymentSource}</span>
             </div>
             <div className="flex items-center space-x-2">
               <div className={`w-6 h-6 rounded-lg border flex items-center justify-center shrink-0 ${sourceStyle.border} ${sourceStyle.bg} ${sourceStyle.text}`}>
@@ -243,7 +243,7 @@ export function TransactionDetailModal({
           <div className="p-3 rounded-2xl bg-[var(--bg-subtle)] border border-[var(--border-subtle)] flex items-center justify-between">
             <div className="flex items-center space-x-2 text-xs text-[var(--text-muted)]">
               <Calendar className="w-3.5 h-3.5" />
-              <span>{isJa ? '取引日' : 'Date'}</span>
+              <span>{t.txDetail.date}</span>
             </div>
             <span className="text-xs font-mono font-bold text-[var(--text-main)]">
               {transaction.date}
@@ -254,7 +254,7 @@ export function TransactionDetailModal({
           <div className="px-3 py-1 flex items-center justify-between text-[10px] font-mono text-[var(--text-faint)]">
             <span>ID: {transaction.id}</span>
             {transaction.isRecurring && (
-              <span className="text-emerald-500 font-semibold">{isJa ? '毎月の固定費' : 'Recurring Bill'}</span>
+              <span className="text-emerald-500 font-semibold">{t.txDetail.recurringBill}</span>
             )}
           </div>
         </div>
@@ -292,7 +292,7 @@ export function TransactionDetailModal({
               onClick={onClose}
               className="px-5 py-2 rounded-xl bg-[var(--btn-primary-bg)] text-[var(--btn-primary-text)] border border-[var(--btn-primary-border)] shadow-[var(--btn-primary-shadow)] hover:opacity-90 text-xs font-bold transition-all cursor-pointer"
             >
-              {isJa ? '閉じる' : 'Close'}
+              {t.txDetail.close}
             </button>
           </div>
         </div>
@@ -300,8 +300,8 @@ export function TransactionDetailModal({
 
       <ConfirmDeleteModal
         isOpen={isConfirmDeleteOpen}
-        title={isJa ? "取引の削除" : "Delete Transaction"}
-        description={isJa ? "この取引履歴を削除してもよろしいですか？" : "Are you sure you want to delete this transaction?"}
+        title={t.txDetail.deleteTitle}
+        description={t.txDetail.deleteDesc}
         itemName={`${catLabel}: ${formatCurrency(convertedAmount, currency)}`}
         language={language}
         onConfirm={() => {

@@ -22,6 +22,7 @@ import { ConfirmDeleteModal } from '@/components/ConfirmDeleteModal';
 import { ReceiptScannerModal } from '@/components/ReceiptScannerModal';
 import { CustomSelect, CustomSelectOption } from '@/components/CustomSelect';
 import { FormattedAmountInput } from '@/components/FormattedAmountInput';
+import { parseSmartText } from '@/lib/parser';
 import { useBodyScrollLock } from '@/lib/useBodyScrollLock';
 import { getTodayLocalDate } from '@/lib/dateUtils';
 import {
@@ -317,96 +318,50 @@ export function QuickRecordBoard({
     }, 1500);
   };
 
-  function parseSmartText(raw: string): {
-    type: TransactionType;
-    category: ExpenseCategory;
-    amount: number;
-    source: FundingSource;
-    note: string;
-  } | null {
-    const text = raw.trim().toLowerCase();
-    const match = text.match(/([a-zA-Z\s]+)?\s*([0-9.,]+)\s*([a-zA-Z\s]+)?/);
-    if (!match) return null;
-
-    const numStr = match[2].replace(/,/g, '');
-    const amount = parseFloat(numStr);
-    if (isNaN(amount) || amount <= 0) return null;
-
-    const rawWords = `${match[1] || ''} ${match[3] || ''}`.trim();
-
-    // 1. Detect funding source from input keywords (e.g. "train 4000 bank")
-    let detectedSource: FundingSource = source; // Default to active board source
-    if (/\b(cc|credit|kredit|kartu kredit|creditcard|visa|mastercard|jcb|amex)\b/.test(rawWords)) {
-      detectedSource = 'credit_card';
-    } else if (/\b(bank|bca|mandiri|bni|bri|cimb|jago|jenius|atm|transfer|debit|wire)\b/.test(rawWords)) {
-      detectedSource = 'bank';
-    } else if (/\b(ic|suica|pasmo|wallet|ewallet|e-wallet|ovo|gopay|dana|shopeepay|qris)\b/.test(rawWords)) {
-      detectedSource = 'ewallet';
-    } else if (/\b(cash|tunai|genkin)\b/.test(rawWords)) {
-      detectedSource = 'cash';
-    }
-
-    // Clean up source words to leave the clean description/note
-    const cleanWords = rawWords
-      .replace(/\b(bank|bca|mandiri|bni|bri|cimb|jago|jenius|atm|transfer|debit|wire|ic|suica|pasmo|wallet|ewallet|e-wallet|ovo|gopay|dana|shopeepay|qris|cc|credit|kredit|kartu kredit|creditcard|visa|mastercard|jcb|amex|cash|tunai|genkin)\b/gi, '')
-      .trim();
-
-    const words = cleanWords || rawWords;
-
-    let category: ExpenseCategory = 'others';
-    if (/train|subway|densha|jr|bus|transport/.test(words)) category = 'train';
-    else if (/food|lunch|dinner|cafe|coffee|eat|meal|ramen|rice|drink/.test(words)) category = 'food_drinks';
-    else if (/taxi|uber|grab|gojek|ride/.test(words)) category = 'ride';
-    else if (/laundry|wash|dry/.test(words)) category = 'laundry';
-    else if (/rent|room|apartment|mansion/.test(words)) category = 'rent';
-    else if (/vps|server|cloud|aws|digitalocean/.test(words)) category = 'vps';
-    else if (/data|sim|mobile|wifi|phone|internet/.test(words)) category = 'mobile';
-    else if (/family|support|mom|dad/.test(words)) category = 'family';
-    else if (/gift|social|present|nomikai/.test(words)) category = 'gifts';
-    else if (/shop|buy|uniqlo|amazon/.test(words)) category = 'shopping';
-
-    // If candidate category is hidden, fallback to first visible category or 'others'
-    if (hiddenCategories.includes(category)) {
-      category = visibleExpenseCategories.includes('others')
-        ? 'others'
-        : visibleExpenseCategories[0] || 'others';
-    }
-
-    return {
-      type: 'expense',
-      category,
-      amount,
-      source: detectedSource,
-      note: words || raw,
-    };
-  }
-
   const handleSmartTextSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (isSubmittingRef.current) return;
     if (!smartText.trim()) return;
 
-    const parsed = parseSmartText(smartText);
+    const parsed = parseSmartText(smartText, source);
     if (!parsed) {
-      setStatusMessage(language === "ja" ? '入力を解析できませんでした。例: 「電車 220」や「昼食 1000 現金」' : 'Could not parse text. Format e.g. "train 220 bank" or "laundry 600"');
+      setStatusMessage(language === "ja" ? '入力を解析できませんでした。例: 「電車 500」や「セブン 850 現金」' : 'Could not parse text. Format e.g. "train 220 bank" or "lunch 35k ewallet"');
       setTimeout(() => setStatusMessage(null), 3000);
       return;
     }
 
     isSubmittingRef.current = true;
 
+    let finalCategory = parsed.category;
+    if (parsed.type === 'expense' && hiddenCategories.includes(finalCategory as ExpenseCategory)) {
+      finalCategory = visibleExpenseCategories.includes('others')
+        ? 'others'
+        : visibleExpenseCategories[0] || 'others';
+    }
+
+    const finalSource = parsed.source || source;
+
     onAddTransaction({
       type: parsed.type,
       amount: parsed.amount,
-      category: parsed.category,
-      source: parsed.source,
+      category: finalCategory,
+      source: finalSource,
+      destinationSource: parsed.destinationSource,
       currency,
       date: date || getTodayLocalDate(),
       note: parsed.note,
     });
 
     setSmartText('');
-    setStatusMessage(language === "ja" ? `${t.expenseCategories[parsed.category as ExpenseCategory] || parsed.category}（${t.sources[parsed.source as FundingSource] || parsed.source}）を記録しました！` : `Saved ${parsed.category} (${parsed.source})!`);
+    const typeLabel = parsed.type === 'expense'
+      ? (t.expenseCategories[finalCategory as ExpenseCategory] || finalCategory)
+      : parsed.type === 'income'
+      ? (t.incomeCategories[finalCategory as IncomeCategory] || finalCategory)
+      : parsed.type === 'transfer'
+      ? t.record.typeTransfer
+      : t.record.typeSavings;
+
+    setStatusMessage(language === "ja" ? `${typeLabel}（${t.sources[finalSource as FundingSource] || finalSource}）を記録しました！` : `Saved ${typeLabel} (${finalSource})!`);
     setTimeout(() => {
       setStatusMessage(null);
       isSubmittingRef.current = false;

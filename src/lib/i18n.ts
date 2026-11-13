@@ -10,6 +10,16 @@ export interface Translations {
     yearly: string;
     investments: string;
     savings: string;
+    syncVault: string;
+    bankEmailSync: string;
+    backupRestore: string;
+    remindersNotifications: string;
+    securityAppLock: string;
+    accountSettings: string;
+    logOut: string;
+    deleteAccount: string;
+    getApk: string;
+    settingsReminder: string;
   };
   actions: {
     save: string;
@@ -155,6 +165,10 @@ export interface Translations {
     exportStatement: string;
     exportCsv: string;
     exportPdf: string;
+    leftoverNotice: string;
+    carryoverNotice: string;
+    inclCarryover: string;
+    totalLabel: string;
   };
   security: {
     biometricLock: string;
@@ -213,6 +227,28 @@ export interface Translations {
     activityFeed: string;
     adjustTarget: string;
     updateTarget: string;
+    lifetimeBuffer: string;
+    monthlySavingsRate: string;
+    ofIncome: string;
+    allocatedThisMonth: string;
+    remainingToTarget: string;
+    achieved: string;
+    targetReached: string;
+    neededToReach: string;
+    oneTapAllocation: string;
+    customAmountPlaceholder: string;
+    notePlaceholder: string;
+    savingsTransfer: string;
+    deleteTitle: string;
+    deleteDesc: string;
+    presetLabel: string;
+    totalReserveGoal: string;
+    savingsTarget: string;
+    targetAchieved: string;
+    onTrack: string;
+    quickSavingsAllocation: string;
+    targetUpdated: string;
+    entryRemoved: string;
   };
   dailySpend: {
     title: string;
@@ -284,6 +320,62 @@ export interface Translations {
     loadSampleMandiri: string;
     loadSamplePayPay: string;
   };
+  confirmDelete: {
+    title: string;
+    desc: string;
+    confirm: string;
+    cancel: string;
+  };
+  txDetail: {
+    title: string;
+    original: string;
+    note: string;
+    noNote: string;
+    category: string;
+    paymentSource: string;
+    date: string;
+    recurringBill: string;
+    close: string;
+    deleteTitle: string;
+    deleteDesc: string;
+  };
+  scanner: {
+    title: string;
+    autoScan: string;
+    subtitle: string;
+    takePhoto: string;
+    takePhotoDesc: string;
+    uploadImage: string;
+    uploadImageDesc: string;
+    autoExtractedTitle: string;
+    grandTotalCurrency: string;
+    paymentSource: string;
+    merchantItems: string;
+    categoryMatching: string;
+    alignInsideFrame: string;
+    scannerBrand: string;
+    captureReceipt: string;
+    uploadFromDisk: string;
+    uploadShort: string;
+    analyzingReceipt: string;
+    aiExtracting: string;
+    offlineOrError: string;
+    analysisFailed: string;
+    offlineDesc: string;
+    analysisFailedDesc: string;
+    quickManualEntry: string;
+    retry: string;
+    tryAgain: string;
+    manualModeViewingPhoto: string;
+    receiptParsed: string;
+    offlineTag: string;
+    hide: string;
+    viewPhoto: string;
+    convertedIntoActiveCurrency: string;
+    scanAnother: string;
+    cameraError: string;
+    generalError: string;
+  };
 }
 
 export const translations: Record<Language, Translations> = {
@@ -297,6 +389,16 @@ export const translations: Record<Language, Translations> = {
       yearly: 'Yearly',
       investments: 'Investments',
       savings: 'Savings',
+      syncVault: 'Sync Vault Now',
+      bankEmailSync: 'Bank & Email Sync',
+      backupRestore: 'Backup & Restore Data',
+      remindersNotifications: 'Reminders & Notifications',
+      securityAppLock: 'Security & App Lock',
+      accountSettings: 'Account & Server Settings',
+      logOut: 'Log Out',
+      deleteAccount: 'Delete Account',
+      getApk: 'Get Android APK',
+      settingsReminder: 'Settings & Daily Reminder',
     },
     actions: {
       save: 'Save Transaction',
@@ -466,6 +568,10 @@ export const translations: Record<Language, Translations> = {
       exportStatement: 'Export Statement',
       exportCsv: 'Export CSV (.csv)',
       exportPdf: 'Print / Save as PDF',
+      leftoverNotice: 'leftover from last month. Tap to bring it into this month budget.',
+      carryoverNotice: 'Surplus carryover from previous month active.',
+      inclCarryover: 'incl. carryover',
+      totalLabel: 'Total',
     },
     security: {
       biometricLock: 'Biometric & App Lock',
@@ -524,6 +630,28 @@ export const translations: Record<Language, Translations> = {
       activityFeed: 'Reserve Transfer History',
       adjustTarget: 'Set Goal',
       updateTarget: 'Update Monthly Target',
+      lifetimeBuffer: 'Lifetime liquid buffer across all time',
+      monthlySavingsRate: 'Monthly Savings Rate',
+      ofIncome: 'of income',
+      allocatedThisMonth: 'allocated this month',
+      remainingToTarget: 'Remaining to Target',
+      achieved: 'Achieved!',
+      targetReached: 'Target reached',
+      neededToReach: 'Needed to reach target',
+      oneTapAllocation: '1-Tap Allocation',
+      customAmountPlaceholder: 'Custom savings amount...',
+      notePlaceholder: 'Note (e.g. bonus portion, emergency buffer)...',
+      savingsTransfer: 'Savings Transfer',
+      deleteTitle: 'Delete Savings Entry',
+      deleteDesc: 'Are you sure you want to delete this savings allocation?',
+      presetLabel: 'Presets:',
+      totalReserveGoal: 'Total reserve goal',
+      savingsTarget: 'savings target',
+      targetAchieved: 'Target Achieved',
+      onTrack: 'On Track',
+      quickSavingsAllocation: 'Quick Savings Allocation',
+      targetUpdated: 'Monthly savings target updated!',
+      entryRemoved: 'Savings entry removed.',
     },
     dailySpend: {
       title: 'Daily Spending & Budget Limit',
@@ -595,6 +723,62 @@ export const translations: Record<Language, Translations> = {
       loadSampleMandiri: 'Load Sample: Livin Mandiri',
       loadSamplePayPay: 'Load Sample: PayPay Japan',
     },
+    confirmDelete: {
+      title: 'Confirm Deletion',
+      desc: 'Are you sure you want to delete this item? This action cannot be undone.',
+      confirm: 'Delete',
+      cancel: 'Cancel',
+    },
+    txDetail: {
+      title: 'Transaction Details',
+      original: 'Original:',
+      note: 'Note & Description',
+      noNote: 'No description provided',
+      category: 'Category',
+      paymentSource: 'Payment Source',
+      date: 'Date',
+      recurringBill: 'Recurring Bill',
+      close: 'Close',
+      deleteTitle: 'Delete Transaction',
+      deleteDesc: 'Are you sure you want to delete this transaction?',
+    },
+    scanner: {
+      title: 'Receipt & Invoice Scanner',
+      autoScan: 'Auto Scan',
+      subtitle: 'Photograph a receipt or upload an invoice to auto-extract details.',
+      takePhoto: 'Take Photo',
+      takePhotoDesc: 'Scan physical bill directly',
+      uploadImage: 'Upload Image',
+      uploadImageDesc: 'Pick invoice screenshot/photo',
+      autoExtractedTitle: 'Auto-Extracted Details',
+      grandTotalCurrency: 'Grand Total & Currency',
+      paymentSource: 'Payment Source (Cash/QRIS/Bank)',
+      merchantItems: 'Merchant Name & Items',
+      categoryMatching: 'Expense Category Matching',
+      alignInsideFrame: 'Align receipt inside frame',
+      scannerBrand: 'Dailyba Scanner',
+      captureReceipt: 'Capture Receipt',
+      uploadFromDisk: 'Upload from disk instead',
+      uploadShort: 'Upload',
+      analyzingReceipt: 'Analyzing receipt with AI...',
+      aiExtracting: 'Reading items, total amount, taxes, and merchant details.',
+      offlineOrError: 'Offline or Connection Error',
+      analysisFailed: 'Receipt Analysis Failed',
+      offlineDesc: 'Please check your internet connection and try again.',
+      analysisFailedDesc: 'Could not extract transaction details from this image.',
+      quickManualEntry: 'Quick Manual Entry',
+      retry: 'Retry',
+      tryAgain: 'Try Again',
+      manualModeViewingPhoto: 'Manual Entry Mode (Viewing Photo)',
+      receiptParsed: 'Receipt Parsed (Please review details)',
+      offlineTag: 'Offline',
+      hide: 'Hide',
+      viewPhoto: 'View Photo',
+      convertedIntoActiveCurrency: 'Converted into your active currency:',
+      scanAnother: 'Scan Another',
+      cameraError: 'Camera is unavailable or permission was denied.',
+      generalError: 'Could not analyze receipt image.',
+    },
   },
   ja: {
     appTitle: 'Dailyba',
@@ -606,6 +790,16 @@ export const translations: Record<Language, Translations> = {
       yearly: '年次推移',
       investments: '投資・純資産',
       savings: '貯金管理',
+      syncVault: '今すぐクラウド同期',
+      bankEmailSync: '銀行・決済メール連携',
+      backupRestore: 'データ出力・復元',
+      remindersNotifications: '通知 & リマインダー',
+      securityAppLock: '生体認証 & アプリロック',
+      accountSettings: 'アカウント・設定',
+      logOut: 'ログアウト',
+      deleteAccount: 'アカウントの削除',
+      getApk: 'Android APK入手',
+      settingsReminder: '設定 & 通知リマインダー',
     },
     actions: {
       save: '記録を保存',
@@ -775,6 +969,10 @@ export const translations: Record<Language, Translations> = {
       exportStatement: '明細書出力',
       exportCsv: 'CSV出力 (.csv)',
       exportPdf: '印刷 / PDF保存',
+      leftoverNotice: '前月の余剰金を今月の活動資金（繰越金）として計上できます。',
+      carryoverNotice: '前月からの繰越金が有効です。',
+      inclCarryover: '内 繰越金',
+      totalLabel: '合計',
     },
     security: {
       biometricLock: '生体認証・アプリロック',
@@ -833,6 +1031,28 @@ export const translations: Record<Language, Translations> = {
       activityFeed: '貯金振替履歴',
       adjustTarget: '目標設定',
       updateTarget: '目標金額を更新',
+      lifetimeBuffer: '手元に確保された累計防衛資金',
+      monthlySavingsRate: '今月の貯蓄率',
+      ofIncome: '収入比',
+      allocatedThisMonth: '今月振替済',
+      remainingToTarget: '目標達成まであと',
+      achieved: '達成！',
+      targetReached: '貯蓄目標を達成しました',
+      neededToReach: '目標額に到達するために必要',
+      oneTapAllocation: 'ワンタップ振替',
+      customAmountPlaceholder: '任意の貯蓄金額を入力...',
+      notePlaceholder: 'メモ（例: ボーナス分、生活防衛資金など）...',
+      savingsTransfer: '貯金振替',
+      deleteTitle: '貯金記録の削除',
+      deleteDesc: 'この貯金振替記録を削除してもよろしいですか？',
+      presetLabel: 'プリセット:',
+      totalReserveGoal: '生活防衛資金・目標額',
+      savingsTarget: '目標貯蓄額',
+      targetAchieved: '目標達成',
+      onTrack: '順調',
+      quickSavingsAllocation: 'クイック貯金振替',
+      targetUpdated: '今月の貯蓄目標を更新しました！',
+      entryRemoved: '貯金記録を削除しました。',
     },
     dailySpend: {
       title: '日次支出・1日予算管理',
@@ -904,18 +1124,79 @@ export const translations: Record<Language, Translations> = {
       loadSampleMandiri: 'サンプル: Livin Mandiri',
       loadSamplePayPay: 'サンプル: PayPay Japan',
     },
+    confirmDelete: {
+      title: '削除の確認',
+      desc: 'この項目を削除してもよろしいですか？この操作は取り消せません。',
+      confirm: '削除する',
+      cancel: 'キャンセル',
+    },
+    txDetail: {
+      title: '取引明細',
+      original: '元金額:',
+      note: '説明・メモ',
+      noNote: 'メモはありません',
+      category: 'カテゴリー',
+      paymentSource: '支出元・口座',
+      date: '取引日',
+      recurringBill: '毎月の固定費',
+      close: '閉じる',
+      deleteTitle: '取引の削除',
+      deleteDesc: 'この取引履歴を削除してもよろしいですか？',
+    },
+    scanner: {
+      title: 'レシート・請求書スキャナー',
+      autoScan: '自動解析',
+      subtitle: 'レシートを撮影または画像をアップロードして取引内容を自動抽出',
+      takePhoto: 'カメラで撮影',
+      takePhotoDesc: 'レシートを直接スキャン',
+      uploadImage: 'ギャラリーから選択',
+      uploadImageDesc: '保存済みの画像やPDFスクショ',
+      autoExtractedTitle: '自動認識される情報',
+      grandTotalCurrency: '合計金額 & 通貨 (Rp/¥/$)',
+      paymentSource: '決済方法 (現金/クレカ/QRIS)',
+      merchantItems: '店舗名 & 購入品目',
+      categoryMatching: '支出カテゴリーの自動分類',
+      alignInsideFrame: '枠内にレシートを収めてください',
+      scannerBrand: 'Dailyba レシート読取',
+      captureReceipt: '撮影する',
+      uploadFromDisk: '端末の画像を選択',
+      uploadShort: '画像選択',
+      analyzingReceipt: 'レシートをAI解析中...',
+      aiExtracting: '店舗名、合計金額、品目、税額を読み取っています。',
+      offlineOrError: 'オフライン・通信エラー',
+      analysisFailed: '解析できませんでした',
+      offlineDesc: 'インターネット接続を確認して再度お試しください。',
+      analysisFailedDesc: '画像から取引情報を抽出できませんでした。',
+      quickManualEntry: '写真を見ながら手動入力',
+      retry: 'もう一度試す',
+      tryAgain: 'もう一度試す',
+      manualModeViewingPhoto: '手動入力モード（写真確認中）',
+      receiptParsed: 'AI解析完了（内容をご確認ください）',
+      offlineTag: 'オフライン',
+      hide: '隠す',
+      viewPhoto: '写真を見る',
+      convertedIntoActiveCurrency: '換算目安 (自動反映):',
+      scanAnother: '再スキャン',
+      cameraError: 'カメラが利用できないか、アクセスが拒否されました。',
+      generalError: 'レシート画像を解析できませんでした。',
+    },
   },
 };
 
 export function formatCurrency(amount: number, currency: Currency): string {
+  const isNegative = amount < 0;
+  const abs = Math.abs(amount);
+  const sign = isNegative ? '-' : '';
+
   if (currency === 'JPY') {
-    return `¥${Math.round(amount).toLocaleString('ja-JP')}`;
+    return `${sign}¥${Math.round(abs).toLocaleString('ja-JP')}`;
   }
   if (currency === 'IDR') {
-    return `Rp ${Math.round(amount).toLocaleString('id-ID')}`;
+    return `${sign}Rp ${Math.round(abs).toLocaleString('id-ID')}`;
   }
   if (currency === 'MMK') {
-    return `K ${Math.round(amount).toLocaleString()}`;
+    return `${sign}K ${Math.round(abs).toLocaleString('en-US')}`;
   }
-  return `${amount.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+  // USD (2 decimal digits with $ symbol)
+  return `${sign}${abs.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 }

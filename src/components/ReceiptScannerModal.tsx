@@ -318,15 +318,13 @@ export function ReceiptScannerModal({
             </div>
             <div>
               <h3 className="text-base font-extrabold text-[var(--text-main)] flex items-center space-x-1.5">
-                <span>{language === 'ja' ? 'レシート・請求書スキャナー' : 'Receipt & Invoice Scanner'}</span>
+                <span>{t.scanner.title}</span>
                 <span className="text-[10px] font-mono px-1.5 py-0.5 rounded bg-emerald-500/15 text-emerald-500 border border-emerald-500/30">
-                  {language === 'ja' ? '自動解析' : 'Auto Scan'}
+                  {t.scanner.autoScan}
                 </span>
               </h3>
               <p className="text-[11px] text-[var(--text-muted)]">
-                {language === 'ja'
-                  ? 'カメラまたは画像から金額・項目・店舗を自動解析'
-                  : 'Auto-detect amount, category, source & merchant'}
+                {t.scanner.subtitle}
               </p>
             </div>
           </div>
@@ -373,10 +371,10 @@ export function ReceiptScannerModal({
                 </div>
                 <div>
                   <h4 className="text-sm font-bold text-[var(--text-main)]">
-                    {language === 'ja' ? 'カメラで撮影' : 'Take Photo'}
+                    {t.scanner.takePhoto}
                   </h4>
                   <p className="text-[11px] text-[var(--text-muted)] mt-0.5">
-                    {language === 'ja' ? 'レシートを直接スキャン' : 'Scan physical bill directly'}
+                    {t.scanner.takePhotoDesc}
                   </p>
                 </div>
               </button>
@@ -392,10 +390,10 @@ export function ReceiptScannerModal({
                 </div>
                 <div>
                   <h4 className="text-sm font-bold text-[var(--text-main)]">
-                    {language === 'ja' ? 'ギャラリーから選択' : 'Upload Image'}
+                    {t.scanner.uploadImage}
                   </h4>
                   <p className="text-[11px] text-[var(--text-muted)] mt-0.5">
-                    {language === 'ja' ? '保存済みの画像やPDFスクショ' : 'Pick invoice screenshot/photo'}
+                    {t.scanner.uploadImageDesc}
                   </p>
                 </div>
               </button>
@@ -404,24 +402,24 @@ export function ReceiptScannerModal({
             {/* Smart Capability Badges */}
             <div className="p-3.5 rounded-2xl border border-[var(--border-subtle)] bg-[var(--bg-subtle)] space-y-2">
               <span className="text-[10px] font-bold text-[var(--text-muted)] uppercase tracking-wider block">
-                {language === 'ja' ? '自動認識される情報' : 'Auto-Extracted Details'}
+                {t.scanner.autoExtractedTitle}
               </span>
               <div className="grid grid-cols-2 gap-2 text-[11px] text-[var(--text-muted)]">
                 <div className="flex items-center space-x-1.5">
                   <Check className="w-3.5 h-3.5 text-emerald-500 shrink-0" />
-                  <span>{language === 'ja' ? '合計金額 & 通貨 (Rp/¥/$)' : 'Grand Total & Currency'}</span>
+                  <span>{t.scanner.grandTotalCurrency}</span>
                 </div>
                 <div className="flex items-center space-x-1.5">
                   <Check className="w-3.5 h-3.5 text-emerald-500 shrink-0" />
-                  <span>{language === 'ja' ? '決済方法 (現金/クレカ/QRIS)' : 'Payment Source (Cash/QRIS/Bank)'}</span>
+                  <span>{t.scanner.paymentSource}</span>
                 </div>
                 <div className="flex items-center space-x-1.5">
                   <Check className="w-3.5 h-3.5 text-emerald-500 shrink-0" />
-                  <span>{language === 'ja' ? '店舗名 & 購入品目' : 'Merchant Name & Items'}</span>
+                  <span>{t.scanner.merchantItems}</span>
                 </div>
                 <div className="flex items-center space-x-1.5">
                   <Check className="w-3.5 h-3.5 text-emerald-500 shrink-0" />
-                  <span>{language === 'ja' ? '支出カテゴリーの自動分類' : 'Expense Category Matching'}</span>
+                  <span>{t.scanner.categoryMatching}</span>
                 </div>
               </div>
             </div>
@@ -450,7 +448,7 @@ export function ReceiptScannerModal({
 
                 {/* Top Alignment Guide */}
                 <div className="text-[10px] text-emerald-300 font-mono bg-black/75 px-3 py-1 rounded-full backdrop-blur-md self-center shadow-md border border-emerald-500/30 whitespace-nowrap">
-                  <span>{language === 'ja' ? '枠内にレシートを収めてください' : 'Align receipt inside frame'}</span>
+                  <span>{t.scanner.alignInsideFrame}</span>
                 </div>
 
                 {/* Center Dynamic Scanning Laser */}
@@ -458,7 +456,7 @@ export function ReceiptScannerModal({
 
                 {/* Bottom Branding / Guide */}
                 <div className="text-[10px] text-emerald-300 font-mono self-center bg-black/75 px-2.5 py-0.5 rounded-full backdrop-blur-md border border-emerald-500/30 whitespace-nowrap">
-                  <span>{language === 'ja' ? 'Dailyba レシート読取' : 'Dailyba Scanner'}</span>
+                  <span>{t.scanner.scannerBrand}</span>
                 </div>
               </div>
             </div>
@@ -483,7 +481,7 @@ export function ReceiptScannerModal({
                 }}
                 className="px-4 py-2.5 rounded-xl border border-[var(--border-subtle)] bg-[var(--bg-subtle)] hover:bg-[var(--bg-subtle-hover)] text-xs font-bold text-[var(--text-muted)] hover:text-[var(--text-main)] transition-all cursor-pointer"
               >
-                {language === 'ja' ? 'キャンセル' : 'Cancel'}
+                {t.actions.cancel}
               </button>
 
               {/* Big Shutter Button */}
@@ -494,7 +492,7 @@ export function ReceiptScannerModal({
               >
                 <div className="w-3 h-3 rounded-full bg-white animate-ping mr-0.5" />
                 <Camera className="w-4 h-4" />
-                <span>{language === 'ja' ? '撮影する' : 'Capture Receipt'}</span>
+                <span>{t.scanner.captureReceipt}</span>
               </button>
 
               <button
@@ -504,10 +502,10 @@ export function ReceiptScannerModal({
                   galleryInputRef.current?.click();
                 }}
                 className="px-3.5 py-2.5 rounded-xl border border-[var(--border-subtle)] bg-[var(--bg-subtle)] hover:bg-[var(--bg-subtle-hover)] text-xs font-bold text-[var(--text-muted)] hover:text-[var(--text-main)] transition-all cursor-pointer flex items-center space-x-1"
-                title={language === 'ja' ? '端末の画像を選択' : 'Upload from disk instead'}
+                title={t.scanner.uploadFromDisk}
               >
                 <Upload className="w-3.5 h-3.5" />
-                <span className="hidden sm:inline">{language === 'ja' ? '画像選択' : 'Upload'}</span>
+                <span className="hidden sm:inline">{t.scanner.uploadShort}</span>
               </button>
             </div>
           </div>
@@ -562,8 +560,7 @@ export function ReceiptScannerModal({
             <div className="space-y-1.5 max-w-sm">
               <h4 className="text-sm font-bold text-[var(--text-main)]">
                 {isNetworkFailure
-                  ? (language === 'ja' ? 'オフライン・通信エラー' : 'Offline or Connection Error')
-                  : (language === 'ja' ? '解析できませんでした' : 'Receipt Analysis Failed')}
+                  ? t.scanner.offlineOrError : t.scanner.analysisFailed}
               </h4>
               <p className="text-xs text-[var(--text-muted)] leading-relaxed">
                 {errorMessage}
@@ -587,7 +584,7 @@ export function ReceiptScannerModal({
                     className="w-full sm:w-auto px-5 py-2.5 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-white text-xs font-bold shadow-md shadow-emerald-500/20 active:scale-95 transition-all flex items-center justify-center space-x-1.5 cursor-pointer"
                   >
                     <PenLine className="w-3.5 h-3.5" />
-                    <span>{language === 'ja' ? '写真を見ながら手動入力' : 'Quick Manual Entry'}</span>
+                    <span>{t.scanner.quickManualEntry}</span>
                   </button>
 
                   <button
@@ -602,7 +599,7 @@ export function ReceiptScannerModal({
                     className="w-full sm:w-auto px-4 py-2.5 rounded-xl bg-[var(--bg-subtle)] border border-[var(--border-subtle)] text-xs font-bold text-[var(--text-muted)] hover:text-[var(--text-main)] hover:bg-[var(--bg-subtle-hover)] transition-all flex items-center justify-center space-x-1.5 cursor-pointer"
                   >
                     <RotateCcw className="w-3.5 h-3.5" />
-                    <span>{language === 'ja' ? 'もう一度試す' : 'Retry'}</span>
+                    <span>{t.scanner.retry}</span>
                   </button>
                 </>
               ) : (
@@ -612,7 +609,7 @@ export function ReceiptScannerModal({
                   className="px-4 py-2 rounded-xl bg-[var(--bg-subtle)] border border-[var(--border-subtle)] text-xs font-bold text-[var(--text-main)] hover:bg-[var(--bg-subtle-hover)] transition-all flex items-center space-x-1.5 cursor-pointer"
                 >
                   <RotateCcw className="w-3.5 h-3.5" />
-                  <span>{language === 'ja' ? 'もう一度試す' : 'Try Again'}</span>
+                  <span>{t.scanner.tryAgain}</span>
                 </button>
               )}
             </div>
@@ -639,8 +636,7 @@ export function ReceiptScannerModal({
                 }`}>
                   <span>
                     {isManualOfflineMode
-                      ? (language === 'ja' ? '手動入力モード（写真確認中）' : 'Manual Entry Mode (Viewing Photo)')
-                      : (language === 'ja' ? 'AI解析完了（内容をご確認ください）' : 'Receipt Parsed (Please review details)')}
+                      ? t.scanner.manualModeViewingPhoto : t.scanner.receiptParsed}
                   </span>
                   {!isManualOfflineMode ? (
                     <span className="text-[10px] font-mono px-1.5 py-0.5 rounded bg-emerald-500/20 text-emerald-500 font-bold">
@@ -648,7 +644,7 @@ export function ReceiptScannerModal({
                     </span>
                   ) : (
                     <span className="text-[10px] font-mono px-1.5 py-0.5 rounded bg-amber-500/20 text-amber-500 font-bold">
-                      {language === 'ja' ? 'オフライン' : 'Offline'}
+                      {t.scanner.offlineTag}
                     </span>
                   )}
                 </span>
@@ -660,7 +656,7 @@ export function ReceiptScannerModal({
                   className="text-[11px] font-bold text-[var(--text-muted)] hover:text-[var(--text-main)] flex items-center space-x-1 cursor-pointer"
                 >
                   <Eye className="w-3 h-3" />
-                  <span>{showFullReceipt ? (language === 'ja' ? '隠す' : 'Hide') : (language === 'ja' ? '写真を見る' : 'View Photo')}</span>
+                  <span>{showFullReceipt ? t.scanner.hide : t.scanner.viewPhoto}</span>
                 </button>
               )}
             </div>
@@ -729,7 +725,7 @@ export function ReceiptScannerModal({
               {/* Multi-Currency Auto-Conversion Hint */}
               {txCurrency !== activeCurrency && (
                 <div className="flex items-center justify-between px-1 text-[11px] text-[var(--text-muted)] font-mono bg-emerald-500/10 border border-emerald-500/20 rounded-xl p-2">
-                  <span>{language === 'ja' ? '換算目安 (自動反映):' : 'Converted into your active currency:'}</span>
+                  <span>{t.scanner.convertedIntoActiveCurrency}</span>
                   <span className="text-emerald-500 font-bold">
                     ≈ {formatCurrency(convertCurrency(parseRawNumber(amountStr), txCurrency, activeCurrency, rates), activeCurrency)}
                   </span>
@@ -814,7 +810,7 @@ export function ReceiptScannerModal({
                 className="px-4 py-2.5 rounded-2xl border border-[var(--border-subtle)] bg-[var(--bg-subtle)] hover:bg-[var(--bg-subtle-hover)] text-xs font-bold text-[var(--text-muted)] hover:text-[var(--text-main)] transition-all cursor-pointer flex items-center justify-center space-x-1.5"
               >
                 <RotateCcw className="w-3.5 h-3.5" />
-                <span>{language === 'ja' ? '再スキャン' : 'Scan Another'}</span>
+                <span>{t.scanner.scanAnother}</span>
               </button>
 
               <div className="flex items-center space-x-2">

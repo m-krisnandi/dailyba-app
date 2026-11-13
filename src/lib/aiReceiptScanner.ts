@@ -192,6 +192,23 @@ Date Extraction:
 - Find the transaction date. Normalize ANY calendar format (e.g. "2026/11/10", "10-11-2026", "Nov 10, 2026", "令和8年11月10日") into standard ISO "YYYY-MM-DD".
 - If date is missing, illegible, or year is unreasonable, return null.
 
+
+Special Rules for Japanese Receipts (日本国内のレシート・領収書):
+- Convenience Stores (コンビニ: セブン-イレブン, ファミリーマート, ローソン, ミニストップ) & Supermarkets (ライフ, 西友, イオン):
+  * Items marked with \"※\" or \"軽\" denote 8% reduced consumption tax (軽減税率 food/drinks) -> category: \"food_drinks\".
+  * Total Amount: Look strictly for \"合計\", \"お買上合計\", \"お買上げ合計\", or \"現計\".
+  * NEVER extract \"お預り\" / \"お預かり\" (cash handed over by customer, e.g. ¥10,000)!
+  * NEVER extract \"お釣り\" / \"つり\" (change returned)!
+  * NEVER extract \"小計\" (subtotal) or \"内消費税等\" / \"内税\" (tax amount)!
+- Train Stations & Railway Transit (JR東日本, JR西日本, 東京メトロ, 都営地下鉄, 私鉄, 券売機・精算機 領収書):
+  * Look for slips titled \"領収書\" with words: \"乗車券\", \"定期券\", \"新幹線特急券\", \"特急券\", \"精算\", \"入場券\", \"東日本旅客鉄道\", \"東京メトロ\".
+  * Always set category to \"train\".
+- Payment Method Recognition in Japan:
+  * \"交通系IC\", \"交通系電子マネー\", \"Suica\", \"PASMO\", \"ICOCA\" -> source: \"ewallet\"
+  * \"コード決済\", \"PayPay\", \"LINE Pay\", \"楽天ペイ\", \"d払い\", \"au PAY\" -> source: \"ewallet\"
+  * \"クレジット\", \"クレカ\", \"JCB\", \"VISA\", \"Mastercard\", \"AMEX\" -> source: \"credit_card\"
+  * \"現計\", \"現金\", \"現金支払\" -> source: \"cash\"
+
 JSON Schema to output:
 {
   "amount": number,

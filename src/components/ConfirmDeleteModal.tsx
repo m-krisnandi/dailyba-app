@@ -3,6 +3,7 @@
 import React from 'react';
 import { Trash2 } from 'lucide-react';
 import { Language } from '@/types/finance';
+import { translations } from '@/lib/i18n';
 import { useBodyScrollLock } from '@/lib/useBodyScrollLock';
 
 export interface ConfirmDeleteModalProps {
@@ -32,14 +33,11 @@ export function ConfirmDeleteModal({
 
   if (!isOpen) return null;
 
-  const isJa = language === 'ja';
-
-  const defaultTitle = isJa ? '削除の確認' : 'Confirm Deletion';
-  const defaultDesc = isJa
-    ? 'この項目を削除してもよろしいですか？この操作は元に戻せません。'
-    : 'Are you sure you want to delete this item? This action cannot be undone.';
-  const defaultConfirm = isJa ? '削除する' : 'Delete';
-  const defaultCancel = isJa ? 'キャンセル' : 'Cancel';
+  const t = translations[language];
+  const defaultTitle = t.confirmDelete.title;
+  const defaultDesc = t.confirmDelete.desc;
+  const defaultConfirm = t.confirmDelete.confirm;
+  const defaultCancel = t.confirmDelete.cancel;
 
   return (
     <div

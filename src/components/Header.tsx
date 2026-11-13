@@ -285,7 +285,7 @@ export function Header({
               type="button"
               onClick={onOpenEmailSync}
               className="relative flex p-1.5 sm:p-2 rounded-xl border border-[var(--border-subtle)] bg-[var(--bg-subtle)] hover:bg-[var(--bg-subtle-hover)] text-[var(--text-muted)] hover:text-[var(--text-main)] transition-all cursor-pointer shrink-0"
-              title={language === 'ja' ? '銀行・決済メール連携' : 'Bank & Email Sync'}
+              title={t.nav.bankEmailSync}
             >
               <Mail className="w-4 h-4 stroke-[2]" />
               {Boolean(pendingEmailSyncCount > 0) && (
@@ -422,7 +422,7 @@ export function Header({
                   >
                     <div className="flex items-center space-x-2">
                       <Smartphone className="w-3.5 h-3.5 shrink-0" />
-                      <span>{language === 'ja' ? 'Android APK入手' : 'Get Android APK'}</span>
+                      <span>{t.nav.getApk}</span>
                     </div>
                     <span className="text-[10px] font-mono opacity-80">v{APP_VERSION}</span>
                   </a>
@@ -439,7 +439,7 @@ export function Header({
                       className="w-full flex items-center space-x-2 px-2.5 py-2 rounded-xl text-xs text-[var(--text-muted)] hover:text-[var(--text-main)] hover:bg-[var(--bg-subtle)] transition-all cursor-pointer"
                     >
                       <RefreshCw className="w-3.5 h-3.5 text-emerald-400" />
-                      <span>{language === 'ja' ? '今すぐクラウド同期' : 'Sync Vault Now'}</span>
+                      <span>{t.nav.syncVault}</span>
                     </button>
                   )}
 
@@ -473,7 +473,7 @@ export function Header({
                     className="w-full flex items-center space-x-2 px-2.5 py-2 rounded-xl text-xs text-[var(--text-muted)] hover:text-[var(--text-main)] hover:bg-[var(--bg-subtle)] transition-all cursor-pointer"
                   >
                     <Database className="w-3.5 h-3.5" />
-                    <span>{language === 'ja' ? 'データ出力・復元' : 'Backup & Restore Data'}</span>
+                    <span>{t.nav.backupRestore}</span>
                   </button>
 
                   <button
@@ -485,7 +485,7 @@ export function Header({
                     className="w-full flex items-center space-x-2 px-2.5 py-2 rounded-xl text-xs text-[var(--text-muted)] hover:text-[var(--text-main)] hover:bg-[var(--bg-subtle)] transition-all cursor-pointer"
                   >
                     <Bell className="w-3.5 h-3.5" />
-                    <span>{language === 'ja' ? '通知 & リマインダー' : 'Reminders & Notifications'}</span>
+                    <span>{t.nav.remindersNotifications}</span>
                   </button>
 
                   <button
@@ -497,7 +497,7 @@ export function Header({
                     className="w-full flex items-center space-x-2 px-2.5 py-2 rounded-xl text-xs text-[var(--text-muted)] hover:text-[var(--text-main)] hover:bg-[var(--bg-subtle)] transition-all cursor-pointer"
                   >
                     <Shield className="w-3.5 h-3.5 text-indigo-400" />
-                    <span>{language === 'ja' ? '生体認証 & アプリロック' : 'Security & App Lock'}</span>
+                    <span>{t.nav.securityAppLock}</span>
                   </button>
 
                   <button
@@ -509,7 +509,7 @@ export function Header({
                     className="w-full flex items-center space-x-2 px-2.5 py-2 rounded-xl text-xs text-[var(--text-muted)] hover:text-[var(--text-main)] hover:bg-[var(--bg-subtle)] transition-all cursor-pointer"
                   >
                     <UserIcon className="w-3.5 h-3.5" />
-                    <span>{language === 'ja' ? 'アカウント・設定' : 'Account & Server Settings'}</span>
+                    <span>{t.nav.accountSettings}</span>
                   </button>
 
                   {isAuthenticated && (
@@ -523,7 +523,7 @@ export function Header({
                         className="w-full flex items-center space-x-2 px-2.5 py-2 rounded-xl text-xs text-[var(--text-muted)] hover:text-[var(--text-main)] hover:bg-[var(--bg-subtle)] transition-all cursor-pointer"
                       >
                         <LogOut className="w-3.5 h-3.5" />
-                        <span>{language === 'ja' ? 'ログアウト' : 'Log Out'}</span>
+                        <span>{t.nav.logOut}</span>
                       </button>
 
                       <button
@@ -535,7 +535,7 @@ export function Header({
                         className="w-full flex items-center space-x-2 px-2.5 py-2 rounded-xl text-xs text-rose-500 hover:text-rose-400 hover:bg-rose-500/10 transition-all cursor-pointer"
                       >
                         <Trash2 className="w-3.5 h-3.5" />
-                        <span>{language === 'ja' ? 'アカウントの削除' : 'Delete Account'}</span>
+                        <span>{t.nav.deleteAccount}</span>
                       </button>
                     </>
                   )}
@@ -554,7 +554,7 @@ export function Header({
             type="button"
             onClick={onOpenBackup}
             className="hidden sm:flex p-1.5 sm:p-2 rounded-xl border border-[var(--border-subtle)] bg-[var(--bg-subtle)] hover:bg-[var(--bg-subtle-hover)] text-[var(--text-muted)] hover:text-[var(--text-main)] transition-all cursor-pointer shrink-0"
-            title={language === 'ja' ? '設定 & 通知リマインダー' : 'Settings & Daily Reminder'}
+            title={t.nav.settingsReminder}
           >
             <Bell className="w-4 h-4 stroke-[2]" />
           </button>

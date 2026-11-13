@@ -178,7 +178,7 @@ export function SavingsBoard({
   const isGoalAchieved = currentGoalInCurrency > 0 && totalAccumulatedSavings >= currentGoalInCurrency;
 
   const handleSaveQuick = (amount: number) => {
-    onAddSavings(amount, language === "ja" ? "クイック貯金振替" : "Quick Savings Allocation");
+    onAddSavings(amount, t.savings.quickSavingsAllocation);
     setStatusMessage(language === "ja" ? `${formatCurrency(amount, currency)} を貯蓄へ振替しました！` : `Saved ${formatCurrency(amount, currency)} to reserves! (Can be deleted below if clicked by mistake)`);
     setTimeout(() => setStatusMessage(null), 3000);
   };
@@ -200,7 +200,7 @@ export function SavingsBoard({
     if (!isNaN(val) && val >= 0) {
       onUpdateGoal(val, currency);
       setIsEditingGoal(false);
-      setStatusMessage(language === "ja" ? "今月の貯蓄目標を更新しました！" : "Monthly savings target updated!");
+      setStatusMessage(t.savings.targetUpdated);
       setTimeout(() => setStatusMessage(null), 2500);
     }
   };
@@ -209,14 +209,14 @@ export function SavingsBoard({
     setGoalInput(formatNumberWithCommas(val));
     onUpdateGoal(val, currency);
     setIsEditingGoal(false);
-    setStatusMessage(language === "ja" ? "今月の貯蓄目標を更新しました！" : "Monthly savings target updated!");
+    setStatusMessage(t.savings.targetUpdated);
     setTimeout(() => setStatusMessage(null), 2500);
   };
 
   const handleDeleteItem = (id: string) => {
     if (onDeleteTransaction) {
       onDeleteTransaction(id);
-      setStatusMessage(language === "ja" ? "貯金記録を削除しました。" : "Savings entry removed.");
+      setStatusMessage(t.savings.entryRemoved);
       setTimeout(() => setStatusMessage(null), 2500);
     }
   };
@@ -256,7 +256,7 @@ export function SavingsBoard({
                 {formatCurrency(totalAccumulatedSavings, currency)}
               </h2>
               <span className="text-xs sm:text-sm font-semibold text-[var(--text-muted)] font-mono">
-                / {formatCurrency(currentGoalInCurrency, currency)} {language === 'ja' ? '目標貯蓄額' : 'savings target'}
+                / {formatCurrency(currentGoalInCurrency, currency)} {t.savings.savingsTarget}
               </span>
             </div>
             <p className="text-xs text-[var(--text-muted)] mt-1">
@@ -299,7 +299,7 @@ export function SavingsBoard({
                 {t.savings.adjustTarget} ({currency})
               </label>
               <span className="text-[11px] text-[var(--text-faint)] font-mono">
-                {language === 'ja' ? '生活防衛資金・目標額' : 'Total reserve goal'}
+                {t.savings.totalReserveGoal}
               </span>
             </div>
             <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2.5">
@@ -325,7 +325,7 @@ export function SavingsBoard({
             {/* Quick Preset Buttons */}
             <div className="flex flex-wrap items-center gap-2 pt-1">
               <span className="text-xs text-[var(--text-muted)] mr-1 font-mono">
-                {language === "ja" ? "プリセット:" : "Presets:"}
+                {t.savings.presetLabel}
               </span>
               {goalPresets.map((val) => (
                 <button
@@ -355,12 +355,12 @@ export function SavingsBoard({
                 {isGoalAchieved ? (
                   <>
                     <Check className="w-3.5 h-3.5 stroke-[3]" />
-                    <span>{language === 'ja' ? `目標達成 (${formatCurrency(totalAccumulatedSavings, currency)} 蓄積済)` : `Target Achieved (${formatCurrency(totalAccumulatedSavings, currency)} saved)`}</span>
+                    <span>{`${t.savings.targetAchieved} (${formatCurrency(totalAccumulatedSavings, currency)})`}</span>
                   </>
                 ) : (
                   <>
                     <ShieldCheck className="w-3.5 h-3.5" />
-                    <span>{language === 'ja' ? `順調 (残り ${formatCurrency(remainingToGoal, currency)})` : `On Track (${formatCurrency(remainingToGoal, currency)} remaining)`}</span>
+                    <span>{`${t.savings.onTrack} (${t.savings.remainingToTarget}: ${formatCurrency(remainingToGoal, currency)})`}</span>
                   </>
                 )}
               </span>
@@ -405,38 +405,38 @@ export function SavingsBoard({
             {formatCurrency(totalAccumulatedSavings, currency)}
           </p>
           <p className="text-[10px] text-[var(--text-faint)]">
-            {language === 'ja' ? '手元に確保された累計防衛資金' : 'Lifetime liquid buffer across all time'}
+            {t.savings.lifetimeBuffer}
           </p>
         </div>
 
-        {/* {language === 'ja' ? '今月の貯蓄率' : 'Monthly Savings Rate'} */}
+        {/* {t.savings.monthlySavingsRate} */}
         <div className="p-4 sm:p-5 rounded-2xl border border-[var(--border-subtle)] bg-[var(--bg-surface)]  shadow-xs space-y-1">
           <span className="text-xs text-[var(--text-muted)] font-medium block">
             {language === 'ja' ? '今月の貯蓄率' : 'Monthly Savings Rate'}
           </span>
           <p className="text-xl sm:text-2xl font-bold text-[var(--text-main)] tabular-numbers font-mono flex items-center space-x-1.5">
             <span className="text-[var(--accent-amber)]">{savingsRate}%</span>
-            <span className="text-[var(--text-faint)] text-xs font-normal">{language === 'ja' ? '収入比' : 'of income'}</span>
+            <span className="text-[var(--text-faint)] text-xs font-normal">{t.savings.ofIncome}</span>
           </p>
           <p className="text-[10px] text-[var(--text-faint)]">
-            {language === 'ja' ? `今月振替済: ${formatCurrency(actualSavedThisMonth, currency)}` : `${formatCurrency(actualSavedThisMonth, currency)} allocated this month`}
+            {`${formatCurrency(actualSavedThisMonth, currency)} (${t.savings.allocatedThisMonth})`}
           </p>
         </div>
 
         {/* Remaining to Goal */}
         <div className="p-4 sm:p-5 rounded-2xl border border-[var(--border-subtle)] bg-[var(--bg-surface)]  shadow-xs space-y-1">
           <span className="text-xs text-[var(--text-muted)] font-medium block">
-            {language === 'ja' ? '目標達成まであと' : 'Remaining to Target'}
+            {t.savings.remainingToTarget}
           </span>
           <p className="text-xl sm:text-2xl font-bold text-[var(--text-main)] tabular-numbers font-mono">
             {remainingToGoal === 0 ? (
-              <span className="text-emerald-500">{language === 'ja' ? '達成！' : 'Achieved!'}</span>
+              <span className="text-emerald-500">{t.savings.achieved}</span>
             ) : (
               formatCurrency(remainingToGoal, currency)
             )}
           </p>
           <p className="text-[10px] text-[var(--text-faint)]">
-            {remainingToGoal === 0 ? (language === 'ja' ? '貯蓄目標を達成しました' : 'Target reached') : (language === 'ja' ? '目標額に到達するために必要' : 'Needed to reach target')}
+            {remainingToGoal === 0 ? t.savings.targetReached : t.savings.neededToReach}
           </p>
         </div>
       </div>
@@ -449,7 +449,7 @@ export function SavingsBoard({
             <span>{t.savings.quickTransferTitle}</span>
           </h3>
           <span className="text-xs text-[var(--text-muted)] font-mono">
-            {language === 'ja' ? 'ワンタップ振替' : '1-Tap Allocation'}
+            {t.savings.oneTapAllocation}
           </span>
         </div>
 
@@ -478,14 +478,14 @@ export function SavingsBoard({
             <FormattedAmountInput
               value={customAmountStr}
               onChange={(val: string) => setCustomAmountStr(val)}
-              placeholder={language === 'ja' ? '任意の貯蓄金額を入力...' : 'Custom savings amount...'}
+              placeholder={t.savings.customAmountPlaceholder}
               className="bg-[var(--bg-subtle)] border border-[var(--border-subtle)] focus:border-[var(--accent-amber)] rounded-xl px-4 py-3 text-xs sm:text-sm text-[var(--text-main)] placeholder-[var(--text-faint)] outline-none tabular-numbers font-mono transition-all"
             />
             <input
               type="text"
               value={savingsNote}
               onChange={(e) => setSavingsNote(e.target.value)}
-              placeholder={language === 'ja' ? 'メモ（例: ボーナス分、生活防衛資金など）...' : 'Note (e.g. bonus portion, emergency buffer)...'}
+              placeholder={t.savings.notePlaceholder}
               className="bg-[var(--bg-subtle)] border border-[var(--border-subtle)] focus:border-[var(--border-strong)] rounded-xl px-4 py-3 text-xs sm:text-sm text-[var(--text-main)] placeholder-[var(--text-faint)] outline-none transition-all"
             />
           </div>
@@ -596,7 +596,7 @@ export function SavingsBoard({
                     </div>
                     <div>
                       <p className="font-semibold text-[var(--text-main)]">
-                        {tx.note || (language === 'ja' ? '貯金振替' : 'Savings Transfer')}
+                        {tx.note || (t.savings.savingsTransfer)}
                       </p>
                       <p className="text-[11px] text-[var(--text-muted)]">{tx.date}</p>
                     </div>
@@ -685,8 +685,8 @@ export function SavingsBoard({
       {/* Confirm Delete Modal */}
       <ConfirmDeleteModal
         isOpen={!!deletingTx}
-        title={language === "ja" ? "貯金記録の削除" : "Delete Savings Entry"}
-        description={language === "ja" ? "この貯金振替記録を削除してもよろしいですか？" : "Are you sure you want to delete this savings allocation?"}
+        title={t.savings.deleteTitle}
+        description={t.savings.deleteDesc}
         itemName={deletingTx ? `${formatCurrency(convertCurrency(deletingTx.amount, deletingTx.currency || "JPY", currency, rates), currency)}${deletingTx.note ? ` (${deletingTx.note})` : ""}` : undefined}
         language={language}
         onConfirm={() => {
