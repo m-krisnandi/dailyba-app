@@ -37,6 +37,7 @@ interface BankEmailSyncModalProps {
   onClose: () => void;
   language: Language;
   onApproveTransactions: (txs: Transaction[]) => void;
+  onPendingCountChange?: (count: number) => void;
   existingTransactions?: Transaction[];
 }
 
@@ -74,6 +75,7 @@ export function BankEmailSyncModal({
   onClose,
   language,
   onApproveTransactions,
+  onPendingCountChange,
   existingTransactions = [],
 }: BankEmailSyncModalProps) {
   useBodyScrollLock(isOpen);
@@ -83,6 +85,13 @@ export function BankEmailSyncModal({
 
   const [status, setStatus] = useState<EmailSyncStatus | null>(null);
   const [pendingItems, setPendingItems] = useState<PendingImportItem[]>([]);
+
+  // Keep parent (Topbar badge) synchronized whenever pendingItems change
+  useEffect(() => {
+    if (isOpen) {
+      onPendingCountChange?.(pendingItems.length);
+    }
+  }, [pendingItems.length, isOpen, onPendingCountChange]);
   const [isLoading, setIsLoading] = useState(false);
   const [isSyncing, setIsSyncing] = useState(false);
   const [feedback, setFeedback] = useState<{ type: 'success' | 'error' | 'info'; message: string } | null>(null);

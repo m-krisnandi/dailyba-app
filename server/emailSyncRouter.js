@@ -636,11 +636,15 @@ function createEmailSyncRouter(db, authenticateToken, jwtSecret) {
 
     db.prepare('UPDATE google_connections SET last_synced_at = ? WHERE user_id = ?').run(syncStartTime, userId);
 
+    const pendingRow = db.prepare('SELECT COUNT(*) as count FROM pending_imports WHERE user_id = ? AND status = ?').get(userId, 'pending');
+    const totalPendingCount = pendingRow ? pendingRow.count : 0;
+
     return {
       success: true,
       importedCount,
       autoRecordedCount,
-      pendingCount,
+      newPendingCount: pendingCount,
+      pendingCount: totalPendingCount,
       duplicateCount,
       lastSyncedAt: syncStartTime,
       message: autoRecordedCount > 0
@@ -766,7 +770,8 @@ function createEmailSyncRouter(db, authenticateToken, jwtSecret) {
 
       res.json({
         success: true,
-        items
+        items,
+        pendingCount: items.length
       });
     } catch (err) {
       console.error('Get pending error:', err);
@@ -1004,11 +1009,15 @@ function createEmailSyncRouter(db, authenticateToken, jwtSecret) {
         });
       }
 
+      const remainingPending = db.prepare("SELECT COUNT(*) as count FROM pending_imports WHERE user_id = ? AND status = 'pending'").get(req.user.id);
+
       res.json({
         success: true,
         approvedItem: updatedItem,
         newTransaction,
         updatedState,
+        remainingPendingCount: remainingPending?.count || 0,
+        pendingCount: remainingPending?.count || 0,
         message: 'Transaction approved and recorded into your balance ledger'
       });
     } catch (err) {
@@ -1031,6 +1040,8 @@ function createEmailSyncRouter(db, authenticateToken, jwtSecret) {
 
         return res.json({
           success: true,
+          remainingPendingCount: 0,
+          pendingCount: 0,
           message: 'All pending items dismissed'
         });
       }
@@ -1052,8 +1063,12 @@ function createEmailSyncRouter(db, authenticateToken, jwtSecret) {
         });
       }
 
+      const remainingPending = db.prepare("SELECT COUNT(*) as count FROM pending_imports WHERE user_id = ? AND status = 'pending'").get(req.user.id);
+
       res.json({
         success: true,
+        remainingPendingCount: remainingPending?.count || 0,
+        pendingCount: remainingPending?.count || 0,
         message: 'Transaction dismissed'
       });
     } catch (err) {

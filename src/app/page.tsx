@@ -455,6 +455,7 @@ export default function Home() {
         }}
         language={state.language}
         onApproveTransactions={handleApproveBankTransactions}
+        onPendingCountChange={setPendingEmailSyncCount}
         existingTransactions={state.transactions}
       />
 
