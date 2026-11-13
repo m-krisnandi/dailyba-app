@@ -60,8 +60,8 @@ export function SecuritySettingsModal({
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/75 backdrop-blur-sm animate-fade-in">
-      <div className="relative w-full max-w-md bg-[var(--bg-card)] border border-[var(--border-subtle)] rounded-3xl shadow-2xl overflow-hidden p-6 space-y-6">
+    <div onClick={onClose} className="fixed inset-0 z-[110] flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-md animate-fade-in cursor-pointer">
+      <div onClick={(e) => e.stopPropagation()} className="relative w-full max-w-md bg-white dark:bg-[#0f1722] border border-[var(--border-strong)] rounded-3xl shadow-2xl overflow-hidden p-6 space-y-6 cursor-default">
         {/* Header */}
         <div className="flex items-center justify-between pb-3 border-b border-[var(--border-subtle)]">
           <div className="flex items-center space-x-3">
@@ -87,7 +87,7 @@ export function SecuritySettingsModal({
         </div>
 
         {/* Toggle Lock */}
-        <div className="flex items-center justify-between p-4 rounded-2xl bg-[var(--bg-subtle)] border border-[var(--border-subtle)]">
+        <div className="flex items-center justify-between p-4 rounded-2xl bg-slate-50 dark:bg-[#16202e] border border-[var(--border-subtle)]">
           <div className="flex items-center space-x-3">
             <Fingerprint className="w-5 h-5 text-indigo-400" />
             <div>
@@ -114,7 +114,7 @@ export function SecuritySettingsModal({
 
         {/* PIN Configuration */}
         {enabled && (
-          <div className="space-y-3 p-4 rounded-2xl bg-[var(--bg-subtle)] border border-[var(--border-subtle)] animate-fade-in">
+          <div className="space-y-3 p-4 rounded-2xl bg-slate-50 dark:bg-[#16202e] border border-[var(--border-subtle)] animate-fade-in">
             <div className="flex items-center space-x-2 text-xs font-semibold text-[var(--text-main)]">
               <KeyRound className="w-4 h-4 text-emerald-400" />
               <span>{t.security.enterPin}</span>
@@ -131,7 +131,7 @@ export function SecuritySettingsModal({
                   value={pin}
                   onChange={(e) => setPin(e.target.value.replace(/[^0-9]/g, ''))}
                   placeholder="••••"
-                  className="w-full bg-[var(--bg-card)] border border-[var(--border-subtle)] focus:border-indigo-500 rounded-xl px-3 py-2 text-center text-sm font-mono tracking-widest text-[var(--text-main)] outline-none"
+                  className="w-full bg-white dark:bg-[#0c121a] border border-[var(--border-strong)] focus:border-indigo-500 rounded-xl px-3 py-2.5 text-center text-sm font-mono tracking-widest text-[var(--text-main)] outline-none font-bold"
                 />
               </div>
               <div>
@@ -145,7 +145,7 @@ export function SecuritySettingsModal({
                   value={confirmPin}
                   onChange={(e) => setConfirmPin(e.target.value.replace(/[^0-9]/g, ''))}
                   placeholder="••••"
-                  className="w-full bg-[var(--bg-card)] border border-[var(--border-subtle)] focus:border-indigo-500 rounded-xl px-3 py-2 text-center text-sm font-mono tracking-widest text-[var(--text-main)] outline-none"
+                  className="w-full bg-white dark:bg-[#0c121a] border border-[var(--border-strong)] focus:border-indigo-500 rounded-xl px-3 py-2.5 text-center text-sm font-mono tracking-widest text-[var(--text-main)] outline-none font-bold"
                 />
               </div>
             </div>
