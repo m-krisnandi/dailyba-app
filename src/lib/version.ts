@@ -1,7 +1,7 @@
 import { Language } from '@/types/finance';
 
-export const APP_VERSION = '1.6.0';
-export const APP_BUILD = '20261112_1';
+export const APP_VERSION = '1.7.0';
+export const APP_BUILD = '20261113_1';
 
 export interface LocalizedChangelogItem {
   version: string;
@@ -11,6 +11,34 @@ export interface LocalizedChangelogItem {
 }
 
 export const APP_CHANGELOG: LocalizedChangelogItem[] = [
+  {
+    version: '1.7.0',
+    date: '2026-11-13',
+    title: {
+      en: 'Automated Bank & E-Wallet Email Sync, Gemini 3.8 Flash Hybrid Engine, & Mobile Topbar Polish',
+      ja: '銀行・決済メール全自動同期連携、Gemini 3.8 Flashハイブリッドエンジン、モバイルトップバーUI刷新',
+    },
+    highlights: {
+      en: [
+        'Automated Gmail & Bank Receipt Sync: Connect Google Gmail with 1 tap to automatically extract transactions from Bank Jago, Livin by Mandiri, BCA QRIS, GoPay, ShopeePay, and PayPay Japan.',
+        'Smart Hybrid Option A Engine: Deterministic local regex parsing for audited banking institutions, combined with Gemini 3.8 Flash structured AI parsing and mathematical evidence verification for complex marketplace orders and e-wallets.',
+        'Multi-Email Order Deduplication: Added permanent order registry to prevent duplicate expense entries between order placed, shipping status, and delivery arrival notifications.',
+        'Real Rp 1 Flash Deal Protection: Intelligent verification differentiates legitimate promotional purchases (such as flash food deals) from marketing discount spam blasts.',
+        'Streamlined Mobile Topbar: Cleaned up mobile header layout into essential controls (Logo, Currency, Email Sync, and Profile Hub), eliminating horizontal clipping and cut-off buttons on small screens.',
+        'Liquid Glass Modal Dropdowns: Replaced generic browser select elements in sync modals with custom dark glass dropdowns featuring category icons and funding source badges.',
+        'Bank-Grade Security Vault: Encrypted OAuth tokens via AES-256-GCM, permanent tombstone message tracking, and pre-processing PII redaction to protect account and card numbers.',
+      ],
+      ja: [
+        '銀行・決済メール全自動同期：Google Gmail連携により、Bank Jago、Livin by Mandiri、BCA QRIS、GoPay、ShopeePay、PayPay Japan等の決済受領書を全自動取得・記録。',
+        'スマートハイブリッド Option A エンジン：監査済み銀行は端末内正規表現で安全かつ高速に抽出。複雑なEC注文や電子マネーはGemini 3.8 Flash構造化AIと金額根拠の数学的照合で高精度解析。',
+        '同一注文の重複計上防止（Deduplication）：注文受付・発送・配達完了など複数の通知メールが届いても、同一注文番号（Order Ref）を照合して二重記録を自動防止。',
+        '1円フラッシュセール判定機能：タイムセール等の正規1円取引を正しく認識しつつ、無関係なプロモーション宣伝メールを的確に除外。',
+        'モバイルトップバーの表示最適化：スマートフォン画面での横幅はみ出し・ボタン見切れを解消。重要操作に絞り込み、詳細設定はプロフィールメニュー内に統合。',
+        'リキッドグラス調カスタムドロップダウン：同期モーダル内のブラウザ標準選択肢を刷新し、費目アイコンと決済元バッジを備えたガラス調UIへ統一。',
+        '銀行水準のセキュリティ：OAuthトークンのAES-256-GCM暗号化保管、処理済みメールの恒久Tombstone管理、口座番号やカード番号をマスキングするPII自動保護を実装。',
+      ],
+    },
+  },
   {
     version: '1.6.0',
     date: '2026-11-12',
