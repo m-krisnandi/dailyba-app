@@ -15,13 +15,13 @@ export const APP_CHANGELOG: LocalizedChangelogItem[] = [
     version: '1.7.0',
     date: '2026-11-13',
     title: {
-      en: 'Automated Bank & E-Wallet Email Sync, Gemini 3.8 Flash Hybrid Engine, & Mobile Topbar Polish',
-      ja: '銀行・決済メール全自動同期連携、Gemini 3.8 Flashハイブリッドエンジン、モバイルトップバーUI刷新',
+      en: 'Automated Bank & E-Wallet Email Sync, Next-Gen Smart Extraction Engine, & Mobile Topbar Polish',
+      ja: '銀行・決済メール全自動同期連携、次世代スマート解析エンジン、モバイルトップバーUI刷新',
     },
     highlights: {
       en: [
         'Automated Gmail & Bank Receipt Sync: Connect Google Gmail with 1 tap to automatically extract transactions from Bank Jago, Livin by Mandiri, BCA QRIS, GoPay, ShopeePay, and PayPay Japan.',
-        'Smart Hybrid Option A Engine: Deterministic local regex parsing for audited banking institutions, combined with Gemini 3.8 Flash structured AI parsing and mathematical evidence verification for complex marketplace orders and e-wallets.',
+        'Smart Multi-Engine Receipt Parser: Combines ultra-fast on-device processing for major banks with advanced AI multimodal understanding for complex e-commerce and marketplace receipts, backed by automated mathematical verification.',
         'Multi-Email Order Deduplication: Added permanent order registry to prevent duplicate expense entries between order placed, shipping status, and delivery arrival notifications.',
         'Real Rp 1 Flash Deal Protection: Intelligent verification differentiates legitimate promotional purchases (such as flash food deals) from marketing discount spam blasts.',
         'Streamlined Mobile Topbar: Cleaned up mobile header layout into essential controls (Logo, Currency, Email Sync, and Profile Hub), eliminating horizontal clipping and cut-off buttons on small screens.',
@@ -30,7 +30,7 @@ export const APP_CHANGELOG: LocalizedChangelogItem[] = [
       ],
       ja: [
         '銀行・決済メール全自動同期：Google Gmail連携により、Bank Jago、Livin by Mandiri、BCA QRIS、GoPay、ShopeePay、PayPay Japan等の決済受領書を全自動取得・記録。',
-        'スマートハイブリッド Option A エンジン：監査済み銀行は端末内正規表現で安全かつ高速に抽出。複雑なEC注文や電子マネーはGemini 3.8 Flash構造化AIと金額根拠の数学的照合で高精度解析。',
+        'スマートマルチ解析エンジン：主要銀行の超高速ローカル処理と、複雑なEC注文・電子マネー受領書に対する高精度AI解析を統合。金額根拠の数学的照合により誤抽出を徹底防止。',
         '同一注文の重複計上防止（Deduplication）：注文受付・発送・配達完了など複数の通知メールが届いても、同一注文番号（Order Ref）を照合して二重記録を自動防止。',
         '1円フラッシュセール判定機能：タイムセール等の正規1円取引を正しく認識しつつ、無関係なプロモーション宣伝メールを的確に除外。',
         'モバイルトップバーの表示最適化：スマートフォン画面での横幅はみ出し・ボタン見切れを解消。重要操作に絞り込み、詳細設定はプロフィールメニュー内に統合。',
