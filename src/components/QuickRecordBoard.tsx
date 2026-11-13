@@ -49,7 +49,6 @@ import {
   Search,
   ChevronLeft,
   ChevronRight,
-  Mail,
 } from 'lucide-react';
 
 interface QuickRecordBoardProps {
@@ -109,8 +108,6 @@ export function QuickRecordBoard({
   onUpdateRecurringBill,
   onDeleteRecurringBill,
   initialScanOpen = false,
-  pendingEmailSyncCount = 0,
-  onOpenEmailSync,
 }: QuickRecordBoardProps) {
   const t = translations[language];
   const [editingTx, setEditingTx] = useState<Transaction | null>(null);
