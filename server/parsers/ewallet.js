@@ -1,4 +1,4 @@
-const { normalizeDate, createDedupHash } = require('./types');
+const { normalizeDate, createDedupHash, parseCurrencyAmount } = require('./types');
 const { categorizeTransaction } = require('./categorizer');
 
 /**
@@ -71,7 +71,7 @@ const ewalletParser = {
 
     // 1. Merchant Extraction
     let merchant = '';
-    const mMatch = text.match(/(?:Nama\s+Produk|Produk|Toko|Nama\s+Toko|Merchant|Penerima|Tujuan|利用先|加盟店|支払先|Store|Recipient)[:\s]+([^\r\n]+)/i);
+    const mMatch = text.match(/(?:Nama\s+Produk|Produk|Toko|Nama\s+Toko|Merchant|Penerima|Tujuan|利用先|加盟店|支払先|Store|Recipient|Penjual)[:\s]+([^\r\n]+)/i);
     if (mMatch) {
       merchant = mMatch[1].trim();
     } else {
@@ -98,20 +98,14 @@ const ewalletParser = {
         amount = Math.round(parseFloat(jpyMatch[1].replace(/,/g, ''))) || 0;
       }
     } else {
-      // IDR
-      const idrMatch = text.match(/(?:Total|Nominal|Jumlah|Amount)(?:\s+Pembayaran)?\s*[:\s]*(?:Rp\.?|IDR)?\s*([0-9.,]+)/i) ||
-                       text.match(/(?:Rp\.?|IDR)\s*([0-9]{1,3}(?:\.[0-9]{3})+(?:,[0-9]{2})?)/i) ||
-                       text.match(/(?:Rp\.?|IDR)\s*([0-9.,]+)/i);
+      // IDR: Priority on explicit payment totals (never match bare "Jumlah: 1" which denotes quantity)
+      const explicitTotalMatch = text.match(/(?:Total\s+Pembayaran|Total\s+Bayar|Total\s+Transaksi|Total\s+Tagihan|Total\s+Belanja|Jumlah\s+Pembayaran|Jumlah\s+Transaksi|Jumlah\s+Tagihan|Nominal\s+Transaksi|Nominal)\s*[:\s]*(?:Rp\.?|IDR)?\s*([0-9.,]+)/i);
+      const generalTotalMatch = text.match(/(?:Total|Amount)\s*[:\s]*(?:Rp\.?|IDR)?\s*([0-9.,]+)/i);
+      const fallbackRpMatch = text.match(/(?:Rp\.?|IDR)\s*([0-9]{1,3}(?:[.,][0-9]{3})*(?:[.,][0-9]{2})?|[0-9]+)/i);
+      const idrMatch = explicitTotalMatch || generalTotalMatch || fallbackRpMatch;
+
       if (idrMatch) {
-        let raw = idrMatch[1].trim();
-        if (raw.includes(',') && raw.includes('.')) {
-          raw = raw.replace(/\./g, '').replace(',', '.');
-        } else if (raw.includes('.')) {
-          raw = raw.replace(/\./g, '');
-        } else if (raw.includes(',')) {
-          raw = raw.replace(',', '.');
-        }
-        amount = Math.round(parseFloat(raw)) || 0;
+        amount = parseCurrencyAmount(idrMatch[1], 'IDR');
       }
     }
 
@@ -119,7 +113,7 @@ const ewalletParser = {
     let occurredAt = normalizeDate(email.date || '');
     let occurredTime = '';
 
-    const dtMatch = text.match(/(?:Tanggal|Date|日時|利用日時)[:：\s]*([0-9]{4}[年/-]\s*[0-9]{1,2}[月/-]\s*[0-9]{1,2}日?|[0-9]{1,2}\s+[A-Za-z]+\s+[0-9]{4})/i);
+    const dtMatch = text.match(/(?:Tanggal\s+Pemesanan|Tanggal|Date|日時|利用日時)[:：\s]*([0-9]{4}[年/-]\s*[0-9]{1,2}[月/-]\s*[0-9]{1,2}日?|[0-9]{1,2}[/-][0-9]{1,2}[/-][0-9]{4}|[0-9]{1,2}\s+[A-Za-z]+\s+[0-9]{4})/i);
     if (dtMatch) {
       occurredAt = normalizeDate(dtMatch[1]);
     }
@@ -139,6 +133,13 @@ const ewalletParser = {
       return null;
     }
 
+    const orderRefMatch = text.match(/(?:No\.?\s*Pesanan|Order\s*(?:ID|Ref|#)|Pesanan\s*#)[:\s]*([#A-Z0-9]+)/i) ||
+                          subject.match(/(?:Pesanan\s*#|Order\s*#)([A-Z0-9]+)/i);
+    const orderRef = orderRefMatch ? orderRefMatch[1].trim() : null;
+
+    const isOrderUpdate = /telah\s*tiba|telah\s*dikirim|sedang\s*dikirim|shipped|delivered/i.test(subject + " " + text);
+    const emailType = isOrderUpdate ? 'order_update' : 'payment';
+
     const category = categorizeTransaction(`${merchant} ${subject}`);
     const messageId = email.messageId || `${provider}_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`;
     const dedupHash = createDedupHash(merchant, amount, occurredAt);
@@ -152,11 +153,14 @@ const ewalletParser = {
       category,
       occurredAt,
       occurredTime,
-      confidence: 0.60,
+      confidence: isOrderUpdate ? 0.50 : 0.60,
       messageId,
       dedupHash,
       verificationStatus: "unverified_heuristic",
-      rawSnippet: text.slice(0, 300)
+      rawSnippet: text.slice(0, 300),
+      orderRef,
+      emailType,
+      parsedBy: 'regex'
     };
   }
 };

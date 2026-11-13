@@ -32,55 +32,42 @@ function createEmailSyncRouter(db, authenticateToken, jwtSecret) {
 
   // Create tables if not exist
   db.exec(`
-    CREATE TABLE IF NOT EXISTS google_connections (
-      user_id TEXT PRIMARY KEY,
-      email TEXT,
-      refresh_token TEXT NOT NULL,
-      access_token TEXT,
-      token_expires_at INTEGER,
-      requires_reauth INTEGER DEFAULT 0,
-      connected_at TEXT NOT NULL,
-      last_synced_at TEXT,
-      FOREIGN KEY(user_id) REFERENCES users(id) ON DELETE CASCADE
-    );
+    CREATE TABLE IF NOT EXISTS google_connections (\n      user_id TEXT PRIMARY KEY,\n      email TEXT,\n      refresh_token TEXT NOT NULL,\n      access_token TEXT,\n      token_expires_at INTEGER,\n      requires_reauth INTEGER DEFAULT 0,\n      connected_at TEXT NOT NULL,\n      last_synced_at TEXT,\n      FOREIGN KEY(user_id) REFERENCES users(id) ON DELETE CASCADE\n    );
 
-    CREATE TABLE IF NOT EXISTS pending_imports (
-      id TEXT PRIMARY KEY,
-      user_id TEXT NOT NULL,
-      message_id TEXT NOT NULL,
-      dedup_hash TEXT NOT NULL,
-      source TEXT NOT NULL,
-      provider TEXT NOT NULL,
-      merchant TEXT NOT NULL,
-      amount REAL NOT NULL,
-      currency TEXT NOT NULL,
-      category TEXT NOT NULL,
-      occurred_at TEXT NOT NULL,
-      occurred_time TEXT,
-      raw_snippet TEXT,
-      confidence REAL NOT NULL,
-      status TEXT NOT NULL DEFAULT 'pending',
-      created_at TEXT NOT NULL,
-      FOREIGN KEY(user_id) REFERENCES users(id) ON DELETE CASCADE,
-      UNIQUE(user_id, message_id)
-    );
+    CREATE TABLE IF NOT EXISTS pending_imports (\n      id TEXT PRIMARY KEY,\n      user_id TEXT NOT NULL,\n      message_id TEXT NOT NULL,\n      dedup_hash TEXT NOT NULL,\n      source TEXT NOT NULL,\n      provider TEXT NOT NULL,\n      merchant TEXT NOT NULL,\n      amount REAL NOT NULL,\n      currency TEXT NOT NULL,\n      category TEXT NOT NULL,\n      occurred_at TEXT NOT NULL,\n      occurred_time TEXT,\n      raw_snippet TEXT,\n      confidence REAL NOT NULL,\n      status TEXT NOT NULL DEFAULT 'pending',\n      created_at TEXT NOT NULL,\n      email_type TEXT NOT NULL DEFAULT 'payment',\n      order_ref TEXT,\n      seller TEXT,\n      item_summary TEXT,\n      amount_evidence TEXT,\n      parsed_by TEXT NOT NULL DEFAULT 'regex',\n      FOREIGN KEY(user_id) REFERENCES users(id) ON DELETE CASCADE,\n      UNIQUE(user_id, message_id)\n    );
 
     -- Permanent tombstone registry of all processed email message_ids.
     -- Never deleted by user clearing pending imports, preventing duplicate imports upon re-sync or re-connect.
-    CREATE TABLE IF NOT EXISTS imported_message_ids (
-      user_id TEXT NOT NULL,
-      message_id TEXT NOT NULL,
-      created_at TEXT NOT NULL,
-      PRIMARY KEY(user_id, message_id),
-      FOREIGN KEY(user_id) REFERENCES users(id) ON DELETE CASCADE
-    );
+    CREATE TABLE IF NOT EXISTS imported_message_ids (\n      user_id TEXT NOT NULL,\n      message_id TEXT NOT NULL,\n      created_at TEXT NOT NULL,\n      PRIMARY KEY(user_id, message_id),\n      FOREIGN KEY(user_id) REFERENCES users(id) ON DELETE CASCADE\n    );
+
+    -- Deduplication registry for e-commerce / marketplace order references (e.g. Shopee #261107MFWDMCBV)
+    -- Prevents double-counting when multiple notifications (ordered, shipped, delivered) arrive for the same order.
+    CREATE TABLE IF NOT EXISTS imported_order_refs (\n      user_id TEXT NOT NULL,\n      order_ref TEXT NOT NULL,\n      created_at TEXT NOT NULL,\n      PRIMARY KEY(user_id, order_ref),\n      FOREIGN KEY(user_id) REFERENCES users(id) ON DELETE CASCADE\n    );
 
     CREATE INDEX IF NOT EXISTS idx_pending_user_status ON pending_imports (user_id, status);
     CREATE INDEX IF NOT EXISTS idx_pending_hash ON pending_imports (user_id, dedup_hash);
+    CREATE INDEX IF NOT EXISTS idx_order_ref_user ON imported_order_refs (user_id, order_ref);
 
     -- Purge invalid non-positive amounts
     DELETE FROM pending_imports WHERE amount <= 0;
   `);
+
+  // Safe migration for columns on existing databases
+  const schemaMigrations = [
+    { name: 'email_type', type: "TEXT NOT NULL DEFAULT 'payment'" },
+    { name: 'order_ref', type: 'TEXT' },
+    { name: 'seller', type: 'TEXT' },
+    { name: 'item_summary', type: 'TEXT' },
+    { name: 'amount_evidence', type: 'TEXT' },
+    { name: 'parsed_by', type: "TEXT NOT NULL DEFAULT 'regex'" }
+  ];
+  for (const m of schemaMigrations) {
+    try {
+      db.exec(`ALTER TABLE pending_imports ADD COLUMN ${m.name} ${m.type};`);
+    } catch {
+      // Column already exists
+    }
+  }
 
   // Helper: check if Google OAuth is configured via environment
   function getGoogleOAuthConfig() {
@@ -148,293 +135,223 @@ function createEmailSyncRouter(db, authenticateToken, jwtSecret) {
 
       db.prepare(`
         UPDATE google_connections
-        SET access_token = ?, token_expires_at = ?, requires_reauth = 0
+        SET access_token = ?,
+            token_expires_at = ?,
+            requires_reauth = 0
         WHERE user_id = ?
       `).run(encrypt(newAccessToken), newExpiresAt, userId);
 
       return newAccessToken;
     } catch (err) {
-      console.error('[Google OAuth] Token refresh exception:', err.message);
+      console.error('[Google OAuth] Token refresh exception:', err);
       return null;
     }
   }
 
-  // 1. Status: Check Google configuration & user connection
+  // 1. Connection Status
   router.get('/status', authenticateToken, (req, res) => {
     try {
-      const config = getGoogleOAuthConfig();
-      const conn = db.prepare('SELECT email, requires_reauth, connected_at, last_synced_at FROM google_connections WHERE user_id = ?').get(req.user.id);
-      const pendingCount = db.prepare(`
-        SELECT COUNT(*) as count FROM pending_imports
-        WHERE user_id = ? AND status = 'pending'
-      `).get(req.user.id);
+      const { isConfigured } = getGoogleOAuthConfig();
+      const conn = db.prepare('SELECT * FROM google_connections WHERE user_id = ?').get(req.user.id);
+      const pendingCount = db.prepare('SELECT COUNT(*) as count FROM pending_imports WHERE user_id = ? AND status = ?').get(req.user.id, 'pending');
 
-      const statusData = {
-        googleConfigured: config.isConfigured,
-        isConnected: Boolean(conn && !conn.requires_reauth),
+      const isConnected = Boolean(conn && !conn.requires_reauth);
+      const responsePayload = {
+        success: true,
+        googleConfigured: isConfigured,
+        isConnected,
         requiresReauth: Boolean(conn?.requires_reauth),
-        connectedEmail: conn?.email || null,
-        connectedAt: conn?.connected_at || null,
+        connectedEmail: isConnected ? conn.email : null,
+        connectedAt: isConnected ? conn.connected_at : null,
         lastSyncedAt: conn?.last_synced_at || null,
-        pendingCount: pendingCount?.count || 0
+        pendingCount: pendingCount ? pendingCount.count : 0
       };
 
+      // Expose both root keys and nested data for backwards/forwards client compatibility
       res.json({
-        success: true,
-        data: statusData,
-        ...statusData
+        ...responsePayload,
+        data: responsePayload
       });
     } catch (err) {
       console.error('Status error:', err);
-      res.status(500).json({ success: false, message: 'Server error retrieving sync status' });
+      res.status(500).json({ success: false, message: 'Server error retrieving status' });
     }
   });
 
-  // 2. Google OAuth: Get Authorization URL with random nonce and expiration
+  // 2. Generate Google OAuth Auth URL
   router.get('/google-auth-url', authenticateToken, (req, res) => {
     try {
-      const config = getGoogleOAuthConfig();
-      if (!config.isConfigured) {
+      const { isConfigured, clientId, redirectUri } = getGoogleOAuthConfig();
+      if (!isConfigured) {
         return res.status(400).json({
           success: false,
-          message: 'Google OAuth is not configured on this server. Set GOOGLE_CLIENT_ID and GOOGLE_CLIENT_SECRET in .env.'
+          message: 'Google OAuth is not configured on this server. Please set GOOGLE_CLIENT_ID and GOOGLE_CLIENT_SECRET.'
         });
       }
 
-      // Encode userId with random nonce and timestamp (valid for 10 minutes)
+      // Encode userId and state with HMAC signature to prevent CSRF / State tampering
       const nonce = crypto.randomBytes(16).toString('hex');
-      const statePayload = JSON.stringify({ userId: req.user.id, nonce, timestamp: Date.now() });
-      const signature = crypto.createHmac('sha256', jwtSecret).update(statePayload).digest('hex');
-      const state = Buffer.from(JSON.stringify({ payload: statePayload, sig: signature })).toString('base64url');
+      const statePayload = Buffer.from(JSON.stringify({ userId: req.user.id, nonce, ts: Date.now() })).toString('base64url');
+      const stateSig = crypto.createHmac('sha256', jwtSecret).update(statePayload).digest('base64url');
+      const state = `${statePayload}.${stateSig}`;
 
-      const scopes = [
-        'https://www.googleapis.com/auth/gmail.readonly',
-        'https://www.googleapis.com/auth/userinfo.email'
-      ].join(' ');
-
-      const authUrl = `https://accounts.google.com/o/oauth2/v2/auth?` + new URLSearchParams({
-        client_id: config.clientId,
-        redirect_uri: config.redirectUri,
+      const params = new URLSearchParams({
+        client_id: clientId,
+        redirect_uri: redirectUri,
         response_type: 'code',
-        scope: scopes,
+        scope: [
+          'https://www.googleapis.com/auth/gmail.readonly',
+          'https://www.googleapis.com/auth/userinfo.email'
+        ].join(' '),
         access_type: 'offline',
         prompt: 'consent',
         state
-      }).toString();
-
-      res.json({
-        success: true,
-        authUrl
       });
+
+      const authUrl = `https://accounts.google.com/o/oauth2/v2/auth?${params.toString()}`;
+      res.json({ success: true, authUrl });
     } catch (err) {
       console.error('Auth URL error:', err);
-      res.status(500).json({ success: false, message: 'Error generating Google authorization URL' });
+      res.status(500).json({ success: false, message: 'Server error creating auth URL' });
     }
   });
 
-  // 3. Google OAuth: Callback (Public endpoint called by Google)
+  // 3. Google OAuth Callback (Exchanges Code for Refresh Token)
   router.get('/google-callback', async (req, res) => {
     try {
       const { code, state, error } = req.query;
+      const appUrl = (process.env.APP_URL || process.env.NEXT_PUBLIC_API_URL || 'https://dailyba.pdfumi.com').replace(/\/+$/, '');
 
       if (error) {
-        return res.send(`
-          <!DOCTYPE html>
-          <html>
-            <body style="font-family: sans-serif; text-align: center; padding: 40px; background: #0f172a; color: #f8fafc;">
-              <h2 style="color: #ef4444;">Authorization Cancelled</h2>
-              <p>${error}</p>
-              <button onclick="window.close()" style="padding: 10px 20px; background: #3b82f6; color: white; border: none; border-radius: 8px; cursor: pointer;">Close Window</button>
-            </body>
-          </html>
-        `);
+        console.warn('[Google OAuth] User denied or error:', error);
+        return res.redirect(`${appUrl}/?emailSync=denied`);
       }
 
       if (!code || !state) {
-        return res.status(400).send('Missing code or state parameter');
+        return res.redirect(`${appUrl}/?emailSync=invalid`);
       }
 
-      // Verify HMAC state with timingSafeEqual and 10-minute validity
-      let userId;
+      // Verify HMAC signature of state to ensure it was created by this server
+      const stateParts = String(state).split('.');
+      if (stateParts.length !== 2) {
+        return res.redirect(`${appUrl}/?emailSync=tampered_state`);
+      }
+      const [statePayload, stateSig] = stateParts;
+      const expectedSig = crypto.createHmac('sha256', jwtSecret).update(statePayload).digest('base64url');
+      if (!timingSafeEqual(stateSig, expectedSig)) {
+        return res.redirect(`${appUrl}/?emailSync=tampered_state`);
+      }
+
+      let parsedState;
       try {
-        const decoded = JSON.parse(Buffer.from(state, 'base64url').toString('utf8'));
-        const expectedSig = crypto.createHmac('sha256', jwtSecret).update(decoded.payload).digest('hex');
-        if (!timingSafeEqual(expectedSig, decoded.sig)) {
-          return res.status(400).send('Invalid state signature');
-        }
-        const payload = JSON.parse(decoded.payload);
-        if (Date.now() - payload.timestamp > 10 * 60 * 1000) {
-          return res.status(400).send('State parameter has expired. Please initiate connection again.');
-        }
-        userId = payload.userId;
+        parsedState = JSON.parse(Buffer.from(statePayload, 'base64url').toString('utf8'));
       } catch {
-        return res.status(400).send('Malformed state parameter');
+        return res.redirect(`${appUrl}/?emailSync=corrupt_state`);
       }
 
-      const config = getGoogleOAuthConfig();
+      // State timestamp expiration (15 minutes)
+      if (!parsedState.ts || Date.now() - parsedState.ts > 15 * 60 * 1000) {
+        return res.redirect(`${appUrl}/?emailSync=state_expired`);
+      }
+
+      const userId = parsedState.userId;
+      const { clientId, clientSecret, redirectUri } = getGoogleOAuthConfig();
+
       // Exchange code for tokens
       const tokenRes = await fetch('https://oauth2.googleapis.com/token', {
         method: 'POST',
         headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
         body: new URLSearchParams({
           code: String(code),
-          client_id: config.clientId,
-          client_secret: config.clientSecret,
-          redirect_uri: config.redirectUri,
+          client_id: clientId,
+          client_secret: clientSecret,
+          redirect_uri: redirectUri,
           grant_type: 'authorization_code'
         })
       });
 
       if (!tokenRes.ok) {
         const errText = await tokenRes.text();
-        console.error('[Google OAuth] Token exchange failed:', errText);
-        return res.status(500).send('Failed to exchange authorization code for tokens: ' + errText);
+        console.error('[Google OAuth] Token exchange error:', errText);
+        return res.redirect(`${appUrl}/?emailSync=token_error`);
       }
 
       const tokenData = await tokenRes.json();
       const refreshToken = tokenData.refresh_token;
       const accessToken = tokenData.access_token;
-      const tokenExpiresAt = Date.now() + (tokenData.expires_in || 3600) * 1000;
+      const expiresIn = tokenData.expires_in || 3600;
 
-      // Fetch user's Google email
-      let googleEmail = '';
+      if (!refreshToken) {
+        const existing = db.prepare('SELECT refresh_token FROM google_connections WHERE user_id = ?').get(userId);
+        if (!existing) {
+          console.warn('[Google OAuth] Missing refresh token on new connection');
+          return res.redirect(`${appUrl}/?emailSync=no_refresh_token`);
+        }
+      }
+
+      // Fetch user profile email
+      let userEmail = 'Google User';
       try {
-        const userinfoRes = await fetch('https://www.googleapis.com/oauth2/v2/userinfo', {
+        const userRes = await fetch('https://www.googleapis.com/oauth2/v2/userinfo', {
           headers: { Authorization: `Bearer ${accessToken}` }
         });
-        if (userinfoRes.ok) {
-          const uData = await userinfoRes.json();
-          googleEmail = uData.email || '';
+        if (userRes.ok) {
+          const profile = await userRes.json();
+          userEmail = profile.email || userEmail;
         }
-      } catch (e) {
-        console.warn('Could not fetch Google profile email:', e.message);
+      } catch (err) {
+        console.warn('[Google OAuth] Could not fetch profile email:', err.message);
       }
 
       const now = new Date().toISOString();
+      const expiresAt = Date.now() + expiresIn * 1000;
 
-      // Upsert into google_connections with AES-256-GCM encryption
-      const encryptedRefresh = refreshToken ? encrypt(refreshToken) : null;
-      const encryptedAccess = encrypt(accessToken);
+      // Save encrypted tokens
+      const existingConn = db.prepare('SELECT refresh_token FROM google_connections WHERE user_id = ?').get(userId);
+      const tokenToSave = refreshToken ? encrypt(refreshToken) : existingConn.refresh_token;
 
       db.prepare(`
         INSERT INTO google_connections (user_id, email, refresh_token, access_token, token_expires_at, requires_reauth, connected_at)
         VALUES (?, ?, ?, ?, ?, 0, ?)
         ON CONFLICT(user_id) DO UPDATE SET
           email = excluded.email,
-          refresh_token = CASE WHEN excluded.refresh_token IS NOT NULL AND excluded.refresh_token != '' THEN excluded.refresh_token ELSE google_connections.refresh_token END,
+          refresh_token = excluded.refresh_token,
           access_token = excluded.access_token,
           token_expires_at = excluded.token_expires_at,
-          requires_reauth = 0,
-          connected_at = excluded.connected_at
-      `).run(userId, googleEmail, encryptedRefresh || '', encryptedAccess, tokenExpiresAt, now);
+          requires_reauth = 0
+      `).run(userId, userEmail, tokenToSave, encrypt(accessToken), expiresAt, now);
 
-      // Render graceful callback page supporting both Web popup and Mobile deep link
-      res.send(`
-        <!DOCTYPE html>
-        <html>
-          <head>
-            <title>Dailyba - Google Connected</title>
-            <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-            <style>
-              body {
-                background: #090d16;
-                color: #f8fafc;
-                font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
-                display: flex;
-                flex-direction: column;
-                align-items: center;
-                justify-content: center;
-                min-height: 100vh;
-                margin: 0;
-                padding: 20px;
-                text-align: center;
-              }
-              .card {
-                background: #131b2e;
-                border: 1px solid rgba(255, 255, 255, 0.08);
-                border-radius: 16px;
-                padding: 32px 24px;
-                max-width: 400px;
-                width: 100%;
-                box-shadow: 0 20px 40px rgba(0,0,0,0.5);
-              }
-              .badge {
-                width: 56px;
-                height: 56px;
-                background: rgba(16, 185, 129, 0.15);
-                color: #10b981;
-                border-radius: 50%;
-                display: flex;
-                align-items: center;
-                justify-content: center;
-                margin: 0 auto 16px;
-                font-size: 28px;
-              }
-              h2 { margin: 0 0 8px; font-size: 20px; }
-              p { margin: 0 0 20px; color: #94a3b8; font-size: 14px; line-height: 1.5; }
-              .btn {
-                background: #2563eb;
-                color: white;
-                border: none;
-                padding: 12px 24px;
-                border-radius: 10px;
-                font-weight: 600;
-                font-size: 14px;
-                cursor: pointer;
-                width: 100%;
-                text-decoration: none;
-                display: inline-block;
-              }
-            </style>
-          </head>
-          <body>
-            <div class="card">
-              <div class="badge">✓</div>
-              <h2>Google Account Connected</h2>
-              <p>Your Gmail account (<strong>${googleEmail || 'Connected'}</strong>) has been securely linked to Dailyba.</p>
-              <a class="btn" href="dailyba://app?emailSync=connected" onclick="finishAndClose(event)">Return to Dailyba</a>
-            </div>
-            <script>
-              function finishAndClose(e) {
-                if (window.opener) {
-                  try {
-                    window.opener.postMessage({ type: 'DAILYBA_GOOGLE_CONNECTED', email: '${googleEmail}' }, '*');
-                  } catch (err) {}
-                  window.close();
-                } else {
-                  // Mobile deep link fallback
-                  window.location.href = 'dailyba://app?emailSync=connected';
-                  setTimeout(() => { window.location.href = '/'; }, 1000);
-                }
-              }
-              // Auto-trigger if opened as popup
-              if (window.opener) {
-                try {
-                  window.opener.postMessage({ type: 'DAILYBA_GOOGLE_CONNECTED', email: '${googleEmail}' }, '*');
-                  setTimeout(() => window.close(), 1800);
-                } catch (e) {}
-              }
-            </script>
-          </body>
-        </html>
-      `);
+      res.redirect(`${appUrl}/?emailSync=connected`);
     } catch (err) {
-      console.error('Callback error:', err);
-      res.status(500).send('Internal Server Error: ' + err.message);
+      console.error('[Google OAuth] Callback exception:', err);
+      const appUrl = (process.env.APP_URL || process.env.NEXT_PUBLIC_API_URL || 'https://dailyba.pdfumi.com').replace(/\/+$/, '');
+      res.redirect(`${appUrl}/?emailSync=server_error`);
     }
   });
 
-  // 4. Disconnect Google Account
-  router.post('/disconnect', authenticateToken, (req, res) => {
+  // 4. Disconnect Google Account & Revoke OAuth
+  router.post('/disconnect', authenticateToken, async (req, res) => {
     try {
-      db.prepare('DELETE FROM google_connections WHERE user_id = ?').run(req.user.id);
-      res.json({
-        success: true,
-        message: 'Google account disconnected successfully'
-      });
+      const conn = db.prepare('SELECT * FROM google_connections WHERE user_id = ?').get(req.user.id);
+      if (conn) {
+        const rawRefreshToken = decrypt(conn.refresh_token);
+        if (rawRefreshToken) {
+          try {
+            await fetch(`https://oauth2.googleapis.com/revoke?token=${rawRefreshToken}`, {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/x-www-form-urlencoded' }
+            });
+          } catch (err) {
+            console.warn('[Google OAuth] Token revocation failed (ignoring):', err.message);
+          }
+        }
+        db.prepare('DELETE FROM google_connections WHERE user_id = ?').run(req.user.id);
+      }
+
+      res.json({ success: true, message: 'Google account disconnected successfully' });
     } catch (err) {
       console.error('Disconnect error:', err);
-      res.status(500).json({ success: false, message: 'Server error disconnecting account' });
+      res.status(500).json({ success: false, message: 'Server error disconnecting' });
     }
   });
 
@@ -464,7 +381,7 @@ function createEmailSyncRouter(db, authenticateToken, jwtSecret) {
 
     const baseQuery = [
       '(from:(noreply@jago.com OR bankmandiri.co.id OR bca.co.id OR paypay.ne.jp OR gojek.com OR ovo.id OR shopee.co.id OR dana.id OR rakuten-card.co.jp OR vpass.ne.jp OR paypal.com)',
-      'OR subject:("You have made a payment" OR "Pembayaran Berhasil" OR "お支払い完了" OR "Payment receipt" OR "Bukti Transfer"))'
+      'OR subject:("You have made a payment" OR "Pembayaran Berhasil" OR "お支払い完了" OR "Payment receipt" OR "Bukti Transfer" OR "Pesanan" OR "Order"))'
     ].join(' ');
 
     const query = `${baseQuery}${incrementalFilter}`;
@@ -505,7 +422,7 @@ function createEmailSyncRouter(db, authenticateToken, jwtSecret) {
       if (payload.body && payload.body.data) {
         try {
           const decoded = Buffer.from(payload.body.data, 'base64url').toString('utf8');
-          text += cleanMimeText(decoded) + '\\n';
+          text += cleanMimeText(decoded) + '\n';
         } catch {}
       }
       if (payload.parts && Array.isArray(payload.parts)) {
@@ -550,8 +467,14 @@ function createEmailSyncRouter(db, authenticateToken, jwtSecret) {
       const now = new Date().toISOString();
 
       if (parsed && parsed.amount > 0) {
-        if (parsed.amount <= 0) {
-          continue;
+        // Multi-email order deduplication:
+        // If this order was already processed via an earlier order/shipped/delivered notification, skip it.
+        if (parsed.orderRef) {
+          const existingOrder = db.prepare('SELECT 1 FROM imported_order_refs WHERE user_id = ? AND order_ref = ?').get(userId, parsed.orderRef);
+          if (existingOrder) {
+            duplicateCount++;
+            continue;
+          }
         }
 
         let finalConfidence = parsed.confidence;
@@ -562,12 +485,33 @@ function createEmailSyncRouter(db, authenticateToken, jwtSecret) {
         const insertId = 'imp_' + Date.now() + '_' + crypto.randomBytes(4).toString('hex');
         const cleanSnippet = redactPII(parsed.rawSnippet || '').slice(0, 300);
 
-        // Check for existing transaction to prevent duplicate auto-recording
+        // Check for existing transaction in ledger
         const isDuplicate = userState.transactions.some(
           t => t.amount === parsed.amount && t.date === parsed.occurredAt
         );
 
-        const canAutoApprove = options.autoRecordHighConfidence && finalConfidence >= 0.85 && !isDuplicate;
+        // For order_update notices, check ±3 days window to prevent double-counting with bank receipt
+        let isPotentialBankDuplicate = false;
+        if (parsed.emailType === 'order_update') {
+          const orderEpoch = new Date(parsed.occurredAt).getTime();
+          isPotentialBankDuplicate = userState.transactions.some(t => {
+            if (t.amount !== parsed.amount) return false;
+            const tEpoch = new Date(t.date).getTime();
+            return Math.abs(tEpoch - orderEpoch) <= 3 * 86400000;
+          });
+        }
+
+        // Strict Auto-Approve Rules:
+        // 1. MUST be deterministic local regex (parsed_by !== 'ai')
+        // 2. MUST be explicit payment (email_type === 'payment', NEVER order_update)
+        // 3. High confidence (>= 0.85)
+        // 4. Not an existing or ±3 days duplicate
+        const canAutoApprove = options.autoRecordHighConfidence &&
+          parsed.parsedBy !== 'ai' &&
+          parsed.emailType === 'payment' &&
+          finalConfidence >= 0.85 &&
+          !isDuplicate &&
+          !isPotentialBankDuplicate;
 
         try {
           db.transaction(() => {
@@ -576,7 +520,18 @@ function createEmailSyncRouter(db, authenticateToken, jwtSecret) {
               VALUES (?, ?, ?)
             `).run(userId, parsed.messageId, now);
 
+            if (parsed.orderRef) {
+              db.prepare(`
+                INSERT OR IGNORE INTO imported_order_refs (user_id, order_ref, created_at)
+                VALUES (?, ?, ?)
+              `).run(userId, parsed.orderRef, now);
+            }
+
             if (canAutoApprove) {
+              const noteText = (parsed.seller || parsed.itemSummary)
+                ? `${parsed.merchant}: ${[parsed.seller, parsed.itemSummary].filter(Boolean).join(' - ')}`
+                : `${parsed.provider.toUpperCase()}: ${parsed.merchant}`;
+
               const newTx = {
                 id: 'tx_email_' + insertId + '_' + crypto.randomBytes(3).toString('hex'),
                 type: 'expense',
@@ -585,7 +540,7 @@ function createEmailSyncRouter(db, authenticateToken, jwtSecret) {
                 source: ALLOWED_SOURCES.has(parsed.source) ? parsed.source : 'bank',
                 currency: parsed.currency,
                 date: parsed.occurredAt,
-                note: `${parsed.provider.toUpperCase()}: ${parsed.merchant}`,
+                note: noteText,
                 isEmailImported: true,
                 importPendingId: insertId
               };
@@ -598,8 +553,9 @@ function createEmailSyncRouter(db, authenticateToken, jwtSecret) {
                 INSERT OR IGNORE INTO pending_imports (
                   id, user_id, message_id, dedup_hash, source, provider,
                   merchant, amount, currency, category, occurred_at, occurred_time,
-                  raw_snippet, confidence, status, created_at
-                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'approved', ?)
+                  raw_snippet, confidence, status, created_at,
+                  email_type, order_ref, seller, item_summary, amount_evidence, parsed_by
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'approved', ?, ?, ?, ?, ?, ?, ?)
               `).run(
                 insertId,
                 userId,
@@ -615,15 +571,22 @@ function createEmailSyncRouter(db, authenticateToken, jwtSecret) {
                 parsed.occurredTime || null,
                 cleanSnippet,
                 finalConfidence,
-                now
+                now,
+                parsed.emailType || 'payment',
+                parsed.orderRef || null,
+                parsed.seller || null,
+                parsed.itemSummary || null,
+                parsed.amountEvidence || null,
+                parsed.parsedBy || 'regex'
               );
             } else {
               db.prepare(`
                 INSERT OR IGNORE INTO pending_imports (
                   id, user_id, message_id, dedup_hash, source, provider,
                   merchant, amount, currency, category, occurred_at, occurred_time,
-                  raw_snippet, confidence, status, created_at
-                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'pending', ?)
+                  raw_snippet, confidence, status, created_at,
+                  email_type, order_ref, seller, item_summary, amount_evidence, parsed_by
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'pending', ?, ?, ?, ?, ?, ?, ?)
               `).run(
                 insertId,
                 userId,
@@ -639,7 +602,13 @@ function createEmailSyncRouter(db, authenticateToken, jwtSecret) {
                 parsed.occurredTime || null,
                 cleanSnippet,
                 finalConfidence,
-                now
+                now,
+                parsed.emailType || 'payment',
+                parsed.orderRef || null,
+                parsed.seller || null,
+                parsed.itemSummary || null,
+                parsed.amountEvidence || null,
+                parsed.parsedBy || 'regex'
               );
               pendingCount++;
             }
@@ -675,7 +644,7 @@ function createEmailSyncRouter(db, authenticateToken, jwtSecret) {
       duplicateCount,
       lastSyncedAt: syncStartTime,
       message: autoRecordedCount > 0
-        ? `Sync complete. ${autoRecordedCount} verified transactions auto-recorded to Recent Transactions.`
+        ? `Sync complete. ${autoRecordedCount} verified bank transactions auto-recorded to Recent Transactions.`
         : `Sync complete. ${importedCount} items imported.`
     };
   }
@@ -733,12 +702,20 @@ function createEmailSyncRouter(db, authenticateToken, jwtSecret) {
             VALUES (?, ?, ?)
           `).run(req.user.id, parsed.messageId, now);
 
+          if (parsed.orderRef) {
+            db.prepare(`
+              INSERT OR IGNORE INTO imported_order_refs (user_id, order_ref, created_at)
+              VALUES (?, ?, ?)
+            `).run(req.user.id, parsed.orderRef, now);
+          }
+
           db.prepare(`
             INSERT INTO pending_imports (
               id, user_id, message_id, dedup_hash, source, provider,
               merchant, amount, currency, category, occurred_at, occurred_time,
-              raw_snippet, confidence, status, created_at
-            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'pending', ?)
+              raw_snippet, confidence, status, created_at,
+              email_type, order_ref, seller, item_summary, amount_evidence, parsed_by
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'pending', ?, ?, ?, ?, ?, ?, ?)
           `).run(
             insertId,
             req.user.id,
@@ -754,7 +731,13 @@ function createEmailSyncRouter(db, authenticateToken, jwtSecret) {
             parsed.occurredTime || null,
             cleanSnippet,
             parsed.confidence,
-            now
+            now,
+            parsed.emailType || 'payment',
+            parsed.orderRef || null,
+            parsed.seller || null,
+            parsed.itemSummary || null,
+            parsed.amountEvidence || null,
+            parsed.parsedBy || 'regex'
           );
         })();
 
@@ -801,10 +784,17 @@ function createEmailSyncRouter(db, authenticateToken, jwtSecret) {
       const { id, all, updates } = req.body;
 
       if (all) {
-        // Safe Approve All: Only approve items with confidence >= 0.8
+        // Safe Approve All:
+        // ONLY approve deterministic local regex receipts with confidence >= 0.8.
+        // AI items (parsed_by = 'ai') and order notices (email_type != 'payment') are STRICTLY EXCLUDED
+        // to protect financial ledger integrity and require explicit human sign-off.
         const itemsToApprove = db.prepare(`
           SELECT * FROM pending_imports
-          WHERE user_id = ? AND status = 'pending' AND confidence >= 0.8
+          WHERE user_id = ?
+            AND status = 'pending'
+            AND confidence >= 0.8
+            AND (parsed_by IS NULL OR parsed_by != 'ai')
+            AND (email_type IS NULL OR email_type = 'payment')
         `).all(req.user.id);
 
         if (itemsToApprove.length === 0) {
@@ -812,7 +802,7 @@ function createEmailSyncRouter(db, authenticateToken, jwtSecret) {
             success: true,
             approvedItems: [],
             newTransactions: [],
-            message: 'No pending items eligible for batch approval (confidence >= 0.8)'
+            message: 'No verified deterministic receipts eligible for batch approval. AI-extracted items and order updates require individual review.'
           });
         }
 
@@ -830,6 +820,10 @@ function createEmailSyncRouter(db, authenticateToken, jwtSecret) {
             const finalCategory = ALLOWED_CATEGORIES.has(item.category) ? item.category : 'others';
             const finalSource = ALLOWED_SOURCES.has(item.source) ? item.source : 'bank';
 
+            const noteText = (item.seller || item.item_summary)
+              ? `${item.merchant}: ${[item.seller, item.item_summary].filter(Boolean).join(' - ')}`
+              : `${item.provider.toUpperCase()}: ${item.merchant}`;
+
             const newTx = {
               id: 'tx_email_' + item.id + '_' + crypto.randomBytes(3).toString('hex'),
               type: 'expense',
@@ -838,13 +832,17 @@ function createEmailSyncRouter(db, authenticateToken, jwtSecret) {
               source: finalSource,
               currency: item.currency,
               date: item.occurred_at,
-              note: `${item.provider.toUpperCase()}: ${item.merchant}`,
+              note: noteText,
               isEmailImported: true,
               importPendingId: item.id
             };
 
             state.transactions.unshift(newTx);
             newTransactions.push(newTx);
+
+            if (item.order_ref) {
+              db.prepare('INSERT OR IGNORE INTO imported_order_refs (user_id, order_ref, created_at) VALUES (?, ?, ?)').run(req.user.id, item.order_ref, new Date().toISOString());
+            }
 
             db.prepare(`
               UPDATE pending_imports
@@ -879,7 +877,7 @@ function createEmailSyncRouter(db, authenticateToken, jwtSecret) {
           newTransactions,
           updatedState,
           remainingPendingCount: remainingPending?.count || 0,
-          message: `Approved ${itemsToApprove.length} transactions. ${remainingPending?.count || 0} low-confidence items kept for manual review.`
+          message: `Approved ${itemsToApprove.length} verified transactions. ${remainingPending?.count || 0} items kept for review.`
         });
       }
 
@@ -946,16 +944,24 @@ function createEmailSyncRouter(db, authenticateToken, jwtSecret) {
 
         if (info.changes === 0) return false;
 
+        if (item.order_ref) {
+          db.prepare('INSERT OR IGNORE INTO imported_order_refs (user_id, order_ref, created_at) VALUES (?, ?, ?)').run(req.user.id, item.order_ref, new Date().toISOString());
+        }
+
         // 2. Fetch and append to user_data.transactions
         const record = db.prepare('SELECT data_json, version FROM user_data WHERE user_id = ?').get(req.user.id);
         let state = record && record.data_json ? JSON.parse(record.data_json) : { transactions: [] };
         if (!Array.isArray(state.transactions)) state.transactions = [];
 
+        const defaultNote = (item.seller || item.item_summary)
+          ? `${finalMerchant}: ${[item.seller, item.item_summary].filter(Boolean).join(' - ')}`
+          : `${item.provider.toUpperCase()}: ${finalMerchant}`;
+
         const finalNote = updates?.note
           ? String(updates.note).trim().slice(0, 200)
           : (updates?.merchant
               ? String(updates.merchant).trim().slice(0, 100)
-              : `${item.provider.toUpperCase()}: ${finalMerchant}`);
+              : defaultNote);
 
         newTransaction = {
           id: 'tx_email_' + item.id + '_' + crypto.randomBytes(3).toString('hex'),

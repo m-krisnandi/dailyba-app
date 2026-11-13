@@ -281,7 +281,10 @@ export function BankEmailSyncModal({
   const handleApproveSingle = async (item: PendingImportItem) => {
     const finalCategory = itemCategories[item.id] || item.category;
     const finalSource = itemSources[item.id] || item.source;
-    const finalMerchant = itemNotes[item.id] !== undefined ? itemNotes[item.id].trim() : item.merchant;
+    const defaultDescription = (item.seller || item.item_summary)
+      ? `${item.merchant}: ${[item.seller, item.item_summary].filter(Boolean).join(' - ')}`
+      : item.merchant;
+    const finalMerchant = itemNotes[item.id] !== undefined ? itemNotes[item.id].trim() : defaultDescription;
 
     try {
       const res = await dailybaApi.approveImport({
@@ -323,24 +326,16 @@ export function BankEmailSyncModal({
     try {
       const res = await dailybaApi.approveImport({ all: true });
       if (res.success) {
-        const approvedTxList: Transaction[] = (res as any).newTransactions || pendingItems.map(item => ({
-          id: `tx_email_${item.id}_${Date.now()}`,
-          type: 'expense',
-          amount: item.amount,
-          category: itemCategories[item.id] || item.category,
-          source: itemSources[item.id] || item.source,
-          currency: item.currency,
-          date: item.occurred_at,
-          note: `${item.provider.toUpperCase()}: ${item.merchant}`,
-        }));
-
-        onApproveTransactions(approvedTxList);
-        setPendingItems([]);
+        const approvedTxList: Transaction[] = (res as any).newTransactions || [];
+        if (approvedTxList.length > 0) {
+          onApproveTransactions(approvedTxList);
+        }
+        await refreshData();
         setFeedback({
           type: 'success',
-          message: language === 'ja'
-            ? `${approvedTxList.length}件の明細をすべて家計簿に記録しました。`
-            : `All ${approvedTxList.length} transactions approved and recorded!`,
+          message: res.message || (language === 'ja'
+            ? `${approvedTxList.length}件の検証済み明細を家計簿に記録しました。`
+            : `Approved ${approvedTxList.length} verified transactions!`),
         });
       }
     } catch (e: any) {
@@ -410,33 +405,37 @@ export function BankEmailSyncModal({
                 : 'bg-blue-500/10 border-blue-500/20 text-blue-400'
             }`}
           >
-            <span>{feedback.message}</span>
+            <div className="flex items-center space-x-2">
+              {feedback.type === 'success' && <Check className="w-4 h-4 stroke-[2]" />}
+              {feedback.type === 'error' && <AlertTriangle className="w-4 h-4 stroke-[2]" />}
+              <span>{feedback.message}</span>
+            </div>
             <button
               type="button"
               onClick={() => setFeedback(null)}
-              className="ml-2 hover:opacity-75 cursor-pointer font-bold"
+              className="hover:opacity-75 cursor-pointer ml-2"
             >
-              ×
+              <X className="w-3.5 h-3.5" />
             </button>
           </div>
         )}
 
-        {/* Content Area */}
-        <div className="flex-1 overflow-y-auto p-4 sm:p-6 space-y-5">
-          {/* Google Connection Card */}
+        {/* Body content */}
+        <div className="p-4 sm:p-6 overflow-y-auto space-y-5 flex-1">
+          {/* Connection Status Card */}
           <div className="p-4 rounded-xl border border-[var(--border-subtle)] bg-[var(--bg-subtle)] space-y-3">
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
               <div className="flex items-center space-x-3">
                 <div
                   className={`w-3 h-3 rounded-full shrink-0 ${
-                    status?.requiresReauth ? 'bg-amber-400 animate-pulse' : status?.isConnected ? 'bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.5)]' : 'bg-slate-500'
+                    status?.isConnected && !status?.requiresReauth
+                      ? 'bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.5)]'
+                      : 'bg-slate-500'
                   }`}
                 />
-                <div>
+                <div className="space-y-0.5">
                   <p className="text-xs font-semibold text-[var(--text-main)]">
-                    {status?.requiresReauth
-                      ? (language === 'ja' ? 'Google認証が期限切れです。再連携してください。' : 'Google authorization expired. Please reconnect.')
-                      : status?.isConnected
+                    {status?.isConnected && !status?.requiresReauth
                       ? `${t.emailSync.googleConnectedAs} ${status.connectedEmail || ''}`
                       : t.emailSync.googleNotConnected}
                   </p>
@@ -522,13 +521,13 @@ export function BankEmailSyncModal({
             </button>
           </div>
 
-          {/* Tab 1: Pending Queue */}
+          {/* Tab 1: Pending Imports */}
           {activeTab === 'pending' && (
             <div className="space-y-3">
               {pendingItems.length > 0 ? (
                 <>
-                  <div className="flex items-center justify-between">
-                    <span className="text-xs font-semibold text-[var(--text-muted)]">
+                  <div className="flex items-center justify-between pt-1">
+                    <span className="text-xs text-[var(--text-muted)] font-medium">
                       {pendingItems.length} {t.emailSync.pendingCountBadge}
                     </span>
                     <div className="flex items-center space-x-2">
@@ -558,6 +557,9 @@ export function BankEmailSyncModal({
                       );
                       const currentCategory = itemCategories[item.id] || item.category;
                       const currentSource = itemSources[item.id] || item.source;
+                      const defaultDescription = (item.seller || item.item_summary)
+                        ? `${item.merchant}: ${[item.seller, item.item_summary].filter(Boolean).join(' - ')}`
+                        : item.merchant;
 
                       return (
                         <div
@@ -566,12 +568,23 @@ export function BankEmailSyncModal({
                         >
                           <div className="flex items-start justify-between gap-2">
                             <div className="space-y-1">
-                              <div className="flex items-center space-x-2">
+                              <div className="flex items-center space-x-2 flex-wrap gap-y-1">
                                 <span className="px-2 py-0.5 rounded text-[10px] font-mono font-bold uppercase bg-blue-500/20 text-blue-400 border border-blue-500/30">
                                   {item.provider}
                                 </span>
                                 <h3 className="text-sm font-bold text-[var(--text-main)]">{item.merchant}</h3>
-                                {item.confidence < 0.8 && (
+                                {item.parsed_by === 'ai' && (
+                                  <span className="px-1.5 py-0.5 text-[9px] font-bold rounded bg-sky-500/15 text-sky-300 border border-sky-500/30 flex items-center space-x-1">
+                                    <Sparkles className="w-2.5 h-2.5" />
+                                    <span>{language === 'ja' ? 'AI抽出' : 'AI-Extracted'}</span>
+                                  </span>
+                                )}
+                                {item.email_type === 'order_update' && (
+                                  <span className="px-1.5 py-0.5 text-[9px] font-bold rounded bg-amber-500/15 text-amber-300 border border-amber-500/30">
+                                    {language === 'ja' ? '注文通知・支払未確定' : 'Order Notice • Payment Unconfirmed'}
+                                  </span>
+                                )}
+                                {item.confidence < 0.8 && item.parsed_by !== 'ai' && (
                                   <span className="px-1.5 py-0.5 text-[9px] font-bold rounded bg-purple-500/15 text-purple-300 border border-purple-500/30">
                                     {language === "ja" ? "未検証・要確認" : "Unverified • Review Required"}
                                   </span>
@@ -591,6 +604,18 @@ export function BankEmailSyncModal({
                                   {Math.round(item.confidence * 100)}% {t.emailSync.confidence}
                                 </span>
                               </p>
+                              {(item.seller || item.item_summary) && (
+                                <p className="text-xs text-slate-300/90 font-medium pt-0.5">
+                                  {item.seller && <span className="text-sky-400 font-semibold">{item.seller}</span>}
+                                  {item.seller && item.item_summary && <span className="mx-1 text-[var(--text-muted)]">•</span>}
+                                  {item.item_summary && <span>{item.item_summary}</span>}
+                                </p>
+                              )}
+                              {item.amount_evidence && (
+                                <p className="text-[11px] text-[var(--text-muted)] font-mono italic">
+                                  {language === 'ja' ? '根拠: ' : 'Evidence: '}&ldquo;{item.amount_evidence}&rdquo;
+                                </p>
+                              )}
                             </div>
 
                             <div className="text-right shrink-0">
@@ -608,12 +633,12 @@ export function BankEmailSyncModal({
                               </label>
                               <input
                                 type="text"
-                                value={itemNotes[item.id] !== undefined ? itemNotes[item.id] : item.merchant}
+                                value={itemNotes[item.id] !== undefined ? itemNotes[item.id] : defaultDescription}
                                 onChange={e =>
                                   setItemNotes(prev => ({ ...prev, [item.id]: e.target.value }))
                                 }
                                 className="w-full bg-[var(--bg-card)] border border-[var(--border-subtle)] rounded-lg px-2.5 py-1 text-xs text-[var(--text-main)] focus:outline-none focus:border-blue-500 font-medium"
-                                placeholder={item.merchant}
+                                placeholder={defaultDescription}
                               />
                             </div>
 

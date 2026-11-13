@@ -15,6 +15,12 @@ const crypto = require('crypto');
  * @property {string} messageId - unique email message id or synthetic id
  * @property {string} dedupHash - hash of (merchant + amount + occurredAt)
  * @property {string} [rawSnippet] - excerpt of the email
+ * @property {'payment' | 'order_update' | 'refund' | 'other'} [emailType]
+ * @property {string} [orderRef]
+ * @property {string} [seller]
+ * @property {string} [itemSummary]
+ * @property {string} [amountEvidence]
+ * @property {'regex' | 'ai'} [parsedBy]
  */
 
 /**
@@ -111,6 +117,53 @@ function parseCurrencyAmount(rawInput, currencyHint = 'IDR') {
 }
 
 /**
+ * Verifies that the numeric amount actually appears in the text, preventing hallucinated amounts.
+ *
+ * @param {number} amount
+ * @param {'IDR'|'JPY'|'USD'|'MMK'} [currency='IDR']
+ * @param {string} text
+ * @returns {boolean}
+ */
+function amountAppearsInText(amount, currency = 'IDR', text = '') {
+  if (typeof amount !== 'number' || isNaN(amount) || amount <= 0 || !text) {
+    return false;
+  }
+  const matches = text.match(/\d[\d.,]*/g);
+  if (!matches) return false;
+
+  for (const m of matches) {
+    const parsed = parseCurrencyAmount(m, currency);
+    if (parsed === amount) {
+      return true;
+    }
+  }
+  return false;
+}
+
+/**
+ * Verifies that a quoted evidence line exists in the email text
+ * and evaluates to the expected amount.
+ *
+ * @param {string} evidence
+ * @param {number} amount
+ * @param {'IDR'|'JPY'|'USD'|'MMK'} [currency='IDR']
+ * @param {string} fullText
+ * @returns {boolean}
+ */
+function verifyAmountEvidence(evidence, amount, currency = 'IDR', fullText = '') {
+  if (!evidence || typeof evidence !== 'string') return false;
+  const cleanEv = evidence.trim().toLowerCase().replace(/\s+/g, ' ');
+  const cleanFull = (fullText || '').toLowerCase().replace(/\s+/g, ' ');
+  if (!cleanFull.includes(cleanEv)) {
+    const strippedEv = cleanEv.replace(/[^a-z0-9]/g, '');
+    const strippedFull = cleanFull.replace(/[^a-z0-9]/g, '');
+    if (!strippedFull.includes(strippedEv)) return false;
+  }
+  const parsed = parseCurrencyAmount(evidence, currency);
+  return parsed === amount;
+}
+
+/**
  * Decodes and sanitizes MIME HTML/text payloads received from Gmail API.
  * Converts HTML table layouts into readable text, decodes HTML entities, and strips tags.
  * Caps length at 250 KB to guard against ReDoS and CPU exhaustion.
@@ -201,7 +254,7 @@ function normalizeDate(rawDate) {
     return `${y}-${m}-${d}`;
   }
 
-  // DD/MM/YYYY or DD-MM-YYYY (e.g. 10/11/2026 or 12-11-2026)
+  // DD/MM/YYYY or DD-MM-YYYY (e.g. 07/11/2026 or 12-11-2026)
   const dmyNumeric = clean.match(/^(\d{1,2})[/-](\d{1,2})[/-](\d{4})/);
   if (dmyNumeric) {
     const d = String(dmyNumeric[1]).padStart(2, '0');
@@ -255,6 +308,8 @@ function normalizeDate(rawDate) {
 module.exports = {
   createDedupHash,
   parseCurrencyAmount,
+  amountAppearsInText,
+  verifyAmountEvidence,
   cleanMimeText,
   normalizeDate
 };

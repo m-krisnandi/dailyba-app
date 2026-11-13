@@ -53,6 +53,16 @@ export interface Transaction {
   note?: string;
   isRecurring?: boolean;
   recurringBillId?: string;
+  isInstallment?: boolean;
+  installmentPeriod?: number; // total months (e.g. 12)
+  installmentCurrentMonth?: number; // current month (e.g. 3)
+  installmentParentId?: string; // ID linking installment slices together
+  isSharedExpense?: boolean;
+  sharedTotalAmount?: number;
+  sharedParticipants?: number;
+  sharedMyShare?: number;
+  isEmailImported?: boolean;
+  importPendingId?: string;
 }
 
 export interface InvestmentAsset {
@@ -119,6 +129,12 @@ export interface PendingImportItem {
   confidence: number;
   status: 'pending' | 'approved' | 'rejected';
   created_at: string;
+  email_type?: 'payment' | 'order_update' | 'refund' | 'other';
+  order_ref?: string;
+  seller?: string;
+  item_summary?: string;
+  amount_evidence?: string;
+  parsed_by?: 'regex' | 'ai';
 }
 
 export interface EmailSyncStatus {
