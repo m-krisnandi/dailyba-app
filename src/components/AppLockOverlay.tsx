@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState, useEffect, useCallback } from 'react';
+import { Capacitor } from '@capacitor/core';
 import { Fingerprint, Lock, ShieldCheck, Delete } from 'lucide-react';
 import { KakeiboLogo } from './KakeiboLogo';
 import {
@@ -34,8 +35,12 @@ export function AppLockOverlay({ isLocked, onUnlock, language }: AppLockOverlayP
     if (success) {
       setPinInput('');
       onUnlock();
+    } else {
+      if (hasSavedPin) {
+        setErrorMessage(language === 'ja' ? '生体認証がキャンセルまたは失敗しました。PINでも解除できます。' : 'Biometric verification cancelled. You can also enter your PIN.');
+      }
     }
-  }, [language, onUnlock]);
+  }, [language, onUnlock, hasSavedPin]);
 
   useEffect(() => {
     if (isLocked) {
@@ -47,8 +52,9 @@ export function AppLockOverlay({ isLocked, onUnlock, language }: AppLockOverlayP
       isBiometricsAvailable().then((res) => {
         setHasBiometrics(res.available);
         setBiometryLabel(res.biometryType);
-        // Automatically attempt biometric prompt on initial lock presentation
-        if (res.available) {
+        // On native platforms, auto-trigger biometric prompt.
+        // On web browser, require explicit user click to satisfy browser user-gesture security policy.
+        if (res.available && Capacitor.isNativePlatform()) {
           triggerBiometricAuth();
         }
       });
