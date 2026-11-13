@@ -60,12 +60,21 @@ export function SecuritySettingsModal({
   };
 
   return (
-    <div onClick={onClose} className="fixed inset-0 z-[110] flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-md animate-fade-in cursor-pointer">
-      <div onClick={(e) => e.stopPropagation()} className="relative w-full max-w-md bg-white dark:bg-[#0f1722] border border-[var(--border-strong)] rounded-3xl shadow-2xl overflow-hidden p-6 space-y-6 cursor-default">
+    <div
+      onClick={onClose}
+      className="fixed inset-0 z-[110] flex items-center justify-center p-4 bg-slate-950/60 backdrop-blur-md animate-fade-in cursor-pointer"
+    >
+      <div
+        onClick={(e) => e.stopPropagation()}
+        className="relative w-full max-w-md rounded-3xl border border-[var(--border-strong)] bg-[var(--bg-surface-solid)] backdrop-blur-3xl shadow-2xl overflow-hidden p-6 sm:p-7 space-y-5 cursor-default animate-in zoom-in-95 duration-150"
+      >
+        {/* Subtle Ambient Liquid Glow */}
+        <div className="absolute -top-20 left-1/2 -translate-x-1/2 w-64 h-32 bg-indigo-500/15 blur-3xl pointer-events-none rounded-full" />
+
         {/* Header */}
-        <div className="flex items-center justify-between pb-3 border-b border-[var(--border-subtle)]">
+        <div className="flex items-center justify-between pb-3.5 border-b border-[var(--border-subtle)] relative z-10">
           <div className="flex items-center space-x-3">
-            <div className="w-10 h-10 rounded-2xl bg-indigo-500/15 border border-indigo-500/30 flex items-center justify-center text-indigo-400">
+            <div className="w-10 h-10 rounded-2xl bg-indigo-500/15 border border-indigo-500/30 flex items-center justify-center text-indigo-400 shadow-sm">
               <Shield className="w-5 h-5" />
             </div>
             <div>
@@ -80,14 +89,14 @@ export function SecuritySettingsModal({
           <button
             type="button"
             onClick={onClose}
-            className="p-2 rounded-xl text-[var(--text-muted)] hover:text-[var(--text-main)] hover:bg-[var(--bg-subtle)] transition-all cursor-pointer"
+            className="p-1.5 rounded-xl text-[var(--text-muted)] hover:text-[var(--text-main)] hover:bg-[var(--bg-subtle)] transition-all cursor-pointer"
           >
             <X className="w-4 h-4" />
           </button>
         </div>
 
         {/* Toggle Lock */}
-        <div className="flex items-center justify-between p-4 rounded-2xl bg-slate-50 dark:bg-[#16202e] border border-[var(--border-subtle)]">
+        <div className="flex items-center justify-between p-4 rounded-2xl bg-[var(--bg-subtle)] border border-[var(--border-subtle)] relative z-10">
           <div className="flex items-center space-x-3">
             <Fingerprint className="w-5 h-5 text-indigo-400" />
             <div>
@@ -114,7 +123,7 @@ export function SecuritySettingsModal({
 
         {/* PIN Configuration */}
         {enabled && (
-          <div className="space-y-3 p-4 rounded-2xl bg-slate-50 dark:bg-[#16202e] border border-[var(--border-subtle)] animate-fade-in">
+          <div className="space-y-3 p-4 rounded-2xl bg-[var(--bg-subtle)] border border-[var(--border-subtle)] animate-fade-in relative z-10">
             <div className="flex items-center space-x-2 text-xs font-semibold text-[var(--text-main)]">
               <KeyRound className="w-4 h-4 text-emerald-400" />
               <span>{t.security.enterPin}</span>
@@ -131,7 +140,7 @@ export function SecuritySettingsModal({
                   value={pin}
                   onChange={(e) => setPin(e.target.value.replace(/[^0-9]/g, ''))}
                   placeholder="••••"
-                  className="w-full bg-white dark:bg-[#0c121a] border border-[var(--border-strong)] focus:border-indigo-500 rounded-xl px-3 py-2.5 text-center text-sm font-mono tracking-widest text-[var(--text-main)] outline-none font-bold"
+                  className="w-full bg-[var(--bg-subtle)] border border-[var(--border-strong)] focus:border-indigo-500 rounded-xl px-3 py-2 text-center text-sm font-mono tracking-widest text-[var(--text-main)] outline-none font-bold placeholder:text-[var(--text-faint)] transition-all"
                 />
               </div>
               <div>
@@ -145,7 +154,7 @@ export function SecuritySettingsModal({
                   value={confirmPin}
                   onChange={(e) => setConfirmPin(e.target.value.replace(/[^0-9]/g, ''))}
                   placeholder="••••"
-                  className="w-full bg-white dark:bg-[#0c121a] border border-[var(--border-strong)] focus:border-indigo-500 rounded-xl px-3 py-2.5 text-center text-sm font-mono tracking-widest text-[var(--text-main)] outline-none font-bold"
+                  className="w-full bg-[var(--bg-subtle)] border border-[var(--border-strong)] focus:border-indigo-500 rounded-xl px-3 py-2 text-center text-sm font-mono tracking-widest text-[var(--text-main)] outline-none font-bold placeholder:text-[var(--text-faint)] transition-all"
                 />
               </div>
             </div>
@@ -153,14 +162,14 @@ export function SecuritySettingsModal({
         )}
 
         {feedback && (
-          <div className="flex items-center space-x-2 text-xs text-rose-400 font-medium p-2.5 rounded-xl bg-rose-500/10 border border-rose-500/20">
+          <div className="flex items-center space-x-2 text-xs text-rose-400 font-medium p-2.5 rounded-xl bg-rose-500/10 border border-rose-500/20 relative z-10">
             <AlertCircle className="w-4 h-4 shrink-0" />
             <span>{feedback}</span>
           </div>
         )}
 
         {/* Buttons */}
-        <div className="flex items-center justify-end space-x-2 pt-2">
+        <div className="flex items-center justify-end space-x-2 pt-2 relative z-10">
           <button
             type="button"
             onClick={onClose}
@@ -171,7 +180,7 @@ export function SecuritySettingsModal({
           <button
             type="button"
             onClick={handleSave}
-            className="flex items-center space-x-1.5 px-4 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-bold transition-all shadow-sm active:scale-95 cursor-pointer"
+            className="flex items-center space-x-1.5 px-5 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-bold transition-all shadow-sm active:scale-95 cursor-pointer"
           >
             <Check className="w-3.5 h-3.5" />
             <span>{t.actions.save}</span>

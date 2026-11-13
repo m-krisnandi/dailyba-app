@@ -82,7 +82,7 @@ export function AppLockOverlay({ isLocked, onUnlock, language }: AppLockOverlayP
   };
 
   return (
-    <div className="fixed inset-0 z-[150] flex flex-col items-center justify-between p-6 bg-slate-950 dark:bg-[#070b10] text-white animate-fade-in select-none">
+    <div className="fixed inset-0 z-[150] flex flex-col items-center justify-between p-6 bg-[var(--bg-surface-solid)] backdrop-blur-3xl text-[var(--text-main)] animate-fade-in select-none">
       <div className="w-full flex justify-center pt-8">
         <div className="flex flex-col items-center space-y-3">
           <KakeiboLogo size={44} />
@@ -143,7 +143,7 @@ export function AppLockOverlay({ isLocked, onUnlock, language }: AppLockOverlayP
                 key={digit}
                 type="button"
                 onClick={() => handleKeyPress(digit)}
-                className="h-14 rounded-2xl bg-slate-900/90 hover:bg-slate-800 active:bg-slate-700 border border-slate-800 text-lg font-bold font-mono text-white flex items-center justify-center transition-all cursor-pointer shadow-xs active:scale-95"
+                className="h-14 rounded-2xl bg-[var(--bg-subtle)] hover:bg-[var(--bg-subtle-hover)] active:bg-[var(--border-subtle)] border border-[var(--border-subtle)] text-lg font-bold font-mono text-[var(--text-main)] flex items-center justify-center transition-all cursor-pointer shadow-xs active:scale-95"
               >
                 {digit}
               </button>
@@ -163,7 +163,7 @@ export function AppLockOverlay({ isLocked, onUnlock, language }: AppLockOverlayP
             <button
               type="button"
               onClick={() => handleKeyPress('0')}
-              className="h-14 rounded-2xl bg-slate-900/90 hover:bg-slate-800 active:bg-slate-700 border border-slate-800 text-lg font-bold font-mono text-white flex items-center justify-center transition-all cursor-pointer shadow-xs active:scale-95"
+              className="h-14 rounded-2xl bg-[var(--bg-subtle)] hover:bg-[var(--bg-subtle-hover)] active:bg-[var(--border-subtle)] border border-[var(--border-subtle)] text-lg font-bold font-mono text-[var(--text-main)] flex items-center justify-center transition-all cursor-pointer shadow-xs active:scale-95"
             >
               0
             </button>
