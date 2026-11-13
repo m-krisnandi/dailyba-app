@@ -403,5 +403,5 @@ app.listen(PORT, () => {
       console.error('[Auto-Sync] Periodic interval exception:', err.message);
     }
   }, SYNC_INTERVAL_MS);
-  console.log('[Dailyba API Server] Periodic Gmail Auto-Sync scheduled (every 15 minutes).);
+  console.log('[Dailyba API Server] Periodic Gmail Auto-Sync scheduled (every 15 minutes).');
 });
