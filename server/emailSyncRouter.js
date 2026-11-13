@@ -15,6 +15,7 @@ const ALLOWED_CATEGORIES = new Set([
   'gifts',
   'vps',
   'mobile',
+  'transfer',
   'others'
 ]);
 
@@ -829,12 +830,14 @@ function createEmailSyncRouter(db, authenticateToken, jwtSecret) {
               ? `${item.merchant}: ${[item.seller, item.item_summary].filter(Boolean).join(' - ')}`
               : `${item.provider.toUpperCase()}: ${item.merchant}`;
 
+            const isTransfer = item.type === 'transfer' || finalCategory === 'transfer';
             const newTx = {
               id: 'tx_email_' + item.id + '_' + crypto.randomBytes(3).toString('hex'),
-              type: 'expense',
+              type: isTransfer ? 'transfer' : 'expense',
               amount: item.amount,
               category: finalCategory,
               source: finalSource,
+              destinationSource: isTransfer ? (item.destination_source || 'ewallet') : undefined,
               currency: item.currency,
               date: item.occurred_at,
               note: noteText,
@@ -968,12 +971,15 @@ function createEmailSyncRouter(db, authenticateToken, jwtSecret) {
               ? String(updates.merchant).trim().slice(0, 100)
               : defaultNote);
 
+        const isTransfer = updates?.type === 'transfer' || finalCategory === 'transfer' || item.type === 'transfer';
+        const finalDestSource = isTransfer ? (updates?.destinationSource || item.destination_source || 'ewallet') : undefined;
         newTransaction = {
           id: 'tx_email_' + item.id + '_' + crypto.randomBytes(3).toString('hex'),
-          type: 'expense',
+          type: isTransfer ? 'transfer' : 'expense',
           amount: finalAmount,
           category: finalCategory,
           source: finalSource,
+          destinationSource: finalDestSource,
           currency: finalCurrency,
           date: finalDate,
           note: finalNote,

@@ -30,6 +30,7 @@ import {
   Sparkles,
   CheckCheck,
   FileText,
+  ArrowRightLeft,
 } from 'lucide-react';
 
 interface BankEmailSyncModalProps {
@@ -105,10 +106,11 @@ export function BankEmailSyncModal({
   const [itemCategories, setItemCategories] = useState<Record<string, string>>({});
   const [itemSources, setItemSources] = useState<Record<string, FundingSource>>({});
   const [itemNotes, setItemNotes] = useState<Record<string, string>>({});
+  const [itemDestSources, setItemDestSources] = useState<Record<string, FundingSource>>({});
 
   // Consistent liquid-glass custom dropdown options
-  const categoryOptions = useMemo<CustomSelectOption<ExpenseCategory>[]>(() => {
-    return (Object.keys(EXPENSE_CATEGORY_ICONS) as ExpenseCategory[]).map((cat) => {
+  const categoryOptions = useMemo<CustomSelectOption<string>[]>(() => {
+    const list: CustomSelectOption<string>[] = (Object.keys(EXPENSE_CATEGORY_ICONS) as ExpenseCategory[]).map((cat) => {
       const style = getCategoryBadgeStyle('expense', cat);
       return {
         value: cat,
@@ -117,6 +119,14 @@ export function BankEmailSyncModal({
         badgeClass: `${style.border} ${style.bg} ${style.text}`,
       };
     });
+    // Add Internal Transfer category
+    list.unshift({
+      value: 'transfer',
+      label: t.record.typeTransfer,
+      icon: ArrowRightLeft,
+      badgeClass: 'border-indigo-500/30 bg-indigo-500/15 text-indigo-400',
+    });
+    return list;
   }, [t]);
 
   const sourceOptions = useMemo<CustomSelectOption<FundingSource>[]>(() => {
@@ -690,8 +700,8 @@ export function BankEmailSyncModal({
                                 <label className="text-[10px] text-[var(--text-faint)] uppercase block mb-1">
                                   {t.emailSync.category}
                                 </label>
-                                <CustomSelect<ExpenseCategory>
-                                  value={currentCategory as ExpenseCategory}
+                                <CustomSelect<string>
+                                  value={currentCategory}
                                   onChange={(val) =>
                                     setItemCategories((prev) => ({ ...prev, [item.id]: val }))
                                   }
@@ -702,7 +712,7 @@ export function BankEmailSyncModal({
 
                               <div>
                                 <label className="text-[10px] text-[var(--text-faint)] uppercase block mb-1">
-                                  {t.emailSync.source}
+                                  {currentCategory === 'transfer' ? t.record.fromSource : t.emailSync.source}
                                 </label>
                                 <CustomSelect<FundingSource>
                                   value={currentSource as FundingSource}
@@ -717,6 +727,27 @@ export function BankEmailSyncModal({
                                 />
                               </div>
                             </div>
+
+                            {/* Destination Source for Internal Transfers */}
+                            {currentCategory === 'transfer' && (
+                              <div className="pt-0.5">
+                                <label className="text-[10px] text-indigo-400 font-semibold uppercase block mb-1 flex items-center space-x-1">
+                                  <ArrowRightLeft className="w-3 h-3" />
+                                  <span>{t.record.toSource}</span>
+                                </label>
+                                <CustomSelect<FundingSource>
+                                  value={(itemDestSources[item.id] || (item as any).destinationSource || (currentSource === 'bank' ? 'ewallet' : 'bank')) as FundingSource}
+                                  onChange={(val) =>
+                                    setItemDestSources((prev) => ({
+                                      ...prev,
+                                      [item.id]: val,
+                                    }))
+                                  }
+                                  options={sourceOptions.filter((opt) => opt.value !== currentSource)}
+                                  size="sm"
+                                />
+                              </div>
+                            )}
                           </div>
 
                           {/* Action Buttons */}

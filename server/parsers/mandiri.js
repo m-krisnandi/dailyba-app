@@ -1,5 +1,5 @@
 const { normalizeDate, createDedupHash, parseCurrencyAmount } = require('./types');
-const { categorizeTransaction } = require('./categorizer');
+const { categorizeTransaction, detectTransferDestination } = require('./categorizer');
 const { redactPII } = require('../crypto');
 
 /**
@@ -81,6 +81,8 @@ const mandiriParser = {
     }
 
     const category = categorizeTransaction(`${merchant} ${subject}`);
+    const isTransfer = category === 'transfer';
+    const destinationSource = isTransfer ? detectTransferDestination(`${merchant} ${subject} ${text}`) : undefined;
     const messageId = email.messageId || `mandiri_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`;
     const dedupHash = createDedupHash(merchant, amount, occurredAt);
 
@@ -91,6 +93,8 @@ const mandiriParser = {
       amount,
       currency: 'IDR',
       category,
+      type: isTransfer ? 'transfer' : 'expense',
+      destinationSource,
       occurredAt,
       occurredTime,
       confidence: 0.98,

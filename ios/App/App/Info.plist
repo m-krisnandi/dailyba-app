@@ -79,6 +79,8 @@
 	<string>Dailyba needs access to your camera to scan receipts and invoices for automatic expense entry.</string>
 	<key>NSPhotoLibraryUsageDescription</key>
 	<string>Dailyba needs access to your photo library to import receipt images for expense parsing.</string>
+	<key>NSFaceIDUsageDescription</key>
+	<string>Dailyba uses Face ID to securely authenticate and unlock your financial vault and balance records.</string>
 	<key>UIViewControllerBasedStatusBarAppearance</key>
 	<true/>
 </dict>

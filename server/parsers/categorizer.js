@@ -6,6 +6,13 @@
 
 const CATEGORY_RULES = [
   {
+    category: 'transfer',
+    patterns: [
+      /\b(top\s*up|topup|isi\s*saldo|pindah\s*dana|antar\s*rekening|antar\s*bank|transfer\s*ke|kirim\s*ke\s*rekening|ke\s*gopay|ke\s*ovo|ke\s*dana|ke\s*shopeepay)\b/i,
+      /(チャージ|口座間振替|残高チャージ)/
+    ]
+  },
+  {
     category: 'food_drinks',
     patterns: [
       /\b(rm|rumah\s*makan|warung|resto|restaurant|cafe|coffee|kopi|salero|padang|soto|bakso|mie|ayam|bento|ramen|sushi|izakaya|shokudo|dining|food|drink|bakery|roti|tea|boba|starbucks|mcdonald|kfc|burger|pizza|dunkin|hokben|jco|gofood|grabfood|shopeefood)\b/i,
@@ -99,6 +106,28 @@ function categorizeTransaction(text) {
   return 'others';
 }
 
+
+/**
+ * Detects destination funding source for internal transfers (e.g. Top Up GoPay -> 'ewallet')
+ * @param {string} text
+ * @returns {'ewallet'|'bank'|'cash'}
+ */
+function detectTransferDestination(text) {
+  if (!text) return 'ewallet';
+  const clean = String(text).toLowerCase();
+  if (/\b(gopay|go-pay|shopeepay|shopee\s*pay|ovo|dana|linkaja|paypay|suica|pasmo|icoca|e-wallet|ewallet|wallet)\b/i.test(clean)) {
+    return 'ewallet';
+  }
+  if (/\b(bca|mandiri|bni|bri|cimb|jago|jenius|seabank|bank|rekening|atm)\b/i.test(clean)) {
+    return 'bank';
+  }
+  if (/\b(cash|tunai|tarik\s*tunai|atm\s*tarik)\b/i.test(clean)) {
+    return 'cash';
+  }
+  return 'ewallet';
+}
+
 module.exports = {
-  categorizeTransaction
+  categorizeTransaction,
+  detectTransferDestination
 };

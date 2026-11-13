@@ -1,5 +1,5 @@
 const { normalizeDate, createDedupHash } = require('./types');
-const { categorizeTransaction } = require('./categorizer');
+const { categorizeTransaction, detectTransferDestination } = require('./categorizer');
 
 /**
  * Bank Central Asia (BCA / myBCA / KlikBCA) Email Parser
@@ -73,6 +73,8 @@ const bcaParser = {
     }
 
     const category = categorizeTransaction(`${merchant} ${subject}`);
+    const isTransfer = category === 'transfer';
+    const destinationSource = isTransfer ? detectTransferDestination(`${merchant} ${subject} ${text}`) : undefined;
     const messageId = email.messageId || `bca_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`;
     const dedupHash = createDedupHash(merchant, amount, occurredAt);
 
@@ -83,6 +85,8 @@ const bcaParser = {
       amount,
       currency: 'IDR',
       category,
+      type: isTransfer ? 'transfer' : 'expense',
+      destinationSource,
       occurredAt,
       occurredTime,
       confidence: 0.60,

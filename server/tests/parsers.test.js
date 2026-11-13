@@ -252,7 +252,7 @@ Terminal ID 0000966628`
 
   // Test 12: Strict Validation on /approve Payload Updates
   {
-    const ALLOWED_CATEGORIES = new Set(['food_drinks', 'shopping', 'train', 'ride', 'laundry', 'rent', 'family', 'gifts', 'vps', 'mobile', 'others']);
+    const ALLOWED_CATEGORIES = new Set(['food_drinks', 'shopping', 'train', 'ride', 'laundry', 'rent', 'family', 'gifts', 'vps', 'mobile', 'transfer', 'others']);
     const ALLOWED_SOURCES = new Set(['bank', 'ewallet', 'credit_card', 'cash']);
     const ALLOWED_CURRENCIES = new Set(['IDR', 'JPY', 'USD', 'MMK']);
 
@@ -284,6 +284,7 @@ Terminal ID 0000966628`
     assert.strictEqual(validateUpdates({ category: 'crypto' }).valid, false);
     assert.strictEqual(validateUpdates({ occurred_at: '12-11-2026' }).valid, false);
     assert.strictEqual(validateUpdates({ amount: 15000, currency: 'IDR', category: 'laundry', occurred_at: '2026-11-06' }).valid, true);
+    assert.strictEqual(validateUpdates({ category: 'transfer' }).valid, true);
 
     console.log('✓ Test 12 Passed: Strict Validation on /approve Updates');
   }
@@ -451,8 +452,33 @@ Tanggal Transaksi: 08 Nov 2026 14:20`
     console.log('✓ Test 16 Passed: Hybrid Option A Safe Batch Approve (AI & Order Notices Strictly Excluded)');
   }
 
+  // Test 17: Automated Internal Transfer Detection (e.g. Bank Jago / Mandiri to GoPay / E-Wallet)
+  {
+    const jagoTopupEmail = {
+      from: 'noreply@jago.com',
+      subject: 'You have made a payment to Top Up GoPay',
+      date: '2026-11-12T10:00:00Z',
+      text: `Assalamu'alaikum ALICE NAKAMURA,
+Thank you for trusting Jago!
+Transaction Summary
+From 502700000001
+To Top Up GoPay
+Amount Rp 500.000
+Transaction Date 12 November 2026, 10:00 WIB`
+    };
+
+    const res = await parseEmailReceipt(jagoTopupEmail);
+    assert(res !== null, 'Jago Top Up email must parse successfully');
+    assert.strictEqual(res.category, 'transfer', 'Top Up GoPay must be categorized as transfer');
+    assert.strictEqual(res.type, 'transfer', 'Transaction type must be transfer');
+    assert.strictEqual(res.destinationSource, 'ewallet', 'Destination must be detected as ewallet');
+    assert.strictEqual(res.amount, 500000, 'Amount must be 500,000');
+    console.log('✓ Test 17 Passed: Automated Internal Transfer Detection (Jago -> GoPay)');
+  }
+
+
   console.log('\n======================================================');
-  console.log('ALL 16 TEST SUITES COMPLETED WITH 100% SUCCESS RATE!');
+  console.log('ALL 17 TEST SUITES COMPLETED WITH 100% SUCCESS RATE!');
   console.log('======================================================');
 }
 
