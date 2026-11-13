@@ -9,6 +9,7 @@ import {
   getAppLockPin,
   isBiometricsAvailable,
   verifyPin,
+  setJustUnlocked,
 } from '@/lib/biometricAuth';
 import { Language } from '@/types/finance';
 import { translations } from '@/lib/i18n';
@@ -34,13 +35,19 @@ export function AppLockOverlay({ isLocked, onUnlock, language }: AppLockOverlayP
     );
     if (success) {
       setPinInput('');
+      setJustUnlocked();
       onUnlock();
     } else {
-      if (hasSavedPin) {
-        setErrorMessage(language === 'ja' ? '生体認証がキャンセルまたは失敗しました。PINでも解除できます。' : 'Biometric verification cancelled. You can also enter your PIN.');
+      const pinExists = Boolean(getAppLockPin());
+      if (pinExists) {
+        setErrorMessage(
+          language === 'ja'
+            ? '生体認証がキャンセルまたは失敗しました。PINでも解除できます。'
+            : 'Biometric verification cancelled. You can also enter your PIN.'
+        );
       }
     }
-  }, [language, onUnlock, hasSavedPin]);
+  }, [language, onUnlock]);
 
   useEffect(() => {
     if (isLocked) {
@@ -52,7 +59,7 @@ export function AppLockOverlay({ isLocked, onUnlock, language }: AppLockOverlayP
       isBiometricsAvailable().then((res) => {
         setHasBiometrics(res.available);
         setBiometryLabel(res.biometryType);
-        // On native platforms, auto-trigger biometric prompt.
+        // On native platforms, auto-trigger biometric prompt once when overlay is displayed.
         // On web browser, require explicit user click to satisfy browser user-gesture security policy.
         if (res.available && Capacitor.isNativePlatform()) {
           triggerBiometricAuth();
@@ -71,6 +78,7 @@ export function AppLockOverlay({ isLocked, onUnlock, language }: AppLockOverlayP
 
     if (next.length === 4) {
       if (verifyPin(next)) {
+        setJustUnlocked();
         setTimeout(() => {
           setPinInput('');
           onUnlock();

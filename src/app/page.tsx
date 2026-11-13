@@ -18,7 +18,7 @@ import { APP_VERSION } from '@/lib/version';
 import { AuthModal } from '@/components/AuthModal';
 import { BankEmailSyncModal } from '@/components/BankEmailSyncModal';
 import { AppLockOverlay } from '@/components/AppLockOverlay';
-import { isAppLockEnabled } from '@/lib/biometricAuth';
+import { isAppLockEnabled, isBiometricAuthenticating, isRecentlyUnlocked } from '@/lib/biometricAuth';
 import { scheduleBillDueReminders } from '@/lib/localNotifications';
 import { dailybaApi } from '@/lib/api';
 import { Transaction } from '@/types/finance';
@@ -119,9 +119,25 @@ export default function Home() {
 
     // Capacitor App URL Open listener for deep links & app state change for security lock
     import('@capacitor/app').then(({ App }) => {
+      let lastBackgroundTime = 0;
+
       App.addListener('appStateChange', (appState) => {
-        if (appState.isActive && isAppLockEnabled()) {
-          setIsAppLocked(true);
+        if (!appState.isActive) {
+          lastBackgroundTime = Date.now();
+        } else if (appState.isActive) {
+          const timeInBackground = lastBackgroundTime > 0 ? Date.now() - lastBackgroundTime : 0;
+          lastBackgroundTime = 0;
+
+          // Only lock if app was genuinely sent to background for more than 2 seconds,
+          // and we are NOT currently in a native biometric auth session or within its grace period.
+          if (
+            isAppLockEnabled() &&
+            timeInBackground > 2000 &&
+            !isBiometricAuthenticating() &&
+            !isRecentlyUnlocked(3000)
+          ) {
+            setIsAppLocked(true);
+          }
         }
       });
 
@@ -175,6 +191,9 @@ export default function Home() {
       setActiveTab(current);
     }
     setIsMounted(true);
+    if (isAppLockEnabled()) {
+      setIsAppLocked(true);
+    }
     if (typeof window !== 'undefined' && window.location.hash !== `#${current}`) {
       window.history.replaceState(null, '', `#${current}`);
     }

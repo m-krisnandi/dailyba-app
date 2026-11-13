@@ -7,6 +7,21 @@ const STORAGE_LOCK_ENABLED = 'dailyba_app_lock_enabled_v1';
 const STORAGE_LOCK_PIN = 'dailyba_app_lock_pin_v1';
 const STORAGE_WEBAUTHN_CRED_ID = 'dailyba_webauthn_credential_id_v1';
 
+let isCurrentlyAuthenticating = false;
+let lastUnlockedTimestamp = 0;
+
+export function isBiometricAuthenticating(): boolean {
+  return isCurrentlyAuthenticating;
+}
+
+export function setJustUnlocked(): void {
+  lastUnlockedTimestamp = Date.now();
+}
+
+export function isRecentlyUnlocked(gracePeriodMs: number = 3000): boolean {
+  return Date.now() - lastUnlockedTimestamp < gracePeriodMs;
+}
+
 export function isAppLockEnabled(): boolean {
   if (typeof window === 'undefined') return false;
   try {
@@ -115,111 +130,128 @@ function setStoredCredentialId(id: string | null): void {
 }
 
 export async function authenticateWithBiometrics(reason: string = 'Unlock Dailyba Vault'): Promise<boolean> {
-  if (Capacitor.isNativePlatform()) {
-    try {
-      await BiometricAuth.authenticate({
-        reason,
-        cancelTitle: 'Cancel',
-        allowDeviceCredential: true,
-      });
-      return true;
-    } catch {
-      return false;
-    }
+  // Prevent duplicate concurrent biometric prompts
+  if (isCurrentlyAuthenticating) {
+    return false;
   }
 
-  // Web Browser fallback via WebAuthn Platform Authenticator (Touch ID on macOS / Windows Hello / Android Fingerprint)
-  if (
-    typeof window !== 'undefined' &&
-    window.isSecureContext &&
-    window.PublicKeyCredential &&
-    navigator.credentials
-  ) {
-    try {
-      const isAvailable = await window.PublicKeyCredential.isUserVerifyingPlatformAuthenticatorAvailable();
-      if (!isAvailable) return false;
+  isCurrentlyAuthenticating = true;
 
-      const storedCredId = getStoredCredentialId();
-
-      // Determine valid rpId (avoid raw IP addresses as RP ID per WebAuthn spec)
-      const hostname = window.location.hostname;
-      const isValidRpDomain = hostname && !/^[0-9.]+$/.test(hostname);
-      const rpId = isValidRpDomain ? hostname : undefined;
-
-      // 1. If we already have a registered local credential, attempt verification via navigator.credentials.get
-      if (storedCredId) {
-        try {
-          const rawId = Uint8Array.from(atob(storedCredId), (c) => c.charCodeAt(0));
-          const challenge = new Uint8Array(32);
-          window.crypto.getRandomValues(challenge);
-
-          const getOptions: CredentialRequestOptions = {
-            publicKey: {
-              challenge,
-              ...(rpId ? { rpId } : {}),
-              allowCredentials: [
-                {
-                  id: rawId,
-                  type: 'public-key',
-                },
-              ],
-              userVerification: 'required',
-              timeout: 60000,
-            },
-          };
-
-          const assertion = await navigator.credentials.get(getOptions);
-          if (assertion) {
-            return true;
-          }
-        } catch (getErr) {
-          console.warn('WebAuthn get failed, attempting credential recreate/refresh:', getErr);
-        }
-      }
-
-      // 2. Register/Create platform biometric credential (triggers Mac Touch ID prompt directly)
-      const challenge = new Uint8Array(32);
-      window.crypto.getRandomValues(challenge);
-      const userId = new Uint8Array([68, 65, 73, 76, 89, 66, 65]); // "DAILYBA"
-
-      const createOptions: CredentialCreationOptions = {
-        publicKey: {
-          challenge,
-          rp: {
-            name: 'Dailyba Vault',
-            ...(rpId ? { id: rpId } : {}),
-          },
-          user: {
-            id: userId,
-            name: 'dailyba-user',
-            displayName: 'Dailyba User',
-          },
-          pubKeyCredParams: [
-            { alg: -7, type: 'public-key' },  // ES256
-            { alg: -257, type: 'public-key' }, // RS256
-          ],
-          authenticatorSelection: {
-            authenticatorAttachment: 'platform',
-            userVerification: 'required',
-            residentKey: 'preferred',
-          },
-          timeout: 60000,
-        },
-      };
-
-      const credential = (await navigator.credentials.create(createOptions)) as PublicKeyCredential | null;
-
-      if (credential && credential.rawId) {
-        const base64Id = btoa(String.fromCharCode(...new Uint8Array(credential.rawId)));
-        setStoredCredentialId(base64Id);
+  try {
+    if (Capacitor.isNativePlatform()) {
+      try {
+        await BiometricAuth.authenticate({
+          reason,
+          cancelTitle: 'Cancel',
+          allowDeviceCredential: true,
+        });
+        setJustUnlocked();
         return true;
+      } catch (err) {
+        console.warn('Native biometric authentication failed or cancelled:', err);
+        return false;
       }
-    } catch (e: any) {
-      // User cancelled Touch ID dialog or failed verification
-      console.warn('WebAuthn platform biometric authentication cancelled or failed:', e);
-      return false;
     }
-  }
 
-  return false;
+    // Web Browser fallback via WebAuthn Platform Authenticator (Touch ID on macOS / Windows Hello / Android Fingerprint)
+    if (
+      typeof window !== 'undefined' &&
+      window.isSecureContext &&
+      window.PublicKeyCredential &&
+      navigator.credentials
+    ) {
+      try {
+        const isAvailable = await window.PublicKeyCredential.isUserVerifyingPlatformAuthenticatorAvailable();
+        if (!isAvailable) return false;
+
+        const storedCredId = getStoredCredentialId();
+
+        // Determine valid rpId (avoid raw IP addresses as RP ID per WebAuthn spec)
+        const hostname = window.location.hostname;
+        const isValidRpDomain = hostname && !/^[0-9.]+$/.test(hostname);
+        const rpId = isValidRpDomain ? hostname : undefined;
+
+        // 1. If we already have a registered local credential, attempt verification via navigator.credentials.get
+        if (storedCredId) {
+          try {
+            const rawId = Uint8Array.from(atob(storedCredId), (c) => c.charCodeAt(0));
+            const challenge = new Uint8Array(32);
+            window.crypto.getRandomValues(challenge);
+
+            const getOptions: CredentialRequestOptions = {
+              publicKey: {
+                challenge,
+                ...(rpId ? { rpId } : {}),
+                allowCredentials: [
+                  {
+                    id: rawId,
+                    type: 'public-key',
+                  },
+                ],
+                userVerification: 'required',
+                timeout: 60000,
+              },
+            };
+
+            const assertion = await navigator.credentials.get(getOptions);
+            if (assertion) {
+              setJustUnlocked();
+              return true;
+            }
+          } catch (getErr) {
+            console.warn('WebAuthn get failed, attempting credential recreate/refresh:', getErr);
+          }
+        }
+
+        // 2. Register/Create platform biometric credential (triggers Mac Touch ID prompt directly)
+        const challenge = new Uint8Array(32);
+        window.crypto.getRandomValues(challenge);
+        const userId = new Uint8Array([68, 65, 73, 76, 89, 66, 65]); // "DAILYBA"
+
+        const createOptions: CredentialCreationOptions = {
+          publicKey: {
+            challenge,
+            rp: {
+              name: 'Dailyba Vault',
+              ...(rpId ? { id: rpId } : {}),
+            },
+            user: {
+              id: userId,
+              name: 'dailyba-user',
+              displayName: 'Dailyba User',
+            },
+            pubKeyCredParams: [
+              { alg: -7, type: 'public-key' },  // ES256
+              { alg: -257, type: 'public-key' }, // RS256
+            ],
+            authenticatorSelection: {
+              authenticatorAttachment: 'platform',
+              userVerification: 'required',
+              residentKey: 'preferred',
+            },
+            timeout: 60000,
+          },
+        };
+
+        const credential = (await navigator.credentials.create(createOptions)) as PublicKeyCredential | null;
+
+        if (credential && credential.rawId) {
+          const base64Id = btoa(String.fromCharCode(...new Uint8Array(credential.rawId)));
+          setStoredCredentialId(base64Id);
+          setJustUnlocked();
+          return true;
+        }
+      } catch (e: any) {
+        console.warn('WebAuthn platform biometric authentication cancelled or failed:', e);
+        return false;
+      }
+    }
+
+    return false;
+  } finally {
+    // Keep isCurrentlyAuthenticating true for 1200ms to absorb native Android Activity resume transitions
+    setTimeout(() => {
+      isCurrentlyAuthenticating = false;
+    }, 1200);
+  }
 }
