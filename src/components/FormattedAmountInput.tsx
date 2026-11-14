@@ -10,6 +10,7 @@ export interface FormattedAmountInputProps
   value: string | number;
   onChange: (formattedValue: string, rawNumber: number) => void;
   allowDecimal?: boolean;
+  hasCurrencySuffix?: boolean;
 }
 
 export const FormattedAmountInput = forwardRef<HTMLInputElement, FormattedAmountInputProps>(
@@ -18,6 +19,7 @@ export const FormattedAmountInput = forwardRef<HTMLInputElement, FormattedAmount
       value,
       onChange,
       allowDecimal = true,
+      hasCurrencySuffix = true,
       className,
       placeholder = '0',
       onKeyDown,
@@ -172,7 +174,6 @@ export const FormattedAmountInput = forwardRef<HTMLInputElement, FormattedAmount
       }
     };
 
-
     return (
       <div className="relative w-full">
         <input
@@ -187,7 +188,7 @@ export const FormattedAmountInput = forwardRef<HTMLInputElement, FormattedAmount
           className={className}
           {...rest}
         />
-        {/* Math Calculation Preview Pill */}
+        {/* Math Calculation Preview Pill - positioned neatly to the left of the currency badge */}
         {mathEval && mathEval.isValid && mathEval.result !== null && (
           <button
             type="button"
@@ -195,10 +196,12 @@ export const FormattedAmountInput = forwardRef<HTMLInputElement, FormattedAmount
               e.preventDefault();
               applyMathResult(mathEval.result!);
             }}
-            className="absolute right-2 -bottom-6 sm:bottom-auto sm:top-1/2 sm:-translate-y-1/2 z-20 flex items-center space-x-1 px-2 py-0.5 rounded-lg bg-emerald-500/20 hover:bg-emerald-500/30 border border-emerald-500/40 text-emerald-400 font-mono text-[11px] font-bold shadow-xs transition-all cursor-pointer animate-fade-in"
+            className={`absolute ${
+              hasCurrencySuffix ? 'right-16 sm:right-20' : 'right-3'
+            } top-1/2 -translate-y-1/2 z-20 flex items-center space-x-1.5 px-2.5 py-1 rounded-xl bg-emerald-500/20 hover:bg-emerald-500/30 border border-emerald-500/40 text-emerald-400 font-mono text-xs font-bold shadow-md transition-all cursor-pointer animate-fade-in`}
             title="Click or press Enter to calculate"
           >
-            <Calculator className="w-3 h-3 text-emerald-400 shrink-0" />
+            <Calculator className="w-3.5 h-3.5 text-emerald-400 shrink-0" />
             <span>= {mathEval.formattedResult}</span>
           </button>
         )}

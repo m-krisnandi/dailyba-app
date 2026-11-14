@@ -276,7 +276,7 @@ export function AddTransactionModal({
                 value={amountStr}
                 onChange={(val) => setAmountStr(val)}
                 placeholder="0"
-                className="w-full bg-[var(--bg-subtle)] border border-[var(--border-subtle)] focus:border-[var(--border-strong)] rounded-2xl pl-4 pr-16 py-3 text-lg font-bold text-[var(--text-main)] outline-none tabular-numbers font-mono"
+                className="w-full bg-[var(--bg-subtle)] border border-[var(--border-subtle)] focus:border-[var(--border-strong)] rounded-2xl pl-4 pr-36 py-3 text-lg font-bold text-[var(--text-main)] outline-none tabular-numbers font-mono"
                 required
               />
               <span className="absolute right-4 top-1/2 -translate-y-1/2 text-xs font-mono font-bold text-[var(--text-muted)] pointer-events-none select-none">

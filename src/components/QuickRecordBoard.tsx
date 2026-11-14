@@ -987,7 +987,7 @@ export function QuickRecordBoard({
               value={amountStr}
               onChange={(val) => setAmountStr(val)}
               placeholder="0"
-              className="w-full bg-[var(--bg-subtle)] border border-[var(--border-subtle)] focus:border-[var(--border-strong)] rounded-2xl pl-4 sm:pl-5 pr-14 sm:pr-16 py-3.5 sm:py-4 text-2xl sm:text-4xl font-extrabold tracking-tight text-[var(--text-main)] placeholder-[var(--text-faint)] outline-none tabular-numbers transition-all font-mono"
+              className="w-full bg-[var(--bg-subtle)] border border-[var(--border-subtle)] focus:border-[var(--border-strong)] rounded-2xl pl-4 sm:pl-5 pr-36 sm:pr-48 py-3.5 sm:py-4 text-2xl sm:text-4xl font-extrabold tracking-tight text-[var(--text-main)] placeholder-[var(--text-faint)] outline-none tabular-numbers transition-all font-mono"
             />
             <div className="absolute right-5 top-1/2 -translate-y-1/2 text-sm font-mono font-bold text-[var(--text-muted)] pointer-events-none select-none tracking-wide">
               {currency}
