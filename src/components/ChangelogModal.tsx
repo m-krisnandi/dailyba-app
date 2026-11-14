@@ -1,10 +1,11 @@
 'use client';
 
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { Language } from '@/types/finance';
 import { APP_VERSION, APP_BUILD, APP_CHANGELOG } from '@/lib/version';
 import { useBodyScrollLock } from '@/lib/useBodyScrollLock';
 import { Sparkles, X, CheckCircle2, Download } from 'lucide-react';
+import { Capacitor } from '@capacitor/core';
 
 interface ChangelogModalProps {
   isOpen: boolean;
@@ -14,6 +15,11 @@ interface ChangelogModalProps {
 
 export function ChangelogModal({ isOpen, language = 'en', onClose }: ChangelogModalProps) {
   useBodyScrollLock(isOpen);
+  const [isNative, setIsNative] = useState(false);
+
+  useEffect(() => {
+    setIsNative(Capacitor.isNativePlatform());
+  }, []);
 
   if (!isOpen) return null;
 
@@ -115,15 +121,17 @@ export function ChangelogModal({ isOpen, language = 'en', onClose }: ChangelogMo
         </div>
 
         {/* Footer Actions */}
-        <div className="flex flex-col sm:flex-row items-center justify-between gap-2.5 pt-3 border-t border-[var(--border-subtle)]">
-          <a
-            href="/dailyba.apk"
-            download={`dailyba-v${APP_VERSION}.apk`}
-            className="w-full sm:w-auto inline-flex items-center justify-center space-x-2 px-4 py-2.5 rounded-2xl bg-emerald-500/15 border border-emerald-500/30 text-emerald-500 hover:bg-emerald-500/25 text-xs font-bold transition-all cursor-pointer"
-          >
-            <Download className="w-3.5 h-3.5" />
-            <span>{isJa ? `APKダウンロード (v${APP_VERSION})` : `Download APK (v${APP_VERSION})`}</span>
-          </a>
+        <div className={`flex flex-col sm:flex-row items-center gap-2.5 pt-3 border-t border-[var(--border-subtle)] ${isNative ? 'justify-end' : 'justify-between'}`}>
+          {!isNative && (
+            <a
+              href="/dailyba.apk"
+              download={`dailyba-v${APP_VERSION}.apk`}
+              className="w-full sm:w-auto inline-flex items-center justify-center space-x-2 px-4 py-2.5 rounded-2xl bg-emerald-500/15 border border-emerald-500/30 text-emerald-500 hover:bg-emerald-500/25 text-xs font-bold transition-all cursor-pointer"
+            >
+              <Download className="w-3.5 h-3.5" />
+              <span>{isJa ? `APKダウンロード (v${APP_VERSION})` : `Download APK (v${APP_VERSION})`}</span>
+            </a>
+          )}
           <button
             type="button"
             onClick={onClose}
