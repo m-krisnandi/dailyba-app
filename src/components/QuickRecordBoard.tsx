@@ -22,7 +22,7 @@ import { ConfirmDeleteModal } from '@/components/ConfirmDeleteModal';
 import { ReceiptScannerModal } from '@/components/ReceiptScannerModal';
 import { CustomSelect, CustomSelectOption } from '@/components/CustomSelect';
 import { FormattedAmountInput } from '@/components/FormattedAmountInput';
-import { evaluateInlineMath } from '@/lib/mathParser';
+import { evaluateInlineMath, formatMathExpression } from '@/lib/mathParser';
 import { parseSmartText } from '@/lib/parser';
 import { useBodyScrollLock } from '@/lib/useBodyScrollLock';
 import { getTodayLocalDate } from '@/lib/dateUtils';
@@ -361,22 +361,22 @@ export function QuickRecordBoard({
     }
 
     // 2. If amount ends with an operator (+, -, *, /, x, etc.), append the formatted preset
-    if (/[+\-*/xX×÷]\s*$/.test(trimmed)) {
-      const endsWithSpace = /\s$/.test(amountStr);
-      const newStr = endsWithSpace
-        ? `${amountStr}${formatNumberWithCommas(val)}`
-        : `${amountStr} ${formatNumberWithCommas(val)}`;
-      setAmountStr(newStr);
+    if (/[+\-\*/xX×÷]\s*$/.test(trimmed)) {
+      const base = trimmed.replace(/[+\-\*/xX×÷]\s*$/, "").trim();
+      const opMatch = trimmed.match(/[+\-\*/xX×÷]\s*$/);
+      const op = opMatch ? opMatch[0].trim() : "+";
+      setAmountStr(`${formatMathExpression(base)} ${op} ${formatNumberWithCommas(val)}`);
       return;
     }
 
     // 3. If amount contains an ongoing arithmetic expression, evaluate it first
-    if (/[+\-*/xX×÷]|(?:k|rb)/i.test(trimmed)) {
+    if (/[+\-\*/xX×÷]|(?:k|rb)/i.test(trimmed)) {
       const evaluated = evaluateInlineMath(trimmed);
       if (evaluated.isValid && evaluated.result !== null) {
         const prevRes = evaluated.result;
         const nextVal = prevRes + val;
-        const formula = `${evaluated.formattedResult || formatNumberWithCommas(prevRes)} + ${formatNumberWithCommas(val)}`;
+        const cleanPrev = formatMathExpression(trimmed);
+        const formula = `${cleanPrev} + ${formatNumberWithCommas(val)}`;
         setAmountStr(formatNumberWithCommas(nextVal));
         setCalculationHistory({
           formula,
@@ -399,14 +399,15 @@ export function QuickRecordBoard({
     });
   };
 
-  const handleAppendOperator = (op: '+' | '-' | '*' | '/') => {
+  const handleAppendOperator = (op: "+" | "-" | "*" | "/") => {
     const trimmed = amountStr.trim();
     if (!trimmed) return;
-    if (/[+\-*/xX×÷]\s*$/.test(trimmed)) {
-      setAmountStr(trimmed.replace(/[+\-*/xX×÷]\s*$/, `${op} `));
+    if (/[+\-\*/xX×÷]\s*$/.test(trimmed)) {
+      const base = trimmed.replace(/[+\-\*/xX×÷]\s*$/, "").trim();
+      setAmountStr(`${formatMathExpression(base)} ${op} `);
       return;
     }
-    setAmountStr(`${trimmed} ${op} `);
+    setAmountStr(`${formatMathExpression(trimmed)} ${op} `);
   };
 
   const handleClearAmount = () => {
@@ -1051,7 +1052,7 @@ export function QuickRecordBoard({
               currency={currency}
               onMathEvaluated={(formula, res) => {
                 setCalculationHistory({
-                  formula,
+                  formula: formatMathExpression(formula),
                   result: res,
                   formattedResult: formatNumberWithCommas(res),
                 });
@@ -1073,7 +1074,7 @@ export function QuickRecordBoard({
               <button
                 type="button"
                 onClick={() => {
-                  setAmountStr(calculationHistory.formula);
+                  setAmountStr(formatMathExpression(calculationHistory.formula));
                   setCalculationHistory(null);
                 }}
                 className="ml-2 text-xs text-emerald-400/80 hover:text-emerald-300 underline font-sans shrink-0 cursor-pointer"

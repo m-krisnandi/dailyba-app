@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useRef, useImperativeHandle, forwardRef, useMemo } from 'react';
+import React, { forwardRef, useImperativeHandle, useRef, useMemo } from 'react';
 import { formatNumberWithCommas } from '@/lib/currency';
 import { evaluateInlineMath, formatMathExpression } from '@/lib/mathParser';
 import { Calculator } from 'lucide-react';
@@ -12,7 +12,7 @@ export interface FormattedAmountInputProps
   allowDecimal?: boolean;
   hasCurrencySuffix?: boolean;
   currency?: string;
-  onMathEvaluated?: (formula: string, result: number) => void;
+  onMathEvaluated?: (rawExpression: string, resultNumber: number) => void;
 }
 
 export const FormattedAmountInput = forwardRef<HTMLInputElement, FormattedAmountInputProps>(
@@ -50,7 +50,7 @@ export const FormattedAmountInput = forwardRef<HTMLInputElement, FormattedAmount
       onChange(formatted, res);
       const expr = originalExpr || (mathEval ? mathEval.rawExpression : '');
       if (expr) {
-        onMathEvaluated?.(expr, res);
+        onMathEvaluated?.(formatMathExpression(expr).trim(), res);
       }
     };
 
@@ -59,7 +59,7 @@ export const FormattedAmountInput = forwardRef<HTMLInputElement, FormattedAmount
       const currentVal = input.value;
       const cursorPos = input.selectionStart ?? currentVal.length;
 
-      // If typing math operators or shorthand suffixes, format each operand with commas consistently
+      // If typing math operators or shorthand suffixes, format each operand and operator with 100% consistent spacing
       const hasMathOp = /[-+*/xX×÷]|(?:k|rb)/i.test(currentVal);
       if (hasMathOp) {
         // Keep digits, dots, commas, spaces, k, rb, and operators
@@ -68,24 +68,36 @@ export const FormattedAmountInput = forwardRef<HTMLInputElement, FormattedAmount
         const evaluated = evaluateInlineMath(formattedExpr);
         const rawNum = evaluated.isValid && evaluated.result !== null ? evaluated.result : 0;
 
-        // Count non-comma characters before cursor for seamless cursor placement
+        // Count meaningful characters (excluding commas and spaces) before cursor for seamless cursor placement
         const charsBeforeCursor = currentVal.slice(0, cursorPos);
-        const nonCommasBefore = charsBeforeCursor.replace(/,/g, '').length;
+        const meaningfulBefore = charsBeforeCursor.replace(/[, ]/g, '').length;
 
         onChange(formattedExpr, rawNum);
 
         requestAnimationFrame(() => {
           if (!input) return;
+          // If cursor was at the end of input, keep it at the end of formattedExpr (after any trailing space)
+          if (cursorPos === currentVal.length) {
+            try {
+              input.setSelectionRange(formattedExpr.length, formattedExpr.length);
+            } catch {
+              // ignore
+            }
+            return;
+          }
+
           let newCursor = 0;
           let count = 0;
           for (let i = 0; i < formattedExpr.length; i++) {
-            if (formattedExpr[i] !== ',') count++;
-            if (count === nonCommasBefore) {
+            if (formattedExpr[i] !== ',' && formattedExpr[i] !== ' ') {
+              count++;
+            }
+            if (count === meaningfulBefore) {
               newCursor = i + 1;
               break;
             }
           }
-          if (nonCommasBefore === 0) newCursor = 0;
+          if (meaningfulBefore === 0) newCursor = 0;
           try {
             input.setSelectionRange(newCursor, newCursor);
           } catch {
