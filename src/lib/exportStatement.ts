@@ -5,9 +5,12 @@ import { convertCurrency, ExchangeRates, formatNumberWithCommas } from './curren
 import { translations } from './i18n';
 import { Capacitor } from '@capacitor/core';
 import { Filesystem, Directory, Encoding } from '@capacitor/filesystem';
+import { Share } from '@capacitor/share';
 import * as XLSX from 'xlsx';
 import { jsPDF } from 'jspdf';
 import autoTable from 'jspdf-autotable';
+
+export type TargetExportLocation = 'DOCUMENTS' | 'DOWNLOADS' | 'SYSTEM_PICKER';
 
 export interface DownloadResult {
   success: boolean;
@@ -19,17 +22,67 @@ export interface DownloadResult {
 
 /**
  * Universal helper to save or download files on both Web Browser and Native Mobile (Capacitor)
+ * Supports choosing target location: Documents, Downloads, or System Picker (Save As)
  */
 export async function saveAndDownloadFile(
   fileName: string,
   content: string,
   isBase64: boolean,
-  mimeType: string
+  mimeType: string,
+  targetLocation: TargetExportLocation = 'DOCUMENTS'
 ): Promise<DownloadResult> {
   // 1. Native Mobile Platform (Android / iOS)
   if (Capacitor.isNativePlatform()) {
     try {
-      // Attempt writing to Directory.Documents first
+      // If user requested System Picker (Save As) on Mobile, write to cache and trigger system file saver / share
+      if (targetLocation === 'SYSTEM_PICKER') {
+        const fileResult = await Filesystem.writeFile({
+          path: fileName,
+          data: content,
+          directory: Directory.Cache,
+          recursive: true,
+          ...(isBase64 ? {} : { encoding: Encoding.UTF8 }),
+        });
+
+        await Share.share({
+          title: `Dailyba Statement`,
+          text: `Save ${fileName} to chosen folder`,
+          url: fileResult.uri,
+          dialogTitle: 'Save As / Pilih Folder Penyimpanan',
+        });
+
+        return {
+          success: true,
+          fileName,
+          uri: fileResult.uri,
+          location: 'Folder Pilihan (System)',
+        };
+      }
+
+      // Try chosen Directory (DOWNLOADS or DOCUMENTS)
+      if (targetLocation === 'DOWNLOADS') {
+        try {
+          // On Android, writing to ExternalStorage "Download/filename" saves to public Downloads folder
+          const result = await Filesystem.writeFile({
+            path: `Download/${fileName}`,
+            data: content,
+            directory: Directory.ExternalStorage,
+            recursive: true,
+            ...(isBase64 ? {} : { encoding: Encoding.UTF8 }),
+          });
+
+          return {
+            success: true,
+            fileName,
+            uri: result.uri,
+            location: 'Downloads',
+          };
+        } catch (downloadErr) {
+          console.warn('ExternalStorage Download/ write failed, trying Documents:', downloadErr);
+        }
+      }
+
+      // Default or fallback: write to Directory.Documents
       const result = await Filesystem.writeFile({
         path: fileName,
         data: content,
@@ -45,7 +98,7 @@ export async function saveAndDownloadFile(
         location: 'Documents',
       };
     } catch (docErr) {
-      console.warn('Failed writing to Directory.Documents, falling back to Directory.Cache:', docErr);
+      console.warn('Failed writing to chosen directory, falling back to Directory.Cache:', docErr);
       try {
         const result = await Filesystem.writeFile({
           path: fileName,
@@ -88,6 +141,37 @@ export async function saveAndDownloadFile(
       blob = new Blob([content], { type: mimeType });
     }
 
+    // Check if user requested System Picker (Save As) and browser supports File System Access API
+    if (targetLocation === 'SYSTEM_PICKER' && typeof window !== 'undefined' && 'showSaveFilePicker' in window) {
+      try {
+        const ext = '.' + fileName.split('.').pop();
+        const handle = await (window as any).showSaveFilePicker({
+          suggestedName: fileName,
+          types: [
+            {
+              description: 'Financial Statement',
+              accept: { [mimeType]: [ext] },
+            },
+          ],
+        });
+        const writable = await handle.createWritable();
+        await writable.write(blob);
+        await writable.close();
+
+        return {
+          success: true,
+          fileName,
+          location: 'Folder Pilihan',
+        };
+      } catch (pickerErr: any) {
+        if (pickerErr.name === 'AbortError') {
+          return { success: false, fileName, error: 'Download cancelled' };
+        }
+        console.warn('File picker failed, falling back to standard download:', pickerErr);
+      }
+    }
+
+    // Standard Web Download
     const url = URL.createObjectURL(blob);
     const link = document.createElement('a');
     link.setAttribute('href', url);
@@ -100,7 +184,7 @@ export async function saveAndDownloadFile(
     return {
       success: true,
       fileName,
-      location: 'Downloads',
+      location: targetLocation === 'DOCUMENTS' ? 'Documents' : 'Downloads',
     };
   } catch (webErr: any) {
     console.error('Web download error:', webErr);
@@ -113,15 +197,15 @@ export async function saveAndDownloadFile(
 }
 
 /**
- * Export Monthly Transactions to CSV (.csv)
+ * Generate CSV Content string
  */
-export async function exportMonthlyTransactionsToCSV(
+export function generateMonthlyCSVText(
   transactions: Transaction[],
-  yearMonth: string, // 'YYYY-MM'
+  yearMonth: string,
   currency: Currency,
   rates: ExchangeRates,
   language: Language
-): Promise<DownloadResult> {
+): string {
   const t = translations[language];
   const filtered = transactions.filter((tx) => tx.date && tx.date.startsWith(yearMonth));
 
@@ -176,22 +260,19 @@ export async function exportMonthlyTransactionsToCSV(
     ].join(',');
   });
 
-  const csvContent = '\uFEFF' + [headers.join(','), ...rows].join('\r\n');
-  const fileName = `dailyba_statement_${yearMonth}.csv`;
-
-  return saveAndDownloadFile(fileName, csvContent, false, 'text/csv;charset=utf-8;');
+  return '\uFEFF' + [headers.join(','), ...rows].join('\r\n');
 }
 
 /**
- * Export Monthly Transactions to Microsoft Excel (.xlsx)
+ * Generate Excel data grid and Base64 string
  */
-export async function exportMonthlyTransactionsToExcel(
+export function generateMonthlyExcelData(
   transactions: Transaction[],
-  yearMonth: string, // 'YYYY-MM'
+  yearMonth: string,
   currency: Currency,
   rates: ExchangeRates,
   language: Language
-): Promise<DownloadResult> {
+): { sheetData: (string | number)[][]; base64: string } {
   const t = translations[language];
   const filtered = transactions.filter((tx) => tx.date && tx.date.startsWith(yearMonth));
 
@@ -281,27 +362,21 @@ export async function exportMonthlyTransactionsToExcel(
   ];
 
   XLSX.utils.book_append_sheet(wb, ws, `Statement ${yearMonth}`);
-  const base64Data = XLSX.write(wb, { bookType: 'xlsx', type: 'base64' });
-  const fileName = `dailyba_statement_${yearMonth}.xlsx`;
+  const base64 = XLSX.write(wb, { bookType: 'xlsx', type: 'base64' });
 
-  return saveAndDownloadFile(
-    fileName,
-    base64Data,
-    true,
-    'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
-  );
+  return { sheetData, base64 };
 }
 
 /**
- * Export Monthly Transactions to Portable Document Format (.pdf)
+ * Generate PDF Base64 string
  */
-export async function exportMonthlyTransactionsToPDF(
+export function generateMonthlyPDFBase64(
   transactions: Transaction[],
-  yearMonth: string, // 'YYYY-MM'
+  yearMonth: string,
   currency: Currency,
   rates: ExchangeRates,
   language: Language
-): Promise<DownloadResult> {
+): string {
   const t = translations[language];
   const filtered = transactions.filter((tx) => tx.date && tx.date.startsWith(yearMonth));
 
@@ -316,7 +391,6 @@ export async function exportMonthlyTransactionsToPDF(
 
   const netSavings = totalIncome - totalExpense;
 
-  // Initialize jsPDF document in A4 format (points unit, 595.28 x 841.89 pt)
   const doc = new jsPDF({ orientation: 'portrait', unit: 'pt', format: 'a4' });
 
   // 1. Header & Title
@@ -330,7 +404,6 @@ export async function exportMonthlyTransactionsToPDF(
   doc.setTextColor(100, 116, 139); // slate-500
   doc.text('Daily Balance & Wealth Tracker • Financial Statement', 40, 68);
 
-  // Period on the right
   doc.setFont('helvetica', 'bold');
   doc.setFontSize(13);
   doc.setTextColor(15, 23, 42);
@@ -342,46 +415,43 @@ export async function exportMonthlyTransactionsToPDF(
   doc.text(`Generated: ${new Date().toLocaleDateString()}`, 555, 68, { align: 'right' });
 
   // Divider line
-  doc.setDrawColor(226, 232, 240); // slate-200
+  doc.setDrawColor(226, 232, 240);
   doc.setLineWidth(1.5);
   doc.line(40, 78, 555, 78);
 
   // 2. Summary KPI Box
-  doc.setFillColor(248, 250, 252); // slate-50
+  doc.setFillColor(248, 250, 252);
   doc.roundedRect(40, 90, 515, 46, 6, 6, 'F');
-  doc.setDrawColor(203, 213, 225); // slate-300
+  doc.setDrawColor(203, 213, 225);
   doc.setLineWidth(0.8);
   doc.roundedRect(40, 90, 515, 46, 6, 6, 'S');
 
-  // Total Income
   doc.setFont('helvetica', 'bold');
   doc.setFontSize(8.5);
   doc.setTextColor(71, 85, 105);
   doc.text('TOTAL INCOME', 55, 105);
   doc.setFontSize(11);
-  doc.setTextColor(16, 185, 129); // emerald-500
+  doc.setTextColor(16, 185, 129);
   doc.text(`+${currency} ${formatNumberWithCommas(totalIncome)}`, 55, 123);
 
-  // Total Expense
   doc.setFont('helvetica', 'bold');
   doc.setFontSize(8.5);
   doc.setTextColor(71, 85, 105);
   doc.text('TOTAL EXPENSE', 230, 105);
   doc.setFontSize(11);
-  doc.setTextColor(244, 63, 94); // rose-500
+  doc.setTextColor(244, 63, 94);
   doc.text(`-${currency} ${formatNumberWithCommas(totalExpense)}`, 230, 123);
 
-  // Net Cash Flow
   doc.setFont('helvetica', 'bold');
   doc.setFontSize(8.5);
   doc.setTextColor(71, 85, 105);
   doc.text('NET CASH FLOW', 405, 105);
   doc.setFontSize(11);
   if (netSavings >= 0) {
-    doc.setTextColor(99, 102, 241); // indigo-500
+    doc.setTextColor(99, 102, 241);
     doc.text(`+${currency} ${formatNumberWithCommas(netSavings)}`, 405, 123);
   } else {
-    doc.setTextColor(244, 63, 94); // rose-500
+    doc.setTextColor(244, 63, 94);
     doc.text(`-${currency} ${formatNumberWithCommas(Math.abs(netSavings))}`, 405, 123);
   }
 
@@ -430,7 +500,7 @@ export async function exportMonthlyTransactionsToPDF(
     head: [['Date', 'Type', 'Category', 'Source', 'Description', `Amount (${currency})`]],
     body: tableRows.length > 0 ? tableRows : [['-', '-', 'No transactions recorded', '-', '-', '-']],
     headStyles: {
-      fillColor: [30, 41, 59], // slate-800
+      fillColor: [30, 41, 59],
       textColor: [255, 255, 255],
       fontStyle: 'bold',
       fontSize: 8.5,
@@ -444,7 +514,7 @@ export async function exportMonthlyTransactionsToPDF(
       lineWidth: 0.5,
     },
     alternateRowStyles: {
-      fillColor: [248, 250, 252], // slate-50
+      fillColor: [248, 250, 252],
     },
     columnStyles: {
       0: { cellWidth: 62 },
@@ -456,11 +526,10 @@ export async function exportMonthlyTransactionsToPDF(
     },
     margin: { left: 40, right: 40, bottom: 40 },
     didDrawPage: (data) => {
-      // Footer on every page
       const pageNumber = (doc as any).internal.getNumberOfPages();
       doc.setFontSize(8);
       doc.setFont('helvetica', 'normal');
-      doc.setTextColor(148, 163, 184); // slate-400
+      doc.setTextColor(148, 163, 184);
       doc.text(
         'Dailyba Personal Finance Vault • Privacy-First & Locally Encrypted Statement',
         40,
@@ -475,8 +544,53 @@ export async function exportMonthlyTransactionsToPDF(
     },
   });
 
-  const base64Data = doc.output('datauristring').split(',')[1];
-  const fileName = `dailyba_statement_${yearMonth}.pdf`;
+  return doc.output('datauristring').split(',')[1];
+}
 
-  return saveAndDownloadFile(fileName, base64Data, true, 'application/pdf');
+/**
+ * High-level export actions
+ */
+export async function exportMonthlyTransactionsToCSV(
+  transactions: Transaction[],
+  yearMonth: string,
+  currency: Currency,
+  rates: ExchangeRates,
+  language: Language,
+  location: TargetExportLocation = 'DOCUMENTS'
+): Promise<DownloadResult> {
+  const content = generateMonthlyCSVText(transactions, yearMonth, currency, rates, language);
+  const fileName = `dailyba_statement_${yearMonth}.csv`;
+  return saveAndDownloadFile(fileName, content, false, 'text/csv;charset=utf-8;', location);
+}
+
+export async function exportMonthlyTransactionsToExcel(
+  transactions: Transaction[],
+  yearMonth: string,
+  currency: Currency,
+  rates: ExchangeRates,
+  language: Language,
+  location: TargetExportLocation = 'DOCUMENTS'
+): Promise<DownloadResult> {
+  const { base64 } = generateMonthlyExcelData(transactions, yearMonth, currency, rates, language);
+  const fileName = `dailyba_statement_${yearMonth}.xlsx`;
+  return saveAndDownloadFile(
+    fileName,
+    base64,
+    true,
+    'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+    location
+  );
+}
+
+export async function exportMonthlyTransactionsToPDF(
+  transactions: Transaction[],
+  yearMonth: string,
+  currency: Currency,
+  rates: ExchangeRates,
+  language: Language,
+  location: TargetExportLocation = 'DOCUMENTS'
+): Promise<DownloadResult> {
+  const base64 = generateMonthlyPDFBase64(transactions, yearMonth, currency, rates, language);
+  const fileName = `dailyba_statement_${yearMonth}.pdf`;
+  return saveAndDownloadFile(fileName, base64, true, 'application/pdf', location);
 }
