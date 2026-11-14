@@ -5,10 +5,17 @@ services:
       dockerfile: Dockerfile
     restart: unless-stopped
     ports:
-      - "4000:4000"
+      - "${API_PORT:-4005}:4000"
     environment:
+      NODE_ENV: ${NODE_ENV:-production}
       PORT: 4000
-      JWT_SECRET: ${JWT_SECRET:-dailyba_dev_jwt_secret_key_2026}
+      JWT_SECRET: ${JWT_SECRET:-dailyba_prod_jwt_secret_key_2026}
+      ENCRYPTION_KEY: ${ENCRYPTION_KEY:-dailyba_prod_encryption_key_2026}
+      GOOGLE_CLIENT_ID: ${GOOGLE_CLIENT_ID:-}
+      GOOGLE_CLIENT_SECRET: ${GOOGLE_CLIENT_SECRET:-}
+      GOOGLE_REDIRECT_URI: ${GOOGLE_REDIRECT_URI:-https://dailyba.pdfumi.com/api/email-sync/google-callback}
+      GEMINI_API_KEY: ${GEMINI_API_KEY:-}
+      GEMINI_MODEL: ${GEMINI_MODEL:-gemini-3.8-flash}
       DB_PATH: /app/data/dailyba.db
     volumes:
       - dailyba_data:/app/data
@@ -18,10 +25,10 @@ services:
       context: .
       dockerfile: Dockerfile
       args:
-        NEXT_PUBLIC_API_URL: http://localhost:4000
+        NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_URL:-https://dailyba.pdfumi.com}
     restart: unless-stopped
     ports:
-      - "3000:3000"
+      - "${WEB_PORT:-3005}:3000"
     depends_on:
       - api
 
