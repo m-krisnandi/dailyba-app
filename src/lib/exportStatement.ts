@@ -79,7 +79,7 @@ export async function saveAndDownloadFile(
             success: true,
             fileName: pickerResult.fileName || fileName,
             uri: pickerResult.uri,
-            location: pickerResult.location || 'Folder Pilihan (File Manager)',
+            location: pickerResult.location || 'Selected Folder',
           };
         } catch (pickerErr: any) {
           const errMsg = pickerErr?.message || String(pickerErr);
@@ -88,7 +88,7 @@ export async function saveAndDownloadFile(
               success: false,
               fileName,
               cancelled: true,
-              error: 'Pemilihan folder dibatalkan',
+              error: 'Folder selection cancelled',
             };
           }
           console.warn('NativeFileSaver error, falling back to cache:', pickerErr);
@@ -211,11 +211,11 @@ export async function saveAndDownloadFile(
         return {
           success: true,
           fileName,
-          location: 'Folder Pilihan',
+          location: 'Selected Folder',
         };
       } catch (pickerErr: any) {
         if (pickerErr.name === 'AbortError') {
-          return { success: false, fileName, cancelled: true, error: 'Pemilihan folder dibatalkan' };
+          return { success: false, fileName, cancelled: true, error: 'Folder selection cancelled' };
         }
         console.warn('File picker failed, falling back to standard download:', pickerErr);
       }
@@ -360,7 +360,7 @@ export function generateMonthlyExcelData(
 
     const catLabel =
       tx.type === 'transfer'
-        ? 'Transfer'
+        ? (language === 'ja' ? '振替' : 'Transfer')
         : tx.type === 'expense'
         ? (t.expenseCategories as any)[tx.category] || tx.category
         : tx.type === 'income'
@@ -468,7 +468,7 @@ export function generateMonthlyPDFBase64(
   doc.setFontSize(8);
   doc.setTextColor(21, 128, 61);
   doc.setFont('helvetica', 'bold');
-  doc.text('TOTAL INCOME', 18, kpiY + 7);
+  doc.text(language === 'ja' ? '収入合計' : 'TOTAL INCOME', 18, kpiY + 7);
   doc.setFontSize(11);
   doc.text(`+${currency} ${formatNumberWithCommas(totalIncome)}`, 18, kpiY + 15);
 
@@ -479,7 +479,7 @@ export function generateMonthlyPDFBase64(
   doc.setFontSize(8);
   doc.setTextColor(185, 28, 28);
   doc.setFont('helvetica', 'bold');
-  doc.text('TOTAL EXPENSE', 80, kpiY + 7);
+  doc.text(language === 'ja' ? '支出合計' : 'TOTAL EXPENSE', 80, kpiY + 7);
   doc.setFontSize(11);
   doc.text(`-${currency} ${formatNumberWithCommas(totalExpense)}`, 80, kpiY + 15);
 
@@ -490,7 +490,7 @@ export function generateMonthlyPDFBase64(
   doc.setFontSize(8);
   doc.setTextColor(netSavings >= 0 ? 79 : 185, netSavings >= 0 ? 70 : 28, netSavings >= 0 ? 229 : 28);
   doc.setFont('helvetica', 'bold');
-  doc.text('NET SAVINGS', 142, kpiY + 7);
+  doc.text(language === 'ja' ? '収支差額' : 'NET CASH FLOW', 142, kpiY + 7);
   doc.setFontSize(11);
   doc.text(`${netSavings >= 0 ? '+' : ''}${currency} ${formatNumberWithCommas(netSavings)}`, 142, kpiY + 15);
 
@@ -500,20 +500,20 @@ export function generateMonthlyPDFBase64(
     const isTransfer = tx.type === 'transfer';
 
     const typeLabel = isTransfer
-      ? 'Transfer'
+      ? (language === 'ja' ? '振替' : 'Transfer')
       : isExpense
-      ? 'Expense'
+      ? (language === 'ja' ? '支出' : 'Expense')
       : isIncome
-      ? 'Income'
-      : 'Savings';
+      ? (language === 'ja' ? '収入' : 'Income')
+      : (language === 'ja' ? '貯蓄' : 'Savings');
 
     const catLabel = isTransfer
-      ? 'Transfer'
+      ? (language === 'ja' ? '振替' : 'Transfer')
       : isExpense
       ? (t.expenseCategories as any)[tx.category] || tx.category
       : isIncome
       ? (t.incomeCategories as any)[tx.category] || tx.category
-      : 'Savings';
+      : (language === 'ja' ? '貯蓄' : 'Savings');
 
     const converted = convertCurrency(tx.amount, tx.currency || 'JPY', currency, rates);
     const sourceText = isTransfer
@@ -534,8 +534,15 @@ export function generateMonthlyPDFBase64(
 
   autoTable(doc, {
     startY: 62,
-    head: [['Date', 'Type', 'Category', 'Account', 'Description', `Amount (${currency})`]],
-    body: tableBody.length > 0 ? tableBody : [['-', '-', 'No transactions found', '-', '-', '-']],
+    head: [[
+      language === 'ja' ? '日付' : 'Date',
+      language === 'ja' ? '種別' : 'Type',
+      language === 'ja' ? 'カテゴリー' : 'Category',
+      language === 'ja' ? '口座' : 'Account',
+      language === 'ja' ? 'メモ' : 'Description',
+      `${language === 'ja' ? '金額' : 'Amount'} (${currency})`,
+    ]],
+    body: tableBody.length > 0 ? tableBody : [['-', '-', language === 'ja' ? 'データがありません' : 'No transactions found', '-', '-', '-']],
     styles: {
       fontSize: 8,
       cellPadding: 2.5,

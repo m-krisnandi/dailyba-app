@@ -169,6 +169,6 @@ public class NativeFileSaverPlugin extends Plugin {
                 }
             }
         } catch (Exception ignored) {}
-        return "Folder Pilihan";
+        return "Selected Folder";
     }
 }

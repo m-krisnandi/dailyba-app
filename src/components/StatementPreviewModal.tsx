@@ -204,7 +204,7 @@ export function StatementPreviewModal({
       setDownloadFeedback({
         success: false,
         fileName: '',
-        error: err?.message || 'Download failed',
+        error: err?.message || (language === 'ja' ? 'ダウンロードに失敗しました' : 'Download failed'),
       });
     } finally {
       setIsDownloading(false);
@@ -218,7 +218,7 @@ export function StatementPreviewModal({
           title: `Dailyba Statement - ${yearMonth}`,
           text: `Dailyba Financial Statement (${yearMonth})`,
           url: result.uri,
-          dialogTitle: 'Share / Send Statement',
+          dialogTitle: language === 'ja' ? 'ステートメントを共有' : 'Share / Send Statement',
         });
       } catch (e) {
         console.warn('Share cancelled or failed:', e);
@@ -243,7 +243,7 @@ export function StatementPreviewModal({
       case 'DOWNLOADS':
         return 'Downloads';
       case 'SYSTEM_PICKER':
-        return isNative ? 'Pilih Folder (Save As)' : 'Choose Folder';
+        return language === 'ja' ? 'フォルダ指定' : 'Choose Folder';
     }
   };
 
@@ -288,7 +288,7 @@ export function StatementPreviewModal({
               type="button"
               onClick={onClose}
               className="flex items-center space-x-1.5 px-3 py-2 rounded-xl bg-[var(--bg-subtle)] hover:bg-[var(--bg-subtle-hover)] border border-[var(--border-subtle)] text-xs font-bold text-[var(--text-main)] transition-all cursor-pointer active:scale-95 shadow-xs shrink-0"
-              title="Back"
+              title={language === 'ja' ? '戻る' : 'Back'}
             >
               <ArrowLeft className="w-4 h-4 text-indigo-400" />
               <span>{language === 'ja' ? '戻る' : 'Back'}</span>
@@ -347,20 +347,20 @@ export function StatementPreviewModal({
           </div>
 
           {/* Right: Custom Folder Destination Dropdown & Download Button */}
-          <div className="w-full sm:w-auto flex items-center justify-end space-x-2">
+          <div className="w-full sm:w-auto flex items-center justify-between sm:justify-end space-x-2">
             {/* Custom Destination Selector Dropdown (Zero Emojis, Pure Lucide Icons) */}
             <div className="relative" ref={folderMenuRef}>
               <button
                 type="button"
                 onClick={() => setIsFolderMenuOpen(!isFolderMenuOpen)}
-                className="flex items-center space-x-2 bg-[var(--bg-subtle)] hover:bg-[var(--bg-subtle-hover)] border border-[var(--border-subtle)] rounded-xl px-3 py-2 text-xs font-bold text-[var(--text-main)] transition-all cursor-pointer shadow-xs active:scale-95"
-                title="Pilih folder tujuan (tersimpan sebagai default)"
+                className="flex items-center space-x-1.5 sm:space-x-2 bg-[var(--bg-subtle)] hover:bg-[var(--bg-subtle-hover)] border border-[var(--border-subtle)] rounded-xl px-2.5 sm:px-3 py-2 text-xs font-bold text-[var(--text-main)] transition-all cursor-pointer shadow-xs active:scale-95"
+                title={language === 'ja' ? '保存先フォルダの指定' : 'Select destination folder'}
               >
                 {targetLocation === 'DOCUMENTS' && <Folder className="w-3.5 h-3.5 text-amber-400 shrink-0" />}
                 {targetLocation === 'DOWNLOADS' && <Download className="w-3.5 h-3.5 text-emerald-400 shrink-0" />}
                 {targetLocation === 'SYSTEM_PICKER' && <FolderPlus className="w-3.5 h-3.5 text-indigo-400 shrink-0" />}
 
-                <span className="truncate max-w-[120px] sm:max-w-none">{getTargetLocationLabel()}</span>
+                <span className="truncate max-w-[100px] sm:max-w-none">{getTargetLocationLabel()}</span>
                 <ChevronDown
                   className={`w-3.5 h-3.5 text-[var(--text-muted)] transition-transform duration-200 ${
                     isFolderMenuOpen ? 'rotate-180' : ''
@@ -368,17 +368,17 @@ export function StatementPreviewModal({
                 />
               </button>
 
-              {/* Dropdown Menu Modal */}
+              {/* Dropdown Menu Modal - Positioned left-0 on mobile so it never gets cut off */}
               {isFolderMenuOpen && (
-                <div className="absolute right-0 top-full mt-2 w-72 sm:w-80 rounded-2xl bg-[var(--bg-surface-solid)] border border-[var(--border-subtle)] shadow-2xl p-2 z-50 animate-fade-in">
+                <div className="absolute left-0 sm:left-auto sm:right-0 top-full mt-2 w-72 sm:w-80 max-w-[calc(100vw-32px)] rounded-2xl bg-[var(--bg-surface-solid)] border border-[var(--border-subtle)] shadow-2xl p-2 z-[130] animate-fade-in">
                   <div className="px-3 py-2 border-b border-[var(--border-subtle)] mb-1">
                     <p className="text-xs font-bold text-[var(--text-main)]">
-                      {language === 'ja' ? '保存先フォルダ' : 'Lokasi Simpan / Save Destination'}
+                      {language === 'ja' ? '保存先フォルダ' : 'Storage Destination'}
                     </p>
                     <p className="text-[10px] text-[var(--text-muted)] mt-0.5">
                       {language === 'ja'
-                        ? '選択した場所は次回以降デフォルトになります'
-                        : 'Pilihan ini akan otomatis tersimpan sebagai default'}
+                        ? '次回以降もこの設定がデフォルトになります'
+                        : 'Saved automatically as your default'}
                     </p>
                   </div>
 
@@ -400,7 +400,9 @@ export function StatementPreviewModal({
                         <div>
                           <p className="text-xs font-bold leading-tight">Documents</p>
                           <p className="text-[10px] text-[var(--text-muted)] mt-0.5">
-                            {language === 'ja' ? 'アプリ内ドキュメント' : 'Folder Dokumen Aplikasi (Internal)'}
+                            {language === 'ja'
+                              ? 'アプリ内ドキュメント (内部保存)'
+                              : 'App internal Documents directory'}
                           </p>
                         </div>
                       </div>
@@ -424,7 +426,9 @@ export function StatementPreviewModal({
                         <div>
                           <p className="text-xs font-bold leading-tight">Downloads</p>
                           <p className="text-[10px] text-[var(--text-muted)] mt-0.5">
-                            {language === 'ja' ? '端末のダウンロードフォルダ' : 'Folder Unduhan Publik Perangkat'}
+                            {language === 'ja'
+                              ? '端末のダウンロードフォルダ'
+                              : 'Device public Downloads folder'}
                           </p>
                         </div>
                       </div>
@@ -447,12 +451,18 @@ export function StatementPreviewModal({
                         </div>
                         <div>
                           <p className="text-xs font-bold leading-tight">
-                            {isNative ? 'Pilih Folder (File Manager)' : 'Choose Folder (Save As)'}
+                            {language === 'ja'
+                              ? 'フォルダを選択 (ファイル管理)'
+                              : isNative
+                              ? 'Choose Folder (File Manager)'
+                              : 'Choose Folder (Save As)'}
                           </p>
                           <p className="text-[10px] text-[var(--text-muted)] mt-0.5">
-                            {isNative
-                              ? 'Buka Pengelola File Android langsung'
-                              : 'Buka dialog penjelajah file komputer'}
+                            {language === 'ja'
+                              ? 'Androidファイル管理を開いて保存'
+                              : isNative
+                              ? 'Open Android File Manager to select folder'
+                              : 'Open system file dialog to save'}
                           </p>
                         </div>
                       </div>
@@ -466,7 +476,7 @@ export function StatementPreviewModal({
                   <div className="px-3 py-2 mt-1.5 border-t border-[var(--border-subtle)] flex items-center justify-between text-[10px] text-[var(--text-muted)]">
                     <span className="flex items-center space-x-1.5 text-emerald-400 font-semibold">
                       <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400 shrink-0" />
-                      <span>Default Tersimpan</span>
+                      <span>{language === 'ja' ? 'デフォルト保存' : 'Default Saved'}</span>
                     </span>
                     {lastSavedLocation && (
                       <span className="truncate max-w-[120px] font-mono text-[9px] text-[var(--text-muted)]">
@@ -483,7 +493,7 @@ export function StatementPreviewModal({
               type="button"
               onClick={handleDownload}
               disabled={isDownloading}
-              className={`flex items-center space-x-1.5 px-4 py-2 rounded-xl text-xs font-bold text-white transition-all cursor-pointer shadow-sm active:scale-95 disabled:opacity-50 ${
+              className={`flex items-center space-x-1.5 px-3.5 sm:px-4 py-2 rounded-xl text-xs font-bold text-white transition-all cursor-pointer shadow-sm active:scale-95 disabled:opacity-50 ${
                 activeTab === 'pdf'
                   ? 'bg-rose-600 hover:bg-rose-500'
                   : activeTab === 'excel'
@@ -498,9 +508,15 @@ export function StatementPreviewModal({
               )}
               <span>
                 {activeTab === 'pdf'
-                  ? 'Download PDF'
+                  ? language === 'ja'
+                    ? 'PDF を保存'
+                    : 'Download PDF'
                   : activeTab === 'excel'
-                  ? 'Download Excel (.xlsx)'
+                  ? language === 'ja'
+                    ? 'Excel を保存'
+                    : 'Download Excel (.xlsx)'
+                  : language === 'ja'
+                  ? 'CSV を保存'
                   : 'Download CSV'}
               </span>
             </button>
@@ -511,10 +527,10 @@ export function StatementPreviewModal({
                 type="button"
                 onClick={() => window.print()}
                 className="hidden lg:flex items-center space-x-1.5 px-3 py-2 rounded-xl bg-indigo-500/15 hover:bg-indigo-500/25 border border-indigo-500/30 text-indigo-400 text-xs font-bold transition-all cursor-pointer shadow-xs active:scale-95"
-                title="Print Browser View"
+                title={language === 'ja' ? '印刷' : 'Print Browser View'}
               >
                 <Printer className="w-3.5 h-3.5" />
-                <span>Print</span>
+                <span>{language === 'ja' ? '印刷' : 'Print'}</span>
               </button>
             )}
           </div>
@@ -530,8 +546,8 @@ export function StatementPreviewModal({
                 <CheckCircle2 className="w-4 h-4 text-emerald-400 shrink-0" />
                 <span className="truncate">
                   {language === 'ja'
-                    ? `ダウンロード完了: ${downloadFeedback.fileName} (${downloadFeedback.location})`
-                    : `Berhasil disimpan di ${downloadFeedback.location}: ${downloadFeedback.fileName}`}
+                    ? `${downloadFeedback.location} に保存しました: ${downloadFeedback.fileName}`
+                    : `Saved to ${downloadFeedback.location}: ${downloadFeedback.fileName}`}
                 </span>
               </div>
               {downloadFeedback.uri && isNative && (
@@ -541,14 +557,17 @@ export function StatementPreviewModal({
                   className="flex items-center space-x-1 px-3 py-1.5 rounded-xl bg-emerald-500/20 hover:bg-emerald-500/30 border border-emerald-500/40 text-emerald-300 text-[11px] font-bold transition-all cursor-pointer shrink-0"
                 >
                   <Share2 className="w-3 h-3" />
-                  <span>Buka / Bagikan</span>
+                  <span>{language === 'ja' ? '開く / 共有' : 'Open / Share'}</span>
                 </button>
               )}
             </div>
           ) : (
             <div className="flex items-center space-x-2 p-3 rounded-2xl bg-rose-500/15 border border-rose-500/30 text-rose-400 text-xs font-semibold shadow-md">
               <AlertCircle className="w-4 h-4 text-rose-400 shrink-0" />
-              <span>{downloadFeedback.error || 'Gagal menyimpan file'}</span>
+              <span>
+                {downloadFeedback.error ||
+                  (language === 'ja' ? 'ファイルの保存に失敗しました' : 'Failed to save file')}
+              </span>
             </div>
           )}
         </div>
@@ -558,7 +577,11 @@ export function StatementPreviewModal({
         <div className="max-w-4xl mx-auto w-full px-4 pt-3 no-print animate-fade-in">
           <div className="flex items-center space-x-2 p-2.5 rounded-2xl bg-[var(--bg-subtle)] border border-[var(--border-subtle)] text-[var(--text-muted)] text-xs font-medium">
             <AlertCircle className="w-4 h-4 text-[var(--text-muted)] shrink-0" />
-            <span>Pemilihan folder dibatalkan</span>
+            <span>
+              {language === 'ja'
+                ? 'フォルダの選択がキャンセルされました'
+                : 'Folder selection cancelled'}
+            </span>
           </div>
         </div>
       )}
@@ -635,19 +658,21 @@ export function StatementPreviewModal({
               <table className="w-full border-collapse text-left">
                 <thead>
                   <tr className="border-b border-slate-300 text-[11px] font-bold uppercase tracking-wider text-slate-500 bg-slate-50">
-                    <th className="py-2.5 px-3">Date</th>
-                    <th className="py-2.5 px-3">Type</th>
-                    <th className="py-2.5 px-3">Category</th>
-                    <th className="py-2.5 px-3">Source / Destination</th>
-                    <th className="py-2.5 px-3">Description</th>
-                    <th className="py-2.5 px-3 text-right">Amount ({currency})</th>
+                    <th className="py-2.5 px-3">{language === 'ja' ? '日付' : 'Date'}</th>
+                    <th className="py-2.5 px-3">{language === 'ja' ? '種別' : 'Type'}</th>
+                    <th className="py-2.5 px-3">{language === 'ja' ? 'カテゴリー' : 'Category'}</th>
+                    <th className="py-2.5 px-3">{language === 'ja' ? '口座 / 移動先' : 'Source / Destination'}</th>
+                    <th className="py-2.5 px-3">{language === 'ja' ? 'メモ' : 'Description'}</th>
+                    <th className="py-2.5 px-3 text-right">{language === 'ja' ? '金額' : 'Amount'} ({currency})</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-100 text-xs">
                   {filtered.length === 0 ? (
                     <tr>
                       <td colSpan={6} className="py-8 text-center text-slate-400 font-medium">
-                        No transactions recorded for this period.
+                        {language === 'ja'
+                          ? '該当期間の取引履歴がありません。'
+                          : 'No transactions recorded for this period.'}
                       </td>
                     </tr>
                   ) : (
@@ -665,7 +690,9 @@ export function StatementPreviewModal({
                         : t.record.typeSavings;
 
                       const catLabel = isTransfer
-                        ? 'Internal Transfer'
+                        ? language === 'ja'
+                          ? '振替'
+                          : 'Internal Transfer'
                         : isExpense
                         ? (t.expenseCategories as any)[tx.category] || tx.category
                         : isIncome
@@ -726,9 +753,13 @@ export function StatementPreviewModal({
             <div className="pt-6 border-t border-slate-200 flex flex-col sm:flex-row items-center justify-between text-[11px] text-slate-400 gap-2 font-mono">
               <div className="flex items-center space-x-1.5">
                 <ShieldCheck className="w-3.5 h-3.5 text-emerald-500" />
-                <span>Dailyba Personal Finance Vault • Privacy-First Statement</span>
+                <span>
+                  {language === 'ja'
+                    ? 'Dailyba 個人財務管理 • プライバシーステートメント'
+                    : 'Dailyba Personal Finance Vault • Privacy-First Statement'}
+                </span>
               </div>
-              <span>Page 1 of 1</span>
+              <span>{language === 'ja' ? 'ページ 1 / 1' : 'Page 1 of 1'}</span>
             </div>
           </div>
         )}
@@ -827,7 +858,9 @@ export function StatementPreviewModal({
                   Statement {yearMonth}
                 </span>
               </div>
-              <span className="font-mono">Total {filtered.length} rows</span>
+              <span className="font-mono">
+                {language === 'ja' ? `合計 ${filtered.length} 行` : `Total ${filtered.length} rows`}
+              </span>
             </div>
           </div>
         )}
@@ -849,7 +882,15 @@ export function StatementPreviewModal({
                 className="flex items-center space-x-1.5 px-3 py-1.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-xs font-bold text-teal-400 transition-all cursor-pointer shadow-xs active:scale-95"
               >
                 {isCopied ? <Check className="w-3.5 h-3.5" /> : <Copy className="w-3.5 h-3.5" />}
-                <span>{isCopied ? 'Copied!' : 'Copy Raw CSV'}</span>
+                <span>
+                  {isCopied
+                    ? language === 'ja'
+                      ? 'コピー完了!'
+                      : 'Copied!'
+                    : language === 'ja'
+                    ? 'CSVをコピー'
+                    : 'Copy Raw CSV'}
+                </span>
               </button>
             </div>
 
@@ -867,7 +908,11 @@ export function StatementPreviewModal({
 
             {/* CSV Footer */}
             <div className="bg-slate-950 px-5 py-2.5 border-t border-slate-800 flex items-center justify-between text-[11px] text-slate-500 font-mono">
-              <span>{csvLines.length} Lines • Comma Delimited</span>
+              <span>
+                {language === 'ja'
+                  ? `${csvLines.length} 行 • カンマ区切り`
+                  : `${csvLines.length} Lines • Comma Delimited`}
+              </span>
               <span>Encrypted Export</span>
             </div>
           </div>
