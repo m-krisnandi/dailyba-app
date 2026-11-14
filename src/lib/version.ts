@@ -1,7 +1,7 @@
 import { Language } from '@/types/finance';
 
-export const APP_VERSION = '1.8.0';
-export const APP_BUILD = '20261113_3';
+export const APP_VERSION = '1.8.1';
+export const APP_BUILD = '20261114_1';
 
 export interface LocalizedChangelogItem {
   version: string;
@@ -11,6 +11,32 @@ export interface LocalizedChangelogItem {
 }
 
 export const APP_CHANGELOG: LocalizedChangelogItem[] = [
+  {
+    version: '1.8.1',
+    date: '2026-11-14',
+    title: {
+      en: 'Native Android SAF File Saver, 3-Format Interactive Statement Preview & Security Gates',
+      ja: 'Android SAF直接ファイル保存、3形式リアルタイム明細プレビュー、セキュリティ強化',
+    },
+    highlights: {
+      en: [
+        "Native Android SAF File Saver: Choose Folder directly opens Android's native File Manager to select any destination (Internal Storage, SD Card, Google Drive) and save without opening the share sheet.",
+        'Default Storage Destination Memory: Automatically remembers your chosen folder preference (Documents, Downloads, or Custom Folder) for subsequent exports.',
+        'Interactive 3-Format Statement Preview: Live document preview for PDF reports (with executive KPI summary), Microsoft Excel (.xlsx with formula ribbons), and raw CSV before saving.',
+        "Zero-Emoji Design Standard: Standardized all export, folder, and tab selectors with sleek, professional Lucide icons matching Dailyba's dark glass aesthetics.",
+        'Mobile Responsive Positioning: Fixed dropdown menu positioning to open smoothly within screen bounds on all mobile viewport sizes without edge clipping.',
+        'Protected App Lock Deactivation: Disabling App Lock now requires strict PIN verification to prevent unauthorized security modifications.',
+      ],
+      ja: [
+        'Android SAF直接ファイル保存: 「フォルダ指定」選択時、共有メニューを経由せずAndroid標準のファイルマネージャーが直接起動し、保存先フォルダを自在に選択・保存可能になりました。',
+        '保存先フォルダの自動記憶: Documents、Downloads、または指定フォルダの選択状態を次回以降のデフォルトとして自動保持します。',
+        '3形式リアルタイム明細プレビュー: 保存前にPDFレポート（KPIサマリー付き）、Excelシート（数式・グリッド付き）、CSV生データを画面上で即座に確認できます。',
+        'デザイン刷新（絵文字撤廃）: すべてのエクスポート関連セレクターを統一されたLucideアイコンに刷新し、洗練されたダークグラス調UIに統一しました。',
+        'モバイル画面での表示最適化: ドロップダウンがスマートフォンの画面端で見切れる問題を解消し、あらゆる画面幅で快適に操作できるよう配置を最適化しました。',
+        'アプリロック解除の保護: アプリロックを無効化する際、不正操作を防止するため暗証番号（PIN）の事前認証を必須化しました。',
+      ],
+    },
+  },
   {
     version: '1.8.0',
     date: '2026-11-13',
