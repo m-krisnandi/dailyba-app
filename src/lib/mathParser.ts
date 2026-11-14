@@ -23,6 +23,28 @@ export interface MathEvalResult {
   isValid: boolean;
 }
 
+/**
+ * Formats all numeric operands inside an expression with commas (e.g. "10,000+20000" -> "10,000+20,000")
+ */
+export function formatMathExpression(expr: string): string {
+  if (!expr || typeof expr !== 'string') return '';
+
+  // First normalize Indonesian thousand-separator dots: e.g. 100.000 -> 100,000
+  let normalized = expr;
+  while (/(\d+)\.(\d{3})(?!\d)/.test(normalized)) {
+    normalized = normalized.replace(/(\d+)\.(\d{3})(?!\d)/g, '$1,$2');
+  }
+
+  // Format all numeric operands with standard commas
+  return normalized.replace(/\b\d+(?:,\d+)*(?:\.\d+)?/g, (match) => {
+    const raw = match.replace(/,/g, '');
+    if (!raw) return match;
+    const parts = raw.split('.');
+    const intPart = parts[0].replace(/\B(?=(\d{3})+(?!\d))/g, ',');
+    return parts.length > 1 ? `${intPart}.${parts.slice(1).join('')}` : intPart;
+  });
+}
+
 export function evaluateInlineMath(input: string): MathEvalResult {
   if (!input || typeof input !== 'string') {
     return { hasExpression: false, rawExpression: '', result: null, isValid: false };

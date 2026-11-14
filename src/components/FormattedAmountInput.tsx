@@ -2,7 +2,7 @@
 
 import React, { useRef, useImperativeHandle, forwardRef, useMemo } from 'react';
 import { formatNumberWithCommas } from '@/lib/currency';
-import { evaluateInlineMath } from '@/lib/mathParser';
+import { evaluateInlineMath, formatMathExpression } from '@/lib/mathParser';
 import { Calculator } from 'lucide-react';
 
 export interface FormattedAmountInputProps
@@ -57,19 +57,43 @@ export const FormattedAmountInput = forwardRef<HTMLInputElement, FormattedAmount
     const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
       const input = e.target;
       const currentVal = input.value;
+      const cursorPos = input.selectionStart ?? currentVal.length;
 
-      // If typing math operators or shorthand suffixes, preserve them
+      // If typing math operators or shorthand suffixes, format each operand with commas consistently
       const hasMathOp = /[-+*/xX×÷]|(?:k|rb)/i.test(currentVal);
       if (hasMathOp) {
         // Keep digits, dots, commas, spaces, k, rb, and operators
         const sanitized = currentVal.replace(/[^0-9.,+*/xX×÷\skKRrbB-]/gi, '');
-        const evaluated = evaluateInlineMath(sanitized);
+        const formattedExpr = formatMathExpression(sanitized);
+        const evaluated = evaluateInlineMath(formattedExpr);
         const rawNum = evaluated.isValid && evaluated.result !== null ? evaluated.result : 0;
-        onChange(sanitized, rawNum);
+
+        // Count non-comma characters before cursor for seamless cursor placement
+        const charsBeforeCursor = currentVal.slice(0, cursorPos);
+        const nonCommasBefore = charsBeforeCursor.replace(/,/g, '').length;
+
+        onChange(formattedExpr, rawNum);
+
+        requestAnimationFrame(() => {
+          if (!input) return;
+          let newCursor = 0;
+          let count = 0;
+          for (let i = 0; i < formattedExpr.length; i++) {
+            if (formattedExpr[i] !== ',') count++;
+            if (count === nonCommasBefore) {
+              newCursor = i + 1;
+              break;
+            }
+          }
+          if (nonCommasBefore === 0) newCursor = 0;
+          try {
+            input.setSelectionRange(newCursor, newCursor);
+          } catch {
+            // ignore
+          }
+        });
         return;
       }
-
-      const cursorPos = input.selectionStart ?? currentVal.length;
 
       // Count how many non-comma/non-formatting characters were before cursor
       const charsBeforeCursor = currentVal.slice(0, cursorPos);
@@ -133,7 +157,7 @@ export const FormattedAmountInput = forwardRef<HTMLInputElement, FormattedAmount
       }
 
       // Special ergonomic handling for Backspace directly after a comma:
-      if (e.key === 'Backspace' && !(/[-+*/xX×÷]|(?:k|rb)/i.test(displayValue))) {
+      if (e.key === 'Backspace') {
         const input = internalRef.current;
         if (!input) return;
 
@@ -145,30 +169,19 @@ export const FormattedAmountInput = forwardRef<HTMLInputElement, FormattedAmount
             e.preventDefault();
             const before = input.value.slice(0, start - 2);
             const after = input.value.slice(start);
-            const rawCleaned = (before + after).replace(/[^0-9.]/g, '');
-            const newFormatted = formatNumberWithCommas(rawCleaned);
-            const rawNumber = parseFloat(rawCleaned) || 0;
+            const combined = before + after;
 
-            const digitsBefore = before.replace(/[^0-9.]/g, '').length;
-
-            onChange(newFormatted, rawNumber);
-
-            requestAnimationFrame(() => {
-              let newCursor = 0;
-              let count = 0;
-              for (let i = 0; i < newFormatted.length; i++) {
-                if (newFormatted[i] !== ',') count++;
-                if (count === digitsBefore) {
-                  newCursor = i + 1;
-                  break;
-                }
-              }
-              try {
-                input.setSelectionRange(newCursor, newCursor);
-              } catch {
-                // ignore
-              }
-            });
+            if (/[-+*/xX×÷]|(?:k|rb)/i.test(combined)) {
+              const formatted = formatMathExpression(combined);
+              const evaluated = evaluateInlineMath(formatted);
+              const rawNum = evaluated.isValid && evaluated.result !== null ? evaluated.result : 0;
+              onChange(formatted, rawNum);
+            } else {
+              const rawCleaned = combined.replace(/[^0-9.]/g, '');
+              const newFormatted = formatNumberWithCommas(rawCleaned);
+              const rawNumber = parseFloat(rawCleaned) || 0;
+              onChange(newFormatted, rawNumber);
+            }
           }
         }
       }
