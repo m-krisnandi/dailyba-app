@@ -7,6 +7,7 @@ import { getTodayLocalDate } from '@/lib/dateUtils';
 import { useBodyScrollLock } from '@/lib/useBodyScrollLock';
 import { ConfirmDeleteModal } from './ConfirmDeleteModal';
 import { LegalModal } from './LegalModal';
+import { CustomTimePicker } from './CustomTimePicker';
 import {
   Upload,
   Trash2,
@@ -322,14 +323,13 @@ export function BackupModal({
                 <span className="text-[11px] text-[var(--text-muted)] font-medium">
                   {t.actions.reminderTime}
                 </span>
-                <input
-                  type="time"
+                <CustomTimePicker
                   value={reminderTime}
-                  onChange={(e) => {
-                    setReminderTime(e.target.value);
-                    handleToggleReminder(true, e.target.value);
+                  onChange={(newTime) => {
+                    setReminderTime(newTime);
+                    handleToggleReminder(true, newTime);
                   }}
-                  className="px-2 py-1 rounded-lg bg-[var(--bg-surface-solid)] border border-[var(--border-subtle)] text-[var(--text-main)] font-mono text-xs focus:outline-none focus:border-emerald-500/50"
+                  language={language}
                 />
               </div>
             )}

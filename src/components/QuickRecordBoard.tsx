@@ -201,6 +201,40 @@ export function QuickRecordBoard({
     [t]
   );
 
+  const txCategoryFilterOptions = useMemo<CustomSelectOption<string>[]>(() => {
+    const opts: CustomSelectOption<string>[] = [
+      {
+        value: 'all',
+        label: language === 'ja' ? 'すべてのカテゴリ' : 'All Categories',
+        icon: SlidersHorizontal,
+      },
+    ];
+
+    ALL_EXPENSE_CATEGORIES.forEach((cat) => {
+      const style = getCategoryBadgeStyle('expense', cat);
+      opts.push({
+        value: cat,
+        label: t.expenseCategories[cat] || cat,
+        sublabel: language === 'ja' ? '支出' : 'Expense',
+        icon: EXPENSE_CATEGORY_ICONS[cat],
+        badgeClass: `${style.border} ${style.bg} ${style.text}`,
+      });
+    });
+
+    ALL_INCOME_CATEGORIES.forEach((cat) => {
+      const style = getCategoryBadgeStyle('income', cat);
+      opts.push({
+        value: cat,
+        label: t.incomeCategories[cat] || cat,
+        sublabel: language === 'ja' ? '収入' : 'Income',
+        icon: INCOME_CATEGORY_ICONS[cat],
+        badgeClass: `${style.border} ${style.bg} ${style.text}`,
+      });
+    });
+
+    return opts;
+  }, [language, t]);
+
 
   const [type, setType] = useState<TransactionType>('expense');
   const [amountStr, setAmountStr] = useState('');
@@ -1410,8 +1444,8 @@ export function QuickRecordBoard({
         {/* Search & Filter Bar - visible when transactions exist or filter is active */}
         {(transactions.length > 0 || isTxFiltered) && (
           <div className="space-y-2.5 pt-1">
-            {/* Search Input, Funding Source Select, & Sort Order Select */}
-            <div className="flex flex-col sm:flex-row gap-2">
+            {/* Row 1: Search Input & Advanced Filter Toggle Button */}
+            <div className="flex items-center gap-2">
               <div className="relative flex-1 min-w-0">
                 <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-[var(--text-muted)] pointer-events-none" />
                 <input
@@ -1432,100 +1466,97 @@ export function QuickRecordBoard({
                 )}
               </div>
 
-              <div className="grid grid-cols-2 sm:flex sm:items-center gap-2 shrink-0">
-                <div className="w-full sm:w-[150px]">
-                  <CustomSelect
-                    value={txFilterSource}
-                    onChange={(val) => handleFilterSourceChange(val as any)}
-                    options={filterSourceOptions}
-                  />
-                </div>
-                <div className="w-full sm:w-[165px]">
-                  <CustomSelect
-                    value={txSortBy}
-                    onChange={(val) => handleSortChange(val as TransactionSortOption)}
-                    options={sortOptions}
-                  />
-                </div>
-              </div>
-            </div>
-
-            {/* Type Filter Pills & Advanced Filter Toggle */}
-            <div className="flex items-center justify-between gap-1.5 flex-wrap">
-              <div className="flex items-center gap-1.5 overflow-x-auto pb-1 scrollbar-none flex-1">
-                <button
-                  type="button"
-                  onClick={() => handleFilterTypeChange('all')}
-                  className={`px-3 py-1.5 rounded-lg text-xs font-semibold whitespace-nowrap transition-all cursor-pointer ${
-                    txFilterType === 'all'
-                      ? 'bg-[var(--btn-primary-bg)] text-[var(--btn-primary-text)] border border-[var(--btn-primary-border)] shadow-xs'
-                      : 'bg-[var(--bg-subtle)] text-[var(--text-muted)] hover:text-[var(--text-main)] border border-[var(--border-subtle)]'
-                  }`}
-                >
-                  {t.record.allTypes}
-                </button>
-                <button
-                  type="button"
-                  onClick={() => handleFilterTypeChange('expense')}
-                  className={`px-3 py-1.5 rounded-lg text-xs font-semibold whitespace-nowrap transition-all cursor-pointer ${
-                    txFilterType === 'expense'
-                      ? 'bg-rose-500/20 text-rose-500 border border-rose-500/40 shadow-sm'
-                      : 'bg-[var(--bg-subtle)] text-[var(--text-muted)] hover:text-[var(--text-main)] border border-[var(--border-subtle)]'
-                  }`}
-                >
-                  {t.record.typeExpense}
-                </button>
-                <button
-                  type="button"
-                  onClick={() => handleFilterTypeChange('income')}
-                  className={`px-3 py-1.5 rounded-lg text-xs font-semibold whitespace-nowrap transition-all cursor-pointer ${
-                    txFilterType === 'income'
-                      ? 'bg-emerald-500/20 text-emerald-500 border border-emerald-500/40 shadow-sm'
-                      : 'bg-[var(--bg-subtle)] text-[var(--text-muted)] hover:text-[var(--text-main)] border border-[var(--border-subtle)]'
-                  }`}
-                >
-                  {t.record.typeIncome}
-                </button>
-                <button
-                  type="button"
-                  onClick={() => handleFilterTypeChange('savings')}
-                  className={`px-3 py-1.5 rounded-lg text-xs font-semibold whitespace-nowrap transition-all cursor-pointer ${
-                    txFilterType === 'savings'
-                      ? 'bg-amber-500/20 text-amber-500 border border-amber-500/40 shadow-sm'
-                      : 'bg-[var(--bg-subtle)] text-[var(--text-muted)] hover:text-[var(--text-main)] border border-[var(--border-subtle)]'
-                  }`}
-                >
-                  {t.record.typeSavings}
-                </button>
-                <button
-                  type="button"
-                  onClick={() => handleFilterTypeChange('transfer')}
-                  className={`px-3 py-1.5 rounded-lg text-xs font-semibold whitespace-nowrap transition-all cursor-pointer ${
-                    txFilterType === 'transfer'
-                      ? 'bg-indigo-500/20 text-indigo-400 border border-indigo-500/40 shadow-sm'
-                      : 'bg-[var(--bg-subtle)] text-[var(--text-muted)] hover:text-[var(--text-main)] border border-[var(--border-subtle)]'
-                  }`}
-                >
-                  {t.record.typeTransfer}
-                </button>
-              </div>
-
               <button
                 type="button"
                 onClick={() => setIsAdvancedFilterOpen((prev) => !prev)}
-                className={`px-3 py-1.5 rounded-lg text-xs font-semibold whitespace-nowrap transition-all flex items-center space-x-1.5 cursor-pointer shrink-0 ${
+                className={`px-3 py-2 rounded-xl text-xs font-semibold whitespace-nowrap transition-all flex items-center space-x-1.5 cursor-pointer shrink-0 ${
                   isAdvancedFilterOpen || activeAdvancedCount > 0
                     ? 'bg-[var(--accent-emerald-soft)] text-[var(--accent-emerald)] border border-[var(--accent-emerald)] shadow-xs'
                     : 'bg-[var(--bg-subtle)] text-[var(--text-muted)] hover:text-[var(--text-main)] border border-[var(--border-subtle)]'
                 }`}
+                title={language === 'ja' ? '詳細フィルター' : 'Advanced Filters'}
               >
                 <SlidersHorizontal className="w-3.5 h-3.5" />
-                <span>{language === 'ja' ? '詳細フィルター' : 'Advanced Filters'}</span>
+                <span className="hidden sm:inline">{language === 'ja' ? '詳細フィルター' : 'Advanced Filters'}</span>
+                <span className="sm:hidden">{language === 'ja' ? '詳細' : 'Filters'}</span>
                 {activeAdvancedCount > 0 && (
-                  <span className="w-4 h-4 rounded-full bg-[var(--accent-emerald)] text-white text-[10px] flex items-center justify-center font-mono">
+                  <span className="w-4 h-4 rounded-full bg-[var(--accent-emerald)] text-white text-[10px] flex items-center justify-center font-mono font-bold">
                     {activeAdvancedCount}
                   </span>
                 )}
+              </button>
+            </div>
+
+            {/* Row 2: Source Select & Sort Select */}
+            <div className="grid grid-cols-2 gap-2">
+              <CustomSelect
+                value={txFilterSource}
+                onChange={(val) => handleFilterSourceChange(val as any)}
+                options={filterSourceOptions}
+              />
+              <CustomSelect
+                value={txSortBy}
+                onChange={(val) => handleSortChange(val as TransactionSortOption)}
+                options={sortOptions}
+              />
+            </div>
+
+            {/* Row 3: 5 Type Filter Pills - full width grid so all 5 types fit with NO horizontal scroll */}
+            <div className="grid grid-cols-5 gap-1 p-1 bg-[var(--bg-subtle)] rounded-xl border border-[var(--border-subtle)] w-full">
+              <button
+                type="button"
+                onClick={() => handleFilterTypeChange('all')}
+                className={`py-1.5 rounded-lg text-[10px] sm:text-xs font-semibold transition-all cursor-pointer text-center truncate ${
+                  txFilterType === 'all'
+                    ? 'bg-[var(--btn-primary-bg)] text-[var(--btn-primary-text)] border border-[var(--btn-primary-border)] shadow-xs'
+                    : 'text-[var(--text-muted)] hover:text-[var(--text-main)]'
+                }`}
+              >
+                {language === 'ja' ? 'すべて' : 'All'}
+              </button>
+              <button
+                type="button"
+                onClick={() => handleFilterTypeChange('expense')}
+                className={`py-1.5 rounded-lg text-[10px] sm:text-xs font-semibold transition-all cursor-pointer text-center truncate ${
+                  txFilterType === 'expense'
+                    ? 'bg-rose-500/20 text-rose-500 border border-rose-500/40 shadow-xs'
+                    : 'text-[var(--text-muted)] hover:text-[var(--text-main)]'
+                }`}
+              >
+                {language === 'ja' ? '支出' : 'Expense'}
+              </button>
+              <button
+                type="button"
+                onClick={() => handleFilterTypeChange('income')}
+                className={`py-1.5 rounded-lg text-[10px] sm:text-xs font-semibold transition-all cursor-pointer text-center truncate ${
+                  txFilterType === 'income'
+                    ? 'bg-emerald-500/20 text-emerald-500 border border-emerald-500/40 shadow-xs'
+                    : 'text-[var(--text-muted)] hover:text-[var(--text-main)]'
+                }`}
+              >
+                {language === 'ja' ? '収入' : 'Income'}
+              </button>
+              <button
+                type="button"
+                onClick={() => handleFilterTypeChange('savings')}
+                className={`py-1.5 rounded-lg text-[10px] sm:text-xs font-semibold transition-all cursor-pointer text-center truncate ${
+                  txFilterType === 'savings'
+                    ? 'bg-amber-500/20 text-amber-500 border border-amber-500/40 shadow-xs'
+                    : 'text-[var(--text-muted)] hover:text-[var(--text-main)]'
+                }`}
+              >
+                {language === 'ja' ? '貯蓄' : 'Savings'}
+              </button>
+              <button
+                type="button"
+                onClick={() => handleFilterTypeChange('transfer')}
+                className={`py-1.5 rounded-lg text-[10px] sm:text-xs font-semibold transition-all cursor-pointer text-center truncate ${
+                  txFilterType === 'transfer'
+                    ? 'bg-indigo-500/20 text-indigo-400 border border-indigo-500/40 shadow-xs'
+                    : 'text-[var(--text-muted)] hover:text-[var(--text-main)]'
+                }`}
+              >
+                {language === 'ja' ? '振替' : 'Transfer'}
               </button>
             </div>
 
@@ -1562,25 +1593,30 @@ export function QuickRecordBoard({
                       {language === 'ja' ? '日付範囲' : 'Date Range'}
                     </label>
                     <div className="grid grid-cols-2 gap-1.5">
-                      <input
-                        type="date"
+                      <CustomDatePicker
                         value={txDateFrom}
-                        onChange={(e) => {
-                          setTxDateFrom(e.target.value);
+                        onChange={(val) => {
+                          setTxDateFrom(val);
                           setTxCurrentPage(1);
                         }}
-                        className="w-full px-2 py-1.5 rounded-xl bg-[var(--bg-surface-solid)] border border-[var(--border-subtle)] text-[var(--text-main)] text-[11px] font-mono focus:outline-none focus:border-emerald-500/50"
-                        title={language === 'ja' ? '開始日' : 'From Date'}
+                        language={language}
+                        placeholder={language === 'ja' ? '開始日' : 'From Date'}
+                        size="sm"
+                        showTodayButton={false}
+                        allowClear={true}
                       />
-                      <input
-                        type="date"
+                      <CustomDatePicker
                         value={txDateTo}
-                        onChange={(e) => {
-                          setTxDateTo(e.target.value);
+                        onChange={(val) => {
+                          setTxDateTo(val);
                           setTxCurrentPage(1);
                         }}
-                        className="w-full px-2 py-1.5 rounded-xl bg-[var(--bg-surface-solid)] border border-[var(--border-subtle)] text-[var(--text-main)] text-[11px] font-mono focus:outline-none focus:border-emerald-500/50"
-                        title={language === 'ja' ? '終了日' : 'To Date'}
+                        language={language}
+                        placeholder={language === 'ja' ? '終了日' : 'To Date'}
+                        size="sm"
+                        showTodayButton={false}
+                        align="right"
+                        allowClear={true}
                       />
                     </div>
                     {/* Quick Date Pills */}
@@ -1667,30 +1703,15 @@ export function QuickRecordBoard({
                     <label className="text-[10px] font-bold text-[var(--text-muted)] uppercase tracking-wider block">
                       {language === 'ja' ? 'カテゴリ指定' : 'Category'}
                     </label>
-                    <select
+                    <CustomSelect
                       value={txCategoryFilter}
-                      onChange={(e) => {
-                        setTxCategoryFilter(e.target.value);
+                      onChange={(val) => {
+                        setTxCategoryFilter(val);
                         setTxCurrentPage(1);
                       }}
-                      className="w-full px-2.5 py-1.5 rounded-xl bg-[var(--bg-surface-solid)] border border-[var(--border-subtle)] text-[var(--text-main)] text-xs focus:outline-none focus:border-emerald-500/50"
-                    >
-                      <option value="all">{language === 'ja' ? 'すべてのカテゴリ' : 'All Categories'}</option>
-                      <optgroup label={language === 'ja' ? '支出カテゴリ' : 'Expense Categories'}>
-                        {ALL_EXPENSE_CATEGORIES.map((cat) => (
-                          <option key={cat} value={cat}>
-                            {t.expenseCategories[cat] || cat}
-                          </option>
-                        ))}
-                      </optgroup>
-                      <optgroup label={language === 'ja' ? '収入カテゴリ' : 'Income Categories'}>
-                        {ALL_INCOME_CATEGORIES.map((cat) => (
-                          <option key={cat} value={cat}>
-                            {t.incomeCategories[cat] || cat}
-                          </option>
-                        ))}
-                      </optgroup>
-                    </select>
+                      options={txCategoryFilterOptions}
+                      size="sm"
+                    />
                   </div>
                 </div>
               </div>

@@ -609,7 +609,7 @@ export function DailySpendBoard({
 
       {/* Day-by-Day Detailed History Feed */}
       <div className="rounded-3xl border border-[var(--border-subtle)] bg-[var(--bg-surface)]  p-5 sm:p-7 shadow-[var(--card-shadow)] space-y-4">
-        <div className="flex items-center justify-between flex-wrap gap-3">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
           <div>
             <h3 className="text-sm font-bold text-[var(--text-main)]">
               {t.dailySpend.dailyHistoryTitle}
@@ -619,12 +619,12 @@ export function DailySpendBoard({
             </p>
           </div>
 
-          {/* Filter Pills */}
-          <div className="flex items-center space-x-1 p-1 bg-[var(--bg-subtle)] rounded-xl border border-[var(--border-subtle)] overflow-x-auto max-w-full">
+          {/* Filter Pills - Responsive 4-Column Grid on Mobile so no scrolling is needed */}
+          <div className="grid grid-cols-4 gap-1 p-1 bg-[var(--bg-subtle)] rounded-xl border border-[var(--border-subtle)] w-full sm:w-auto">
             <button
               type="button"
               onClick={() => setFilterMode('month')}
-              className={`px-2.5 sm:px-3 py-1 rounded-lg text-xs font-semibold transition-all cursor-pointer whitespace-nowrap ${
+              className={`px-1.5 sm:px-3 py-1.5 rounded-lg text-[11px] sm:text-xs font-semibold transition-all cursor-pointer text-center truncate ${
                 filterMode === 'month'
                   ? 'bg-[var(--bg-surface-solid)] text-[var(--text-main)] shadow-xs'
                   : 'text-[var(--text-muted)] hover:text-[var(--text-main)]'
@@ -635,7 +635,7 @@ export function DailySpendBoard({
             <button
               type="button"
               onClick={() => setFilterMode('week')}
-              className={`px-2.5 sm:px-3 py-1 rounded-lg text-xs font-semibold transition-all cursor-pointer whitespace-nowrap ${
+              className={`px-1.5 sm:px-3 py-1.5 rounded-lg text-[11px] sm:text-xs font-semibold transition-all cursor-pointer text-center truncate ${
                 filterMode === 'week'
                   ? 'bg-[var(--bg-surface-solid)] text-[var(--text-main)] shadow-xs'
                   : 'text-[var(--text-muted)] hover:text-[var(--text-main)]'
@@ -646,7 +646,7 @@ export function DailySpendBoard({
             <button
               type="button"
               onClick={() => setFilterMode('custom')}
-              className={`px-2.5 sm:px-3 py-1 rounded-lg text-xs font-semibold transition-all cursor-pointer whitespace-nowrap ${
+              className={`px-1.5 sm:px-3 py-1.5 rounded-lg text-[11px] sm:text-xs font-semibold transition-all cursor-pointer text-center truncate ${
                 filterMode === 'custom'
                   ? 'bg-[var(--bg-surface-solid)] text-[var(--text-main)] shadow-xs'
                   : 'text-[var(--text-muted)] hover:text-[var(--text-main)]'
@@ -657,7 +657,7 @@ export function DailySpendBoard({
             <button
               type="button"
               onClick={() => setFilterMode('all')}
-              className={`px-2.5 sm:px-3 py-1 rounded-lg text-xs font-semibold transition-all cursor-pointer whitespace-nowrap ${
+              className={`px-1.5 sm:px-3 py-1.5 rounded-lg text-[11px] sm:text-xs font-semibold transition-all cursor-pointer text-center truncate ${
                 filterMode === 'all'
                   ? 'bg-[var(--bg-surface-solid)] text-[var(--text-main)] shadow-xs'
                   : 'text-[var(--text-muted)] hover:text-[var(--text-main)]'

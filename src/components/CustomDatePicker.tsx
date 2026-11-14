@@ -1,16 +1,21 @@
 'use client';
 
 import React, { useState, useRef, useEffect, useMemo, useLayoutEffect } from 'react';
-import { Calendar as CalendarIcon, ChevronLeft, ChevronRight, ChevronDown } from 'lucide-react';
+import { Calendar as CalendarIcon, ChevronLeft, ChevronRight, ChevronDown, X } from 'lucide-react';
 import { Language } from '@/types/finance';
 import { getTodayLocalDate, getYesterdayLocalDate } from '@/lib/dateUtils';
 
 interface CustomDatePickerProps {
-  value: string; // YYYY-MM-DD
+  value: string; // YYYY-MM-DD or ""
   onChange: (date: string) => void;
   language: Language;
   dropUp?: boolean;
   className?: string;
+  placeholder?: string;
+  showTodayButton?: boolean;
+  size?: 'sm' | 'md';
+  align?: 'left' | 'right';
+  allowClear?: boolean;
 }
 
 export function CustomDatePicker({
@@ -19,6 +24,11 @@ export function CustomDatePicker({
   language,
   dropUp: explicitDropUp,
   className = '',
+  placeholder,
+  showTodayButton = true,
+  size = 'md',
+  align = 'left',
+  allowClear = false,
 }: CustomDatePickerProps) {
   const [isOpen, setIsOpen] = useState(false);
   const [resolvedDropUp, setResolvedDropUp] = useState<boolean>(false);
@@ -40,8 +50,6 @@ export function CustomDatePicker({
       const spaceBelow = window.innerHeight - rect.bottom;
       const spaceAbove = rect.top;
 
-      // If opening downwards would clip off screen (< 360px below) AND there's more space above, open up
-      // Otherwise, open downwards (standard and visible when scrolled down)
       if (spaceBelow < calendarHeight && spaceAbove > spaceBelow && spaceAbove > 280) {
         setResolvedDropUp(true);
       } else {
@@ -54,6 +62,7 @@ export function CustomDatePicker({
   const parsedValueDate = useMemo(() => {
     if (!value) return new Date();
     const [y, m, d] = value.split('-').map(Number);
+    if (!y || !m || !d) return new Date();
     return new Date(y, m - 1, d);
   }, [value]);
 
@@ -62,10 +71,12 @@ export function CustomDatePicker({
   const [viewMonth, setViewMonth] = useState(() => parsedValueDate.getMonth());
 
   useEffect(() => {
-    if (value) {
+    if (value && value.includes('-')) {
       const [y, m] = value.split('-').map(Number);
-      setViewYear(y);
-      setViewMonth(m - 1);
+      if (y && m) {
+        setViewYear(y);
+        setViewMonth(m - 1);
+      }
     }
   }, [value]);
 
@@ -105,6 +116,10 @@ export function CustomDatePicker({
 
   // Format display text on trigger button
   const displayText = useMemo(() => {
+    if (!value) {
+      return placeholder || (language === 'ja' ? '日付未指定' : 'Select date');
+    }
+
     const todayStr = getTodayLocalDate();
     const yesterdayStr = getYesterdayLocalDate();
 
@@ -123,7 +138,7 @@ export function CustomDatePicker({
       day: 'numeric',
       year: 'numeric',
     });
-  }, [value, parsedValueDate, language]);
+  }, [value, parsedValueDate, language, placeholder]);
 
   // Calendar cells computation
   const daysInMonth = new Date(viewYear, viewMonth + 1, 0).getDate();
@@ -150,19 +165,19 @@ export function CustomDatePicker({
     }
   };
 
-  const handleSelectDay = (day: number) => {
-    const yStr = String(viewYear);
-    const mStr = String(viewMonth + 1).padStart(2, '0');
-    const dStr = String(day).padStart(2, '0');
-    onChange(`${yStr}-${mStr}-${dStr}`);
+  const handleSelectDay = (dayNum: number) => {
+    const formattedMonth = String(viewMonth + 1).padStart(2, '0');
+    const formattedDay = String(dayNum).padStart(2, '0');
+    const dateStr = `${viewYear}-${formattedMonth}-${formattedDay}`;
+    onChange(dateStr);
     setIsOpen(false);
   };
 
   const handleSetToday = (e: React.MouseEvent) => {
     e.stopPropagation();
-    const today = new Date();
-    const y = today.getFullYear();
-    const m = today.getMonth();
+    const now = new Date();
+    const y = now.getFullYear();
+    const m = now.getMonth();
     setViewYear(y);
     setViewMonth(m);
     onChange(getTodayLocalDate());
@@ -178,6 +193,12 @@ export function CustomDatePicker({
     setViewYear(y);
     setViewMonth(m);
     onChange(getYesterdayLocalDate());
+    setIsOpen(false);
+  };
+
+  const handleClear = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    onChange('');
     setIsOpen(false);
   };
 
@@ -197,46 +218,67 @@ export function CustomDatePicker({
 
   return (
     <div ref={containerRef} className={`relative w-full ${className}`}>
-      {/* Trigger Button with Apple Liquid Glass Styling */}
+      {/* Trigger Button */}
       <div className="flex items-center space-x-1.5 w-full">
         <button
           type="button"
           onClick={() => setIsOpen(!isOpen)}
-          className={`flex-1 flex items-center justify-between px-3.5 py-2.5 rounded-xl border text-xs sm:text-sm font-semibold transition-all cursor-pointer select-none ${
+          className={`flex-1 flex items-center justify-between rounded-xl border font-semibold transition-all cursor-pointer select-none ${
+            size === 'sm' ? 'px-2.5 py-1.5 text-xs' : 'px-3.5 py-2.5 text-xs sm:text-sm'
+          } ${
             isOpen
               ? 'border-[var(--text-main)] bg-[var(--bg-subtle-hover)] text-[var(--text-main)] ring-1 ring-[var(--text-main)] shadow-xs'
-              : 'border-[var(--border-subtle)] bg-[var(--bg-subtle)] hover:bg-[var(--bg-subtle-hover)] text-[var(--text-main)]'
-          }`}
+              : 'border-[var(--border-subtle)] bg-[var(--bg-subtle)] hover:bg-[var(--bg-subtle-hover)]'
+          } ${!value ? 'text-[var(--text-muted)]' : 'text-[var(--text-main)]'}`}
         >
-          <div className="flex items-center space-x-2.5 min-w-0 pr-1">
-            <CalendarIcon className="w-4 h-4 text-[var(--text-main)] shrink-0" />
-            <span className="tabular-numbers truncate font-mono text-xs">{displayText}</span>
+          <div className="flex items-center space-x-2 min-w-0 pr-1 truncate">
+            <CalendarIcon className="w-3.5 h-3.5 text-emerald-500 shrink-0" />
+            <span className="tabular-numbers truncate font-mono text-[11px] sm:text-xs">
+              {displayText}
+            </span>
           </div>
-          <ChevronDown
-            className={`w-3.5 h-3.5 text-[var(--text-muted)] shrink-0 transition-transform duration-200 ${
-              isOpen ? 'rotate-180' : ''
-            }`}
-          />
+          <div className="flex items-center space-x-1 shrink-0">
+            {allowClear && value && (
+              <span
+                role="button"
+                tabIndex={0}
+                onClick={handleClear}
+                className="p-0.5 rounded-full hover:bg-[var(--bg-subtle)] text-[var(--text-muted)] hover:text-rose-400 transition-colors cursor-pointer"
+                title={language === 'ja' ? 'クリア' : 'Clear'}
+              >
+                <X className="w-3 h-3" />
+              </span>
+            )}
+            <ChevronDown
+              className={`w-3.5 h-3.5 text-[var(--text-muted)] transition-transform duration-200 ${
+                isOpen ? 'rotate-180' : ''
+              }`}
+            />
+          </div>
         </button>
 
         {/* 1-Tap Quick Shortcut Pill */}
-        <button
-          type="button"
-          onClick={handleSetToday}
-          className="px-3 py-2.5 rounded-xl border border-[var(--border-subtle)] bg-[var(--bg-subtle)] hover:bg-[var(--bg-subtle-hover)] text-xs font-semibold text-[var(--text-muted)] hover:text-[var(--text-main)] cursor-pointer transition-all shrink-0"
-          title={language === "ja" ? "今日に設定" : "Set to today"}
-        >
-          {language === 'ja' ? '今日' : 'Today'}
-        </button>
+        {showTodayButton && (
+          <button
+            type="button"
+            onClick={handleSetToday}
+            className={`rounded-xl border border-[var(--border-subtle)] bg-[var(--bg-subtle)] hover:bg-[var(--bg-subtle-hover)] font-semibold text-[var(--text-muted)] hover:text-[var(--text-main)] cursor-pointer transition-all shrink-0 ${
+              size === 'sm' ? 'px-2 py-1.5 text-xs' : 'px-3 py-2.5 text-xs'
+            }`}
+            title={language === 'ja' ? '今日に設定' : 'Set to today'}
+          >
+            {language === 'ja' ? '今日' : 'Today'}
+          </button>
+        )}
       </div>
 
       {/* Custom Modern Dropdown Calendar Popover */}
       {isOpen && (
         <div
           ref={popoverRef}
-          className={`absolute left-0 z-50 w-[calc(100vw-2.5rem)] max-w-xs sm:w-80 sm:max-w-none p-4 rounded-3xl border border-[var(--border-strong)] bg-[var(--bg-surface-solid)]/98 backdrop-blur-2xl shadow-2xl space-y-3 animate-in fade-in zoom-in-95 duration-150 ${
-            resolvedDropUp ? 'bottom-full mb-2' : 'top-full mt-2'
-          }`}
+          className={`absolute z-50 w-[calc(100vw-2.5rem)] max-w-xs sm:w-80 sm:max-w-none p-4 rounded-3xl border border-[var(--border-strong)] bg-[var(--bg-surface-solid)]/98 backdrop-blur-2xl shadow-2xl space-y-3 animate-in fade-in zoom-in-95 duration-150 ${
+            align === 'right' ? 'right-0' : 'left-0'
+          } ${resolvedDropUp ? 'bottom-full mb-2' : 'top-full mt-2'}`}
         >
           {/* Calendar Header with Nav Controls */}
           <div className="flex items-center justify-between pb-2 border-b border-[var(--border-subtle)]">
@@ -248,44 +290,53 @@ export function CustomDatePicker({
                 type="button"
                 onClick={handlePrevMonth}
                 className="p-1.5 rounded-lg border border-[var(--border-subtle)] bg-[var(--bg-subtle)] hover:bg-[var(--bg-subtle-hover)] text-[var(--text-main)] cursor-pointer transition-all"
+                title={language === 'ja' ? '前月' : 'Previous month'}
               >
-                <ChevronLeft className="w-3.5 h-3.5" />
+                <ChevronLeft className="w-4 h-4" />
               </button>
               <button
                 type="button"
                 onClick={handleNextMonth}
                 className="p-1.5 rounded-lg border border-[var(--border-subtle)] bg-[var(--bg-subtle)] hover:bg-[var(--bg-subtle-hover)] text-[var(--text-main)] cursor-pointer transition-all"
+                title={language === 'ja' ? '次月' : 'Next month'}
               >
-                <ChevronRight className="w-3.5 h-3.5" />
+                <ChevronRight className="w-4 h-4" />
               </button>
             </div>
           </div>
 
-          {/* Weekday Names */}
+          {/* Weekday Names Header */}
           <div className="grid grid-cols-7 gap-1 text-center">
-            {weekdays.map((wd, i) => (
+            {weekdays.map((day, idx) => (
               <span
-                key={wd}
-                className={`text-[10px] font-bold uppercase tracking-wider ${
-                  i === 0 ? 'text-[var(--accent-rose)]' : 'text-[var(--text-muted)]'
+                key={day}
+                className={`text-[11px] font-semibold ${
+                  idx === 0
+                    ? 'text-rose-400'
+                    : idx === 6
+                    ? 'text-sky-400'
+                    : 'text-[var(--text-muted)]'
                 }`}
               >
-                {wd}
+                {day}
               </span>
             ))}
           </div>
 
-          {/* Day Grid Cells */}
-          <div className="grid grid-cols-7 gap-1 text-center">
-            {/* Blank leading days from previous month */}
-            {Array.from({ length: firstDayIndex }).map((_, i) => (
-              <span
-                key={`prev-${i}`}
-                className="h-8 flex items-center justify-center text-[11px] text-[var(--text-faint)] opacity-40 font-mono"
-              >
-                {prevMonthDays - firstDayIndex + i + 1}
-              </span>
-            ))}
+          {/* Calendar Days Matrix */}
+          <div className="grid grid-cols-7 gap-1">
+            {/* Days from previous month */}
+            {Array.from({ length: firstDayIndex }).map((_, i) => {
+              const dayNum = prevMonthDays - firstDayIndex + i + 1;
+              return (
+                <div
+                  key={`prev-${i}`}
+                  className="h-8 w-8 sm:h-9 sm:w-9 mx-auto flex items-center justify-center text-xs text-[var(--text-faint)] tabular-numbers opacity-30 select-none font-mono"
+                >
+                  {dayNum}
+                </div>
+              );
+            })}
 
             {/* Days of current month */}
             {Array.from({ length: daysInMonth }).map((_, i) => {
@@ -317,13 +368,24 @@ export function CustomDatePicker({
 
           {/* Quick Footer Shortcuts */}
           <div className="flex items-center justify-between pt-2 border-t border-[var(--border-subtle)] text-[11px]">
-            <button
-              type="button"
-              onClick={handleSetYesterday}
-              className="text-[var(--text-muted)] hover:text-[var(--text-main)] font-medium cursor-pointer transition-all"
-            >
-              {language === 'ja' ? '昨日' : 'Yesterday'}
-            </button>
+            <div className="flex items-center space-x-2">
+              <button
+                type="button"
+                onClick={handleSetYesterday}
+                className="text-[var(--text-muted)] hover:text-[var(--text-main)] font-medium cursor-pointer transition-all"
+              >
+                {language === 'ja' ? '昨日' : 'Yesterday'}
+              </button>
+              {allowClear && value && (
+                <button
+                  type="button"
+                  onClick={handleClear}
+                  className="text-rose-400 hover:text-rose-300 font-medium cursor-pointer transition-all"
+                >
+                  {language === 'ja' ? 'クリア' : 'Clear'}
+                </button>
+              )}
+            </div>
             <button
               type="button"
               onClick={handleSetToday}
