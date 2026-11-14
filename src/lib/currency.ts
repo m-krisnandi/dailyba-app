@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { Currency } from '@/types/finance';
+import { evaluateInlineMath } from './mathParser';
 
 export interface ExchangeRates {
   JPY: number;
@@ -232,7 +233,7 @@ export function formatNumberWithCommas(raw: string | number | null | undefined):
   const decPart = parts.length > 1 ? parts.slice(1).join('') : null;
 
   // Format integer portion with commas
-  const formattedInt = intPart.replace(/\B(?=(\d{3})+(?!\d))/g, ',');
+  const formattedInt = intPart.replace(/\B(?=(\d{3})+(?!\\d))/g, ',');
   const prefix = isNegative ? '-' : '';
 
   if (decPart !== null) {
@@ -242,12 +243,34 @@ export function formatNumberWithCommas(raw: string | number | null | undefined):
 }
 
 /**
- * Extracts a clean numeric float from a comma-formatted string (e.g. "4,000" -> 4000)
+ * Extracts a clean numeric float from a comma-formatted string, shorthand or inline math expression
+ * (e.g. "4,000" -> 4000, "100.000" -> 100000, "10000+20000" -> 30000, "50k" -> 50000)
  */
 export function parseRawNumber(formatted: string | number | null | undefined): number {
   if (typeof formatted === 'number') return Number.isFinite(formatted) ? formatted : 0;
   if (!formatted) return 0;
-  const cleaned = String(formatted).replace(/,/g, '').trim();
+  
+  const str = String(formatted).trim();
+  if (!str) return 0;
+
+  // If arithmetic operators or shortcuts (k, rb) are present, evaluate dynamically
+  if (/[+\-*/xX×÷]|(?:k|rb)/i.test(str)) {
+    const evalRes = evaluateInlineMath(str);
+    if (evalRes.isValid && evalRes.result !== null) {
+      return evalRes.result;
+    }
+  }
+
+  // Convert full-width numbers to ASCII and strip commas
+  let cleaned = str
+    .replace(/[０-９]/g, (c) => String.fromCharCode(c.charCodeAt(0) - 0xfee0))
+    .replace(/,/g, '');
+
+  // Convert Indonesian/European thousand-separator dots (e.g. "100.000" -> "100000", "1.250.000" -> "1250000")
+  while (/(\d+)\.(\d{3})(?!\d)/.test(cleaned)) {
+    cleaned = cleaned.replace(/(\d+)\.(\d{3})(?!\d)/g, '$1$2');
+  }
+
   const num = parseFloat(cleaned);
   return isNaN(num) ? 0 : num;
 }

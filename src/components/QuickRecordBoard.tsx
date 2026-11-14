@@ -22,6 +22,7 @@ import { ConfirmDeleteModal } from '@/components/ConfirmDeleteModal';
 import { ReceiptScannerModal } from '@/components/ReceiptScannerModal';
 import { CustomSelect, CustomSelectOption } from '@/components/CustomSelect';
 import { FormattedAmountInput } from '@/components/FormattedAmountInput';
+import { evaluateInlineMath } from '@/lib/mathParser';
 import { parseSmartText } from '@/lib/parser';
 import { useBodyScrollLock } from '@/lib/useBodyScrollLock';
 import { getTodayLocalDate } from '@/lib/dateUtils';
@@ -37,6 +38,7 @@ import {
 } from '@/lib/constants';
 import {
   Check,
+  Calculator,
   Trash2,
   FileSpreadsheet,
   Sparkles,
@@ -239,6 +241,11 @@ export function QuickRecordBoard({
 
   const [type, setType] = useState<TransactionType>('expense');
   const [amountStr, setAmountStr] = useState('');
+  const [calculationHistory, setCalculationHistory] = useState<{
+    formula: string;
+    result: number;
+    formattedResult: string;
+  } | null>(null);
   const [selectedExpenseCat, setSelectedExpenseCat] = useState<ExpenseCategory>('food_drinks');
   const [selectedIncomeCat, setSelectedIncomeCat] = useState<IncomeCategory>('salary');
   const [source, setSource] = useState<FundingSource>('cash');
@@ -343,13 +350,67 @@ export function QuickRecordBoard({
   }, [currency]);
 
   const handleAddPreset = (val: number) => {
+    const trimmed = amountStr.trim();
+
+    // 1. If empty: set to val
+    if (!trimmed) {
+      setAmountStr(formatNumberWithCommas(val));
+      setCalculationHistory(null);
+      return;
+    }
+
+    // 2. If amount ends with an operator (+, -, *, /, x, etc.), append the formatted preset
+    if (/[+\-*/xX×÷]\s*$/.test(trimmed)) {
+      const endsWithSpace = /\s$/.test(amountStr);
+      const newStr = endsWithSpace
+        ? `${amountStr}${formatNumberWithCommas(val)}`
+        : `${amountStr} ${formatNumberWithCommas(val)}`;
+      setAmountStr(newStr);
+      return;
+    }
+
+    // 3. If amount contains an ongoing arithmetic expression, evaluate it first
+    if (/[+\-*/xX×÷]|(?:k|rb)/i.test(trimmed)) {
+      const evaluated = evaluateInlineMath(trimmed);
+      if (evaluated.isValid && evaluated.result !== null) {
+        const prevRes = evaluated.result;
+        const nextVal = prevRes + val;
+        const formula = `${evaluated.formattedResult || formatNumberWithCommas(prevRes)} + ${formatNumberWithCommas(val)}`;
+        setAmountStr(formatNumberWithCommas(nextVal));
+        setCalculationHistory({
+          formula,
+          result: nextVal,
+          formattedResult: formatNumberWithCommas(nextVal),
+        });
+        return;
+      }
+    }
+
+    // 4. Normal number: add val to current number and record formula history
     const current = parseRawNumber(amountStr);
     const nextVal = current + val;
+    const formula = `${formatNumberWithCommas(current)} + ${formatNumberWithCommas(val)}`;
     setAmountStr(formatNumberWithCommas(nextVal));
+    setCalculationHistory({
+      formula,
+      result: nextVal,
+      formattedResult: formatNumberWithCommas(nextVal),
+    });
+  };
+
+  const handleAppendOperator = (op: '+' | '-' | '*' | '/') => {
+    const trimmed = amountStr.trim();
+    if (!trimmed) return;
+    if (/[+\-*/xX×÷]\s*$/.test(trimmed)) {
+      setAmountStr(trimmed.replace(/[+\-*/xX×÷]\s*$/, `${op} `));
+      return;
+    }
+    setAmountStr(`${trimmed} ${op} `);
   };
 
   const handleClearAmount = () => {
     setAmountStr('');
+    setCalculationHistory(null);
   };
 
   const handleSubmit = (e: React.FormEvent) => {
@@ -986,29 +1047,84 @@ export function QuickRecordBoard({
             <FormattedAmountInput
               value={amountStr}
               onChange={(val) => setAmountStr(val)}
+              currency={currency}
+              onMathEvaluated={(formula, res) => {
+                setCalculationHistory({
+                  formula,
+                  result: res,
+                  formattedResult: formatNumberWithCommas(res),
+                });
+              }}
               placeholder="0"
               className="w-full bg-[var(--bg-subtle)] border border-[var(--border-subtle)] focus:border-[var(--border-strong)] rounded-2xl pl-4 sm:pl-5 pr-36 sm:pr-48 py-3.5 sm:py-4 text-2xl sm:text-4xl font-extrabold tracking-tight text-[var(--text-main)] placeholder-[var(--text-faint)] outline-none tabular-numbers transition-all font-mono"
             />
-            <div className="absolute right-5 top-1/2 -translate-y-1/2 text-sm font-mono font-bold text-[var(--text-muted)] pointer-events-none select-none tracking-wide">
-              {currency}
+          </div>
+
+          {/* Formula Breakdown / History Pill */}
+          {calculationHistory && (
+            <div className="flex items-center justify-between px-3.5 py-2 rounded-xl bg-emerald-500/10 border border-emerald-500/30 text-xs animate-fade-in">
+              <div className="flex items-center space-x-2 text-emerald-400 font-mono font-medium truncate">
+                <Calculator className="w-3.5 h-3.5 shrink-0" />
+                <span className="truncate">
+                  {calculationHistory.formula} = <strong className="font-bold">{currency} {calculationHistory.formattedResult}</strong>
+                </span>
+              </div>
+              <button
+                type="button"
+                onClick={() => {
+                  setAmountStr(calculationHistory.formula);
+                  setCalculationHistory(null);
+                }}
+                className="ml-2 text-xs text-emerald-400/80 hover:text-emerald-300 underline font-sans shrink-0 cursor-pointer"
+                title="Edit the original formula"
+              >
+                {language === 'ja' ? '数式を編集' : 'Edit Formula'}
+              </button>
+            </div>
+          )}
+
+          {/* Quick Increment Chips & Calculator Operators */}
+          <div className="flex flex-wrap items-center justify-between gap-2 pt-1">
+            <div className="flex flex-wrap items-center gap-1.5">
+              <span className="text-xs text-[var(--text-muted)] mr-1 font-mono">
+                {t.record.quickPresets}:
+              </span>
+              {presets.map((val) => (
+                <button
+                  key={val}
+                  type="button"
+                  onClick={() => handleAddPreset(val)}
+                  className="px-2.5 sm:px-3 py-1.5 rounded-xl border border-[var(--border-subtle)] bg-[var(--bg-subtle)] hover:bg-[var(--bg-subtle-hover)] text-xs font-semibold text-[var(--text-main)] tabular-numbers transition-all shadow-xs active:scale-[0.97] cursor-pointer shrink-0"
+                >
+                  +{val.toLocaleString('en-US')}
+                </button>
+              ))}
+            </div>
+
+            {/* Quick Math Operators Toolbar */}
+            <div className="flex items-center gap-1 bg-[var(--bg-subtle)] p-1 rounded-xl border border-[var(--border-subtle)]">
+              {(['+', '-', '*', '/'] as const).map((op) => (
+                <button
+                  key={op}
+                  type="button"
+                  onClick={() => handleAppendOperator(op)}
+                  className="w-7 h-7 flex items-center justify-center rounded-lg hover:bg-[var(--bg-subtle-hover)] text-xs font-bold text-[var(--text-main)] transition-all font-mono active:scale-95 cursor-pointer"
+                  title={`Insert ${op === '*' ? '×' : op === '/' ? '÷' : op}`}
+                >
+                  {op === '*' ? '×' : op === '/' ? '÷' : op}
+                </button>
+              ))}
             </div>
           </div>
 
-          {/* Quick Increment Chips */}
-          <div className="flex flex-wrap items-center gap-2 pt-1">
-            <span className="text-xs text-[var(--text-muted)] mr-1 font-mono">
-              {t.record.quickPresets}:
+          {/* Calculator Helper Tip */}
+          <div className="text-[11px] text-[var(--text-faint)] flex items-center space-x-1 font-sans">
+            <span>💡</span>
+            <span>
+              {language === 'ja'
+                ? '計算式を直接入力できます (例: 15000*3 または 50k+20k)'
+                : 'Supports inline math (e.g. 18000*3, 50k+20k, or 100rb+20rb)'}
             </span>
-            {presets.map((val) => (
-              <button
-                key={val}
-                type="button"
-                onClick={() => handleAddPreset(val)}
-                className="px-2.5 sm:px-3.5 py-1.5 rounded-xl border border-[var(--border-subtle)] bg-[var(--bg-subtle)] hover:bg-[var(--bg-subtle-hover)] text-xs font-semibold text-[var(--text-main)] tabular-numbers transition-all shadow-xs active:scale-[0.97] cursor-pointer shrink-0"
-              >
-                +{val.toLocaleString()}
-              </button>
-            ))}
           </div>
         </div>
 

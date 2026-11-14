@@ -2,9 +2,14 @@
  * Safe inline math expression evaluator for financial amounts
  * Supports: +, -, *, /, x, X, and decimal periods.
  * Strips thousand-separator commas so expressions like "10,000+20000" evaluate to 30,000.
+ * Automatically recognizes Indonesian/European thousand-separator dots (e.g. "100.000 + 20.000" -> 120,000).
+ * Supports standard "k" / "rb" shortcuts (e.g. "50k + 20k" -> 70,000, "100rb * 2" -> 200,000).
  * Examples:
  *   "10,000+20000" -> 30000
+ *   "100.000 + 20.000" -> 120000
  *   "18,000*3" -> 54000
+ *   "50k+20k" -> 70000
+ *   "100rb+20rb" -> 120000
  *   "500+250" -> 750
  *   "12,500/2" -> 6250
  *   "50,000 - 15,000" -> 35000
@@ -24,7 +29,7 @@ export function evaluateInlineMath(input: string): MathEvalResult {
   }
 
   // Normalize: replace 'x' or 'X' with '*', convert Japanese full-width numbers & operators, strip all commas
-  const normalized = input
+  let normalized = input
     .trim()
     .replace(/[０-９]/g, (s) => String.fromCharCode(s.charCodeAt(0) - 0xfee0))
     .replace(/×/g, '*')
@@ -33,6 +38,17 @@ export function evaluateInlineMath(input: string): MathEvalResult {
     .replace(/＋/g, '+')
     .replace(/ー|−/g, '-')
     .replace(/,/g, '');
+
+  // Expand Indonesian & global shorthand suffixes: 'k' / 'K' / 'rb' / 'RB' (e.g. 50k -> 50000, 100rb -> 100000)
+  normalized = normalized.replace(/(\d+(?:\.\d+)?)\s*(?:k|rb)\b/gi, (_, num) => {
+    return String(Math.round(Number(num) * 1000));
+  });
+
+  // Convert thousand-separator dots: if dot is followed by exactly 3 digits (e.g. 100.000 -> 100000, 1.250.000 -> 1250000)
+  // while preserving true decimals like 12.5 or 0.25 (1 or 2 digits)
+  while (/(\d+)\.(\d{3})(?!\d)/.test(normalized)) {
+    normalized = normalized.replace(/(\d+)\.(\d{3})(?!\d)/g, '$1$2');
+  }
 
   // Check if it contains any arithmetic operator
   const hasOperator = /[+\-*/]/.test(normalized);
@@ -121,7 +137,8 @@ export function evaluateInlineMath(input: string): MathEvalResult {
       hasExpression: true,
       rawExpression: input,
       result: rounded,
-      formattedResult: rounded.toLocaleString(),
+      // Format with en-US to guarantee commas as thousand separators across all locales
+      formattedResult: rounded.toLocaleString('en-US', { maximumFractionDigits: 2 }),
       isValid: true,
     };
   } catch {

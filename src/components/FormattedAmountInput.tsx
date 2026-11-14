@@ -11,6 +11,8 @@ export interface FormattedAmountInputProps
   onChange: (formattedValue: string, rawNumber: number) => void;
   allowDecimal?: boolean;
   hasCurrencySuffix?: boolean;
+  currency?: string;
+  onMathEvaluated?: (formula: string, result: number) => void;
 }
 
 export const FormattedAmountInput = forwardRef<HTMLInputElement, FormattedAmountInputProps>(
@@ -20,6 +22,8 @@ export const FormattedAmountInput = forwardRef<HTMLInputElement, FormattedAmount
       onChange,
       allowDecimal = true,
       hasCurrencySuffix = true,
+      currency,
+      onMathEvaluated,
       className,
       placeholder = '0',
       onKeyDown,
@@ -33,28 +37,32 @@ export const FormattedAmountInput = forwardRef<HTMLInputElement, FormattedAmount
 
     const displayValue = String(value ?? '');
 
-    // Evaluate inline math if operators (+, -, *, /, x, X) are detected
+    // Evaluate inline math if operators (+, -, *, /, x, X) or shorthand (k, rb) are detected
     const mathEval = useMemo(() => {
-      if (!displayValue || !/[+\-*/xX×÷]/.test(displayValue)) {
+      if (!displayValue || !(/[-+*/xX×÷]|(?:k|rb)/i.test(displayValue))) {
         return null;
       }
       return evaluateInlineMath(displayValue);
     }, [displayValue]);
 
-    const applyMathResult = (res: number) => {
+    const applyMathResult = (res: number, originalExpr?: string) => {
       const formatted = formatNumberWithCommas(String(res));
       onChange(formatted, res);
+      const expr = originalExpr || (mathEval ? mathEval.rawExpression : '');
+      if (expr) {
+        onMathEvaluated?.(expr, res);
+      }
     };
 
     const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
       const input = e.target;
       const currentVal = input.value;
 
-      // If typing math operators, preserve them
-      const hasMathOp = /[+\-*/xX×÷]/.test(currentVal);
+      // If typing math operators or shorthand suffixes, preserve them
+      const hasMathOp = /[-+*/xX×÷]|(?:k|rb)/i.test(currentVal);
       if (hasMathOp) {
-        // Keep digits, dots, commas, spaces, and operators
-        const sanitized = currentVal.replace(/[^0-9.,+\-*/xX×÷\s]/g, '');
+        // Keep digits, dots, commas, spaces, k, rb, and operators
+        const sanitized = currentVal.replace(/[^0-9.,+*/xX×÷\skKRrbB-]/gi, '');
         const evaluated = evaluateInlineMath(sanitized);
         const rawNum = evaluated.isValid && evaluated.result !== null ? evaluated.result : 0;
         onChange(sanitized, rawNum);
@@ -120,12 +128,12 @@ export const FormattedAmountInput = forwardRef<HTMLInputElement, FormattedAmount
       // If user presses Enter or '=', resolve math expression immediately
       if ((e.key === 'Enter' || e.key === '=') && mathEval && mathEval.isValid && mathEval.result !== null) {
         e.preventDefault();
-        applyMathResult(mathEval.result);
+        applyMathResult(mathEval.result, mathEval.rawExpression);
         return;
       }
 
       // Special ergonomic handling for Backspace directly after a comma:
-      if (e.key === 'Backspace' && !/[+\-*/xX×÷]/.test(displayValue)) {
+      if (e.key === 'Backspace' && !(/[-+*/xX×÷]|(?:k|rb)/i.test(displayValue))) {
         const input = internalRef.current;
         if (!input) return;
 
@@ -170,7 +178,7 @@ export const FormattedAmountInput = forwardRef<HTMLInputElement, FormattedAmount
       onBlur?.(e);
       // Auto-evaluate any pending math expression on blur
       if (mathEval && mathEval.isValid && mathEval.result !== null) {
-        applyMathResult(mathEval.result);
+        applyMathResult(mathEval.result, mathEval.rawExpression);
       }
     };
 
@@ -188,23 +196,28 @@ export const FormattedAmountInput = forwardRef<HTMLInputElement, FormattedAmount
           className={className}
           {...rest}
         />
-        {/* Math Calculation Preview Pill - positioned neatly to the left of the currency badge */}
-        {mathEval && mathEval.isValid && mathEval.result !== null && (
-          <button
-            type="button"
-            onMouseDown={(e) => {
-              e.preventDefault();
-              applyMathResult(mathEval.result!);
-            }}
-            className={`absolute ${
-              hasCurrencySuffix ? 'right-16 sm:right-20' : 'right-3'
-            } top-1/2 -translate-y-1/2 z-20 flex items-center space-x-1.5 px-2.5 py-1 rounded-xl bg-emerald-500/20 hover:bg-emerald-500/30 border border-emerald-500/40 text-emerald-400 font-mono text-xs font-bold shadow-md transition-all cursor-pointer animate-fade-in`}
-            title="Click or press Enter to calculate"
-          >
-            <Calculator className="w-3.5 h-3.5 text-emerald-400 shrink-0" />
-            <span>= {mathEval.formattedResult}</span>
-          </button>
-        )}
+        {/* Right side controls: Math Preview Pill + Currency Code grouped seamlessly in flex */}
+        <div className="absolute right-3.5 sm:right-4 top-1/2 -translate-y-1/2 flex items-center gap-2 pointer-events-auto">
+          {mathEval && mathEval.isValid && mathEval.result !== null && (
+            <button
+              type="button"
+              onMouseDown={(e) => {
+                e.preventDefault();
+                applyMathResult(mathEval.result!, mathEval.rawExpression);
+              }}
+              className="flex items-center space-x-1.5 px-2.5 py-1 rounded-xl bg-emerald-500/20 hover:bg-emerald-500/30 border border-emerald-500/40 text-emerald-400 font-mono text-xs font-bold shadow-md transition-all cursor-pointer animate-fade-in shrink-0"
+              title="Click or press Enter to calculate"
+            >
+              <Calculator className="w-3.5 h-3.5 text-emerald-400 shrink-0" />
+              <span>= {mathEval.formattedResult}</span>
+            </button>
+          )}
+          {currency && (
+            <span className="text-sm font-mono font-bold text-[var(--text-muted)] pointer-events-none select-none tracking-wide shrink-0">
+              {currency}
+            </span>
+          )}
+        </div>
       </div>
     );
   }
