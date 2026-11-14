@@ -2,7 +2,7 @@
 
 import React from 'react';
 import { Currency, ExpenseCategory, FundingSource, Language, RecurringBill } from '@/types/finance';
-import { formatCurrency, translations } from '@/lib/i18n';
+import { formatCurrency } from '@/lib/i18n';
 import { useBodyScrollLock } from '@/lib/useBodyScrollLock';
 import {
   Tv,
@@ -139,7 +139,6 @@ export function SubscriptionPresetsModal({
   onSelectPreset,
 }: SubscriptionPresetsModalProps) {
   useBodyScrollLock(isOpen);
-  const t = translations[language];
 
   if (!isOpen) return null;
 

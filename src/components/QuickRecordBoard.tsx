@@ -774,7 +774,7 @@ export function QuickRecordBoard({
     });
 
     return sortTransactions(list, txSortBy, currency, rates);
-  }, [transactions, txFilterType, txFilterSource, txSearchQuery, txSortBy, currency, rates, t]);
+  }, [transactions, txFilterType, txFilterSource, txSearchQuery, txSortBy, currency, rates, t, txDateFrom, txDateTo, txCategoryFilter, txMinAmount, txMaxAmount]);
 
   const totalPages = Math.max(1, Math.ceil(filteredTransactions.length / TX_PAGE_SIZE));
   const currentPage = Math.min(txCurrentPage, totalPages);

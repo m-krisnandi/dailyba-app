@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useRef, useEffect } from 'react';
-import { Clock, Check, X, ChevronDown } from 'lucide-react';
+import { Clock, Check, ChevronDown } from 'lucide-react';
 import { Language } from '@/types/finance';
 
 interface CustomTimePickerProps {

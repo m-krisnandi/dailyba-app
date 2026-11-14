@@ -5,7 +5,6 @@ import { Currency, ExpenseCategory, Language, MonthlyBudgetPlan, Transaction, Tr
 import { formatCurrency, translations } from '@/lib/i18n';
 import { EXPENSE_CATEGORY_ICONS, getCategoryBadgeStyle } from '@/lib/constants';
 import { getMonthDateRange, isDateInMonthCycle, getTodayLocalDate } from '@/lib/dateUtils';
-import { checkAndTriggerBudgetAlert } from '@/lib/localNotifications';
 import { AddTransactionModal } from '@/components/AddTransactionModal';
 import { ReceiptScannerModal } from '@/components/ReceiptScannerModal';
 import { useBodyScrollLock } from '@/lib/useBodyScrollLock';
