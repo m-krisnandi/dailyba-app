@@ -63,6 +63,8 @@ export default function Home() {
     clearAllData,
     importData,
     setDailyReminder,
+    setAutoBackupFrequency,
+    updateLastAutoBackupAt,
   } = useFinanceStore();
 
   const {
@@ -261,6 +263,30 @@ export default function Home() {
     pushStateToCloud(state);
   }, [state, isHydrated, isAuthenticated, pushStateToCloud]);
 
+  // Scheduled Cloud & Encrypted Snapshot Auto-Backup
+  useEffect(() => {
+    if (!isHydrated) return;
+    const freq = state.autoBackupFrequency || 'daily';
+    if (freq === 'off') return;
+
+    const now = Date.now();
+    const lastBackupTime = state.lastAutoBackupAt ? new Date(state.lastAutoBackupAt).getTime() : 0;
+    const intervalMs = freq === 'weekly' ? 7 * 24 * 60 * 60 * 1000 : 24 * 60 * 60 * 1000;
+
+    if (now - lastBackupTime >= intervalMs) {
+      const nowIso = new Date().toISOString();
+      updateLastAutoBackupAt(nowIso);
+
+      if (isAuthenticated) {
+        pushStateToCloud(state);
+      }
+
+      try {
+        localStorage.setItem(`dailyba_auto_snapshot_${nowIso.slice(0, 10)}`, JSON.stringify(state));
+      } catch {}
+    }
+  }, [isHydrated, state.autoBackupFrequency, state.lastAutoBackupAt, isAuthenticated, pushStateToCloud, updateLastAutoBackupAt, state]);
+
   const handleManualSync = async () => {
     if (!isAuthenticated) {
       setIsAuthModalOpen(true);
@@ -360,6 +386,7 @@ export default function Home() {
             transactions={state.transactions}
             hiddenCategories={state.hiddenCategories || []}
             recurringBills={state.recurringBills}
+            dailySpendTarget={state.dailySpendTarget}
             pendingEmailSyncCount={pendingEmailSyncCount}
             onOpenEmailSync={() => setIsEmailSyncModalOpen(true)}
             onAddTransaction={addTransaction}
@@ -467,6 +494,8 @@ export default function Home() {
         onImportData={importData}
         onClearAll={clearAllData}
         onToggleReminder={setDailyReminder}
+        onSetAutoBackupFrequency={setAutoBackupFrequency}
+        onManualSync={handleManualSync}
       />
 
       {/* Cloud Authentication & Sync Modal */}

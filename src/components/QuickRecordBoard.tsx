@@ -25,6 +25,8 @@ import { FormattedAmountInput } from '@/components/FormattedAmountInput';
 import { parseSmartText } from '@/lib/parser';
 import { useBodyScrollLock } from '@/lib/useBodyScrollLock';
 import { getTodayLocalDate } from '@/lib/dateUtils';
+import { SubscriptionPresetsModal } from '@/components/SubscriptionPresetsModal';
+import { checkAndTriggerBudgetAlert } from '@/lib/localNotifications';
 import {
   EXPENSE_CATEGORY_ICONS,
   INCOME_CATEGORY_ICONS,
@@ -69,6 +71,7 @@ interface QuickRecordBoardProps {
   onUpdateRecurringBill?: (bill: RecurringBill) => void;
   onDeleteRecurringBill?: (id: string) => void;
   initialScanOpen?: boolean;
+  dailySpendTarget?: number;
   pendingEmailSyncCount?: number;
   onOpenEmailSync?: () => void;
 }
@@ -110,6 +113,7 @@ export function QuickRecordBoard({
   onAddRecurringBill,
   onUpdateRecurringBill,
   onDeleteRecurringBill,
+  dailySpendTarget,
   initialScanOpen = false,
 }: QuickRecordBoardProps) {
   const t = translations[language];
@@ -241,6 +245,13 @@ export function QuickRecordBoard({
   const [txFilterSource, setTxFilterSource] = useState<'all' | FundingSource>('all');
   const [txSortBy, setTxSortBy] = useState<TransactionSortOption>('date-desc');
   const [txCurrentPage, setTxCurrentPage] = useState(1);
+  const [isPresetModalOpen, setIsPresetModalOpen] = useState(false);
+  const [isAdvancedFilterOpen, setIsAdvancedFilterOpen] = useState(false);
+  const [txDateFrom, setTxDateFrom] = useState('');
+  const [txDateTo, setTxDateTo] = useState('');
+  const [txMinAmount, setTxMinAmount] = useState('');
+  const [txMaxAmount, setTxMaxAmount] = useState('');
+  const [txCategoryFilter, setTxCategoryFilter] = useState('all');
   const TX_PAGE_SIZE = 10;
 
   useEffect(() => {
@@ -248,6 +259,25 @@ export function QuickRecordBoard({
     setDate(today);
     setCurrentMonthPrefix(today.slice(0, 7));
   }, []);
+
+  const triggerBudgetCheckIfExpense = (addedAmount: number, addedCurrency: Currency, addedDate?: string) => {
+    const targetDate = addedDate || date || getTodayLocalDate();
+    const today = getTodayLocalDate();
+    if (targetDate !== today || !dailySpendTarget || dailySpendTarget <= 0) return;
+
+    const currentTodaySpent = transactions
+      .filter((tx) => tx.type === 'expense' && tx.date === today)
+      .reduce((sum, tx) => sum + convertCurrency(tx.amount, tx.currency, currency, rates), 0);
+    const newlyAddedInCurr = convertCurrency(addedAmount, addedCurrency, currency, rates);
+    const totalAfter = currentTodaySpent + newlyAddedInCurr;
+
+    checkAndTriggerBudgetAlert({
+      dailySpent: totalAfter,
+      dailyBudget: dailySpendTarget,
+      currency,
+      language,
+    });
+  };
 
   // Ensure selected category is always one of the visible ones
   useEffect(() => {
@@ -304,6 +334,9 @@ export function QuickRecordBoard({
       date: date || getTodayLocalDate(),
       note: note.trim() || undefined,
     });
+    if (type === 'expense') {
+      triggerBudgetCheckIfExpense(parsedAmount, currency, date);
+    }
 
     setAmountStr('');
     setNote('');
@@ -347,6 +380,9 @@ export function QuickRecordBoard({
       date: date || getTodayLocalDate(),
       note: parsed.note,
     });
+    if (parsed.type === 'expense') {
+      triggerBudgetCheckIfExpense(parsed.amount, currency, date);
+    }
 
     setSmartText('');
     const typeLabel = parsed.type === 'expense'
@@ -441,17 +477,19 @@ export function QuickRecordBoard({
   const handleConfirmRecurring = (bill: RecurringBill) => {
     const converted = convertCurrency(bill.defaultAmount, bill.currency, currency, rates);
     const billLabel = bill.name || (bill.titleKey && t.expenseCategories[bill.titleKey as ExpenseCategory]) || bill.category;
+    const txDate = date || getTodayLocalDate();
     onAddTransaction({
       type: 'expense',
       amount: converted,
       category: bill.category,
       source: bill.source,
       currency,
-      date: date || getTodayLocalDate(),
+      date: txDate,
       note: language === "ja" ? `毎月の固定費: ${billLabel}` : `Monthly Fixed: ${billLabel}`,
       recurringBillId: bill.id,
       isRecurring: true,
     });
+    triggerBudgetCheckIfExpense(converted, currency, txDate);
     setStatusMessage(language === "ja" ? `${billLabel} の支払いを記録しました！` : `Paid ${billLabel}!`);
     setTimeout(() => setStatusMessage(null), 2500);
   };
@@ -554,12 +592,52 @@ export function QuickRecordBoard({
     setTimeout(() => setStatusMessage(null), 2500);
   };
 
+  // Monthly fixed commitments KPI metrics
+  const recurringMetrics = useMemo(() => {
+    const activeBills = Array.isArray(recurringBills) ? recurringBills : [];
+    let totalCommitment = 0;
+    let paidCommitment = 0;
+    let paidCount = 0;
+
+    recurringStatus.forEach((bill) => {
+      const billAmountInCurr = convertCurrency(bill.defaultAmount, bill.currency, currency, rates);
+      totalCommitment += billAmountInCurr;
+      if (bill.isPaid) {
+        paidCommitment += billAmountInCurr;
+        paidCount++;
+      }
+    });
+
+    const remainingCommitment = Math.max(0, totalCommitment - paidCommitment);
+    const paidPercent = totalCommitment > 0 ? Math.min(100, Math.round((paidCommitment / totalCommitment) * 100)) : 0;
+
+    return {
+      totalCommitment,
+      paidCommitment,
+      remainingCommitment,
+      paidPercent,
+      paidCount,
+      totalCount: activeBills.length,
+    };
+  }, [recurringBills, recurringStatus, currency, rates]);
+
   // Filter & Search Handlers for Recent Transactions
+  const activeAdvancedCount = useMemo(() => {
+    let count = 0;
+    if (txDateFrom) count++;
+    if (txDateTo) count++;
+    if (txMinAmount) count++;
+    if (txMaxAmount) count++;
+    if (txCategoryFilter !== 'all') count++;
+    return count;
+  }, [txDateFrom, txDateTo, txMinAmount, txMaxAmount, txCategoryFilter]);
+
   const isTxFiltered =
     txSearchQuery.trim() !== '' ||
     txFilterType !== 'all' ||
     txFilterSource !== 'all' ||
-    txSortBy !== 'date-desc';
+    txSortBy !== 'date-desc' ||
+    activeAdvancedCount > 0;
 
   const handleSearchChange = (val: string) => {
     setTxSearchQuery(val);
@@ -585,6 +663,11 @@ export function QuickRecordBoard({
     setTxSearchQuery('');
     setTxFilterType('all');
     setTxFilterSource('all');
+    setTxDateFrom('');
+    setTxDateTo('');
+    setTxMinAmount('');
+    setTxMaxAmount('');
+    setTxCategoryFilter('all');
     setTxSortBy('date-desc');
     setTxCurrentPage(1);
   };
@@ -599,6 +682,28 @@ export function QuickRecordBoard({
       if (txFilterSource !== 'all' && tx.source !== txFilterSource) {
         return false;
       }
+      // Date range filter
+      if (txDateFrom && tx.date < txDateFrom) {
+        return false;
+      }
+      if (txDateTo && tx.date > txDateTo) {
+        return false;
+      }
+      // Category filter
+      if (txCategoryFilter !== 'all' && tx.category !== txCategoryFilter) {
+        return false;
+      }
+      // Amount range filter (calculated in current active currency)
+      if (txMinAmount || txMaxAmount) {
+        const convertedAmount = convertCurrency(tx.amount, tx.currency, currency, rates);
+        if (txMinAmount && convertedAmount < Number(txMinAmount)) {
+          return false;
+        }
+        if (txMaxAmount && convertedAmount > Number(txMaxAmount)) {
+          return false;
+        }
+      }
+
       // Search query
       if (txSearchQuery.trim()) {
         const query = txSearchQuery.toLowerCase().trim();
@@ -1043,21 +1148,102 @@ export function QuickRecordBoard({
               {t.record.recurringBillsDesc}
             </p>
           </div>
-          <button
-            type="button"
-            onClick={handleOpenAddBillModal}
-            className="px-3 py-1.5 rounded-xl bg-[var(--btn-primary-bg)] text-[var(--btn-primary-text)] border border-[var(--btn-primary-border)] shadow-xs text-xs font-bold hover:opacity-90 active:scale-[0.98] transition-all flex items-center space-x-1.5 cursor-pointer shrink-0"
-          >
-            <Plus className="w-3.5 h-3.5" />
-            <span>{t.record.addBill}</span>
-          </button>
+          <div className="flex items-center space-x-2">
+            <button
+              type="button"
+              onClick={() => setIsPresetModalOpen(true)}
+              className="px-3 py-1.5 rounded-xl bg-[var(--bg-subtle)] text-[var(--text-main)] border border-[var(--border-subtle)] hover:bg-[var(--bg-subtle-hover)] text-xs font-bold transition-all flex items-center space-x-1.5 cursor-pointer shrink-0"
+            >
+              <Sparkles className="w-3.5 h-3.5 text-amber-500" />
+              <span>{language === 'ja' ? 'プリセット' : 'Presets'}</span>
+            </button>
+            <button
+              type="button"
+              onClick={handleOpenAddBillModal}
+              className="px-3 py-1.5 rounded-xl bg-[var(--btn-primary-bg)] text-[var(--btn-primary-text)] border border-[var(--btn-primary-border)] shadow-xs text-xs font-bold hover:opacity-90 active:scale-[0.98] transition-all flex items-center space-x-1.5 cursor-pointer shrink-0"
+            >
+              <Plus className="w-3.5 h-3.5" />
+              <span>{t.record.addBill}</span>
+            </button>
+          </div>
         </div>
 
+        {/* Monthly Fixed Obligations Commitment KPI Card */}
+        {recurringStatus.length > 0 && (
+          <div className="p-4 sm:p-5 rounded-2xl border border-[var(--border-subtle)] bg-[var(--bg-subtle)]/70 backdrop-blur-md space-y-3">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+              <div>
+                <span className="text-[10px] font-bold uppercase tracking-wider text-[var(--text-muted)]">
+                  {language === 'ja' ? '今月の固定費・サブスク負担' : 'Monthly Fixed Commitments'}
+                </span>
+                <div className="flex items-baseline space-x-2 mt-0.5">
+                  <span className="text-xl sm:text-2xl font-extrabold text-[var(--text-main)] font-mono tabular-numbers">
+                    {formatCurrency(recurringMetrics.remainingCommitment, currency)}
+                  </span>
+                  <span className="text-xs text-[var(--text-muted)] font-medium">
+                    {recurringMetrics.remainingCommitment === 0
+                      ? (language === 'ja' ? 'すべて支払済' : 'All Settled')
+                      : (language === 'ja' ? '残り未払額' : 'Remaining')}
+                  </span>
+                </div>
+              </div>
+              <div className="flex items-center space-x-2 self-start sm:self-auto">
+                <span className="px-2.5 py-1 rounded-full text-xs font-mono font-bold bg-emerald-500/10 text-emerald-500 border border-emerald-500/20">
+                  {recurringMetrics.paidCount} / {recurringMetrics.totalCount} {language === 'ja' ? '件支払済' : 'Paid'} ({recurringMetrics.paidPercent}%)
+                </span>
+              </div>
+            </div>
+
+            {/* Progress Bar */}
+            <div className="w-full bg-[var(--border-subtle)] h-2 rounded-full overflow-hidden">
+              <div
+                className="bg-[var(--accent-emerald)] h-full transition-all duration-500 rounded-full"
+                style={{ width: `${recurringMetrics.paidPercent}%` }}
+              />
+            </div>
+
+            <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 pt-1 text-xs">
+              <div>
+                <span className="text-[10px] text-[var(--text-muted)] block">
+                  {language === 'ja' ? '月間コミット総額' : 'Total Commitment'}
+                </span>
+                <span className="font-bold text-[var(--text-main)] font-mono">
+                  {formatCurrency(recurringMetrics.totalCommitment, currency)}
+                </span>
+              </div>
+              <div>
+                <span className="text-[10px] text-[var(--text-muted)] block">
+                  {language === 'ja' ? '今月支払済' : 'Paid So Far'}
+                </span>
+                <span className="font-bold text-emerald-500 font-mono">
+                  {formatCurrency(recurringMetrics.paidCommitment, currency)}
+                </span>
+              </div>
+              <div className="col-span-2 sm:col-span-1">
+                <span className="text-[10px] text-[var(--text-muted)] block">
+                  {language === 'ja' ? '未払い残金' : 'Outstanding Remaining'}
+                </span>
+                <span className="font-bold text-amber-500 font-mono">
+                  {formatCurrency(recurringMetrics.remainingCommitment, currency)}
+                </span>
+              </div>
+            </div>
+          </div>
+        )}
+
         {recurringStatus.length === 0 ? (
-          <div className="py-8 text-center border border-dashed border-[var(--border-subtle)] rounded-2xl p-6 bg-[var(--bg-subtle)]">
+          <div className="py-8 text-center border border-dashed border-[var(--border-subtle)] rounded-2xl p-6 bg-[var(--bg-subtle)] space-y-3">
             <p className="text-xs text-[var(--text-muted)]">
               {t.record.noRecurringBills}
             </p>
+            <button
+              type="button"
+              onClick={() => setIsPresetModalOpen(true)}
+              className="inline-flex items-center space-x-1.5 px-3.5 py-2 rounded-xl bg-[var(--bg-surface-solid)] border border-[var(--border-subtle)] text-xs font-bold text-[var(--text-main)] hover:border-emerald-500/50 transition-all cursor-pointer shadow-xs"
+            >
+              <Sparkles className="w-3.5 h-3.5 text-amber-500" />
+              <span>{language === 'ja' ? '人気プリセットから選ぶ (Netflix, Spotify, Wifi...)' : 'Browse Popular Presets (Netflix, Spotify, Wifi...)'}</span>
+            </button>
           </div>
         ) : (
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
@@ -1264,64 +1450,251 @@ export function QuickRecordBoard({
               </div>
             </div>
 
-            {/* Type Filter Pills */}
-            <div className="flex items-center gap-1.5 overflow-x-auto pb-1 scrollbar-none">
+            {/* Type Filter Pills & Advanced Filter Toggle */}
+            <div className="flex items-center justify-between gap-1.5 flex-wrap">
+              <div className="flex items-center gap-1.5 overflow-x-auto pb-1 scrollbar-none flex-1">
+                <button
+                  type="button"
+                  onClick={() => handleFilterTypeChange('all')}
+                  className={`px-3 py-1.5 rounded-lg text-xs font-semibold whitespace-nowrap transition-all cursor-pointer ${
+                    txFilterType === 'all'
+                      ? 'bg-[var(--btn-primary-bg)] text-[var(--btn-primary-text)] border border-[var(--btn-primary-border)] shadow-xs'
+                      : 'bg-[var(--bg-subtle)] text-[var(--text-muted)] hover:text-[var(--text-main)] border border-[var(--border-subtle)]'
+                  }`}
+                >
+                  {t.record.allTypes}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => handleFilterTypeChange('expense')}
+                  className={`px-3 py-1.5 rounded-lg text-xs font-semibold whitespace-nowrap transition-all cursor-pointer ${
+                    txFilterType === 'expense'
+                      ? 'bg-rose-500/20 text-rose-500 border border-rose-500/40 shadow-sm'
+                      : 'bg-[var(--bg-subtle)] text-[var(--text-muted)] hover:text-[var(--text-main)] border border-[var(--border-subtle)]'
+                  }`}
+                >
+                  {t.record.typeExpense}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => handleFilterTypeChange('income')}
+                  className={`px-3 py-1.5 rounded-lg text-xs font-semibold whitespace-nowrap transition-all cursor-pointer ${
+                    txFilterType === 'income'
+                      ? 'bg-emerald-500/20 text-emerald-500 border border-emerald-500/40 shadow-sm'
+                      : 'bg-[var(--bg-subtle)] text-[var(--text-muted)] hover:text-[var(--text-main)] border border-[var(--border-subtle)]'
+                  }`}
+                >
+                  {t.record.typeIncome}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => handleFilterTypeChange('savings')}
+                  className={`px-3 py-1.5 rounded-lg text-xs font-semibold whitespace-nowrap transition-all cursor-pointer ${
+                    txFilterType === 'savings'
+                      ? 'bg-amber-500/20 text-amber-500 border border-amber-500/40 shadow-sm'
+                      : 'bg-[var(--bg-subtle)] text-[var(--text-muted)] hover:text-[var(--text-main)] border border-[var(--border-subtle)]'
+                  }`}
+                >
+                  {t.record.typeSavings}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => handleFilterTypeChange('transfer')}
+                  className={`px-3 py-1.5 rounded-lg text-xs font-semibold whitespace-nowrap transition-all cursor-pointer ${
+                    txFilterType === 'transfer'
+                      ? 'bg-indigo-500/20 text-indigo-400 border border-indigo-500/40 shadow-sm'
+                      : 'bg-[var(--bg-subtle)] text-[var(--text-muted)] hover:text-[var(--text-main)] border border-[var(--border-subtle)]'
+                  }`}
+                >
+                  {t.record.typeTransfer}
+                </button>
+              </div>
+
               <button
                 type="button"
-                onClick={() => handleFilterTypeChange('all')}
-                className={`px-3 py-1.5 rounded-lg text-xs font-semibold whitespace-nowrap transition-all cursor-pointer ${
-                  txFilterType === 'all'
-                    ? 'bg-[var(--btn-primary-bg)] text-[var(--btn-primary-text)] border border-[var(--btn-primary-border)] shadow-xs'
+                onClick={() => setIsAdvancedFilterOpen((prev) => !prev)}
+                className={`px-3 py-1.5 rounded-lg text-xs font-semibold whitespace-nowrap transition-all flex items-center space-x-1.5 cursor-pointer shrink-0 ${
+                  isAdvancedFilterOpen || activeAdvancedCount > 0
+                    ? 'bg-[var(--accent-emerald-soft)] text-[var(--accent-emerald)] border border-[var(--accent-emerald)] shadow-xs'
                     : 'bg-[var(--bg-subtle)] text-[var(--text-muted)] hover:text-[var(--text-main)] border border-[var(--border-subtle)]'
                 }`}
               >
-                {t.record.allTypes}
-              </button>
-              <button
-                type="button"
-                onClick={() => handleFilterTypeChange('expense')}
-                className={`px-3 py-1.5 rounded-lg text-xs font-semibold whitespace-nowrap transition-all cursor-pointer ${
-                  txFilterType === 'expense'
-                    ? 'bg-rose-500/20 text-rose-500 border border-rose-500/40 shadow-sm'
-                    : 'bg-[var(--bg-subtle)] text-[var(--text-muted)] hover:text-[var(--text-main)] border border-[var(--border-subtle)]'
-                }`}
-              >
-                {t.record.typeExpense}
-              </button>
-              <button
-                type="button"
-                onClick={() => handleFilterTypeChange('income')}
-                className={`px-3 py-1.5 rounded-lg text-xs font-semibold whitespace-nowrap transition-all cursor-pointer ${
-                  txFilterType === 'income'
-                    ? 'bg-emerald-500/20 text-emerald-500 border border-emerald-500/40 shadow-sm'
-                    : 'bg-[var(--bg-subtle)] text-[var(--text-muted)] hover:text-[var(--text-main)] border border-[var(--border-subtle)]'
-                }`}
-              >
-                {t.record.typeIncome}
-              </button>
-              <button
-                type="button"
-                onClick={() => handleFilterTypeChange('savings')}
-                className={`px-3 py-1.5 rounded-lg text-xs font-semibold whitespace-nowrap transition-all cursor-pointer ${
-                  txFilterType === 'savings'
-                    ? 'bg-amber-500/20 text-amber-500 border border-amber-500/40 shadow-sm'
-                    : 'bg-[var(--bg-subtle)] text-[var(--text-muted)] hover:text-[var(--text-main)] border border-[var(--border-subtle)]'
-                }`}
-              >
-                {t.record.typeSavings}
-              </button>
-              <button
-                type="button"
-                onClick={() => handleFilterTypeChange('transfer')}
-                className={`px-3 py-1.5 rounded-lg text-xs font-semibold whitespace-nowrap transition-all cursor-pointer ${
-                  txFilterType === 'transfer'
-                    ? 'bg-indigo-500/20 text-indigo-400 border border-indigo-500/40 shadow-sm'
-                    : 'bg-[var(--bg-subtle)] text-[var(--text-muted)] hover:text-[var(--text-main)] border border-[var(--border-subtle)]'
-                }`}
-              >
-                {t.record.typeTransfer}
+                <SlidersHorizontal className="w-3.5 h-3.5" />
+                <span>{language === 'ja' ? '詳細フィルター' : 'Advanced Filters'}</span>
+                {activeAdvancedCount > 0 && (
+                  <span className="w-4 h-4 rounded-full bg-[var(--accent-emerald)] text-white text-[10px] flex items-center justify-center font-mono">
+                    {activeAdvancedCount}
+                  </span>
+                )}
               </button>
             </div>
+
+            {/* Advanced Multi-Filter Panel */}
+            {isAdvancedFilterOpen && (
+              <div className="p-3.5 sm:p-4 rounded-2xl border border-[var(--border-subtle)] bg-[var(--bg-subtle)] space-y-3 animate-fade-in">
+                <div className="flex items-center justify-between pb-1 border-b border-[var(--border-subtle)]">
+                  <span className="text-xs font-bold text-[var(--text-main)] flex items-center space-x-1.5">
+                    <SlidersHorizontal className="w-3.5 h-3.5 text-emerald-500" />
+                    <span>{language === 'ja' ? '詳細検索条件 (日付・金額・カテゴリ)' : 'Advanced Search & Multi-Filter'}</span>
+                  </span>
+                  {activeAdvancedCount > 0 && (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setTxDateFrom('');
+                        setTxDateTo('');
+                        setTxMinAmount('');
+                        setTxMaxAmount('');
+                        setTxCategoryFilter('all');
+                        setTxCurrentPage(1);
+                      }}
+                      className="text-[11px] text-emerald-500 hover:underline font-medium cursor-pointer"
+                    >
+                      {language === 'ja' ? '条件をクリア' : 'Clear Filters'}
+                    </button>
+                  )}
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 text-xs">
+                  {/* Date Range */}
+                  <div className="space-y-1 sm:col-span-1">
+                    <label className="text-[10px] font-bold text-[var(--text-muted)] uppercase tracking-wider block">
+                      {language === 'ja' ? '日付範囲' : 'Date Range'}
+                    </label>
+                    <div className="grid grid-cols-2 gap-1.5">
+                      <input
+                        type="date"
+                        value={txDateFrom}
+                        onChange={(e) => {
+                          setTxDateFrom(e.target.value);
+                          setTxCurrentPage(1);
+                        }}
+                        className="w-full px-2 py-1.5 rounded-xl bg-[var(--bg-surface-solid)] border border-[var(--border-subtle)] text-[var(--text-main)] text-[11px] font-mono focus:outline-none focus:border-emerald-500/50"
+                        title={language === 'ja' ? '開始日' : 'From Date'}
+                      />
+                      <input
+                        type="date"
+                        value={txDateTo}
+                        onChange={(e) => {
+                          setTxDateTo(e.target.value);
+                          setTxCurrentPage(1);
+                        }}
+                        className="w-full px-2 py-1.5 rounded-xl bg-[var(--bg-surface-solid)] border border-[var(--border-subtle)] text-[var(--text-main)] text-[11px] font-mono focus:outline-none focus:border-emerald-500/50"
+                        title={language === 'ja' ? '終了日' : 'To Date'}
+                      />
+                    </div>
+                    {/* Quick Date Pills */}
+                    <div className="flex items-center gap-1 pt-1 flex-wrap">
+                      <button
+                        type="button"
+                        onClick={() => {
+                          const today = getTodayLocalDate();
+                          setTxDateFrom(today);
+                          setTxDateTo(today);
+                          setTxCurrentPage(1);
+                        }}
+                        className="px-2 py-0.5 rounded-md bg-[var(--bg-surface)] hover:bg-[var(--bg-surface-solid)] border border-[var(--border-subtle)] text-[10px] text-[var(--text-muted)] cursor-pointer"
+                      >
+                        {language === 'ja' ? '今日' : 'Today'}
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          const today = getTodayLocalDate();
+                          const d = new Date();
+                          d.setDate(d.getDate() - 7);
+                          const sevenAgo = d.toISOString().split('T')[0];
+                          setTxDateFrom(sevenAgo);
+                          setTxDateTo(today);
+                          setTxCurrentPage(1);
+                        }}
+                        className="px-2 py-0.5 rounded-md bg-[var(--bg-surface)] hover:bg-[var(--bg-surface-solid)] border border-[var(--border-subtle)] text-[10px] text-[var(--text-muted)] cursor-pointer"
+                      >
+                        {language === 'ja' ? '過去7日' : '7 Days'}
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          const today = getTodayLocalDate();
+                          const firstDay = `${today.slice(0, 7)}-01`;
+                          setTxDateFrom(firstDay);
+                          setTxDateTo(today);
+                          setTxCurrentPage(1);
+                        }}
+                        className="px-2 py-0.5 rounded-md bg-[var(--bg-surface)] hover:bg-[var(--bg-surface-solid)] border border-[var(--border-subtle)] text-[10px] text-[var(--text-muted)] cursor-pointer"
+                      >
+                        {language === 'ja' ? '今月' : 'This Month'}
+                      </button>
+                    </div>
+                  </div>
+
+                  {/* Amount Range */}
+                  <div className="space-y-1 sm:col-span-1">
+                    <label className="text-[10px] font-bold text-[var(--text-muted)] uppercase tracking-wider block">
+                      {language === 'ja' ? `金額範囲 (${currency})` : `Amount Range (${currency})`}
+                    </label>
+                    <div className="grid grid-cols-2 gap-1.5">
+                      <input
+                        type="number"
+                        min="0"
+                        placeholder={language === 'ja' ? '最小金額' : 'Min Amount'}
+                        value={txMinAmount}
+                        onChange={(e) => {
+                          setTxMinAmount(e.target.value);
+                          setTxCurrentPage(1);
+                        }}
+                        className="w-full px-2 py-1.5 rounded-xl bg-[var(--bg-surface-solid)] border border-[var(--border-subtle)] text-[var(--text-main)] text-[11px] font-mono focus:outline-none focus:border-emerald-500/50"
+                      />
+                      <input
+                        type="number"
+                        min="0"
+                        placeholder={language === 'ja' ? '最大金額' : 'Max Amount'}
+                        value={txMaxAmount}
+                        onChange={(e) => {
+                          setTxMaxAmount(e.target.value);
+                          setTxCurrentPage(1);
+                        }}
+                        className="w-full px-2 py-1.5 rounded-xl bg-[var(--bg-surface-solid)] border border-[var(--border-subtle)] text-[var(--text-main)] text-[11px] font-mono focus:outline-none focus:border-emerald-500/50"
+                      />
+                    </div>
+                    <p className="text-[10px] text-[var(--text-muted)] pt-0.5">
+                      {language === 'ja' ? '※現在の表示通貨に換算して判定' : 'Evaluated in active currency'}
+                    </p>
+                  </div>
+
+                  {/* Category Filter */}
+                  <div className="space-y-1 sm:col-span-1">
+                    <label className="text-[10px] font-bold text-[var(--text-muted)] uppercase tracking-wider block">
+                      {language === 'ja' ? 'カテゴリ指定' : 'Category'}
+                    </label>
+                    <select
+                      value={txCategoryFilter}
+                      onChange={(e) => {
+                        setTxCategoryFilter(e.target.value);
+                        setTxCurrentPage(1);
+                      }}
+                      className="w-full px-2.5 py-1.5 rounded-xl bg-[var(--bg-surface-solid)] border border-[var(--border-subtle)] text-[var(--text-main)] text-xs focus:outline-none focus:border-emerald-500/50"
+                    >
+                      <option value="all">{language === 'ja' ? 'すべてのカテゴリ' : 'All Categories'}</option>
+                      <optgroup label={language === 'ja' ? '支出カテゴリ' : 'Expense Categories'}>
+                        {ALL_EXPENSE_CATEGORIES.map((cat) => (
+                          <option key={cat} value={cat}>
+                            {t.expenseCategories[cat] || cat}
+                          </option>
+                        ))}
+                      </optgroup>
+                      <optgroup label={language === 'ja' ? '収入カテゴリ' : 'Income Categories'}>
+                        {ALL_INCOME_CATEGORIES.map((cat) => (
+                          <option key={cat} value={cat}>
+                            {t.incomeCategories[cat] || cat}
+                          </option>
+                        ))}
+                      </optgroup>
+                    </select>
+                  </div>
+                </div>
+              </div>
+            )}
           </div>
         )}
 
@@ -1831,6 +2204,25 @@ export function QuickRecordBoard({
         language={language}
         currency={currency}
         onAddTransaction={onAddTransaction}
+      />
+
+      {/* Subscription Presets Modal */}
+      <SubscriptionPresetsModal
+        isOpen={isPresetModalOpen}
+        onClose={() => setIsPresetModalOpen(false)}
+        language={language}
+        currency={currency}
+        onSelectPreset={(preset) => {
+          if (onAddRecurringBill) {
+            onAddRecurringBill(preset);
+            setStatusMessage(
+              language === 'ja'
+                ? `${preset.name} を固定費に追加しました！`
+                : `Added ${preset.name} to Recurring Bills!`
+            );
+            setTimeout(() => setStatusMessage(null), 2500);
+          }
+        }}
       />
 
       {/* Confirm Delete Recurring Bill Modal */}

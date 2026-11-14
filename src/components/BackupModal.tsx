@@ -15,6 +15,8 @@ import {
   FileSpreadsheet,
   Check,
   Bell,
+  Cloud,
+  RefreshCw,
 } from 'lucide-react';
 import { scheduleDailyReminder } from '@/lib/localNotifications';
 
@@ -27,6 +29,8 @@ interface BackupModalProps {
   onResetSample?: () => void;
   onClearAll: () => void;
   onToggleReminder?: (enabled: boolean, time?: string) => void;
+  onSetAutoBackupFrequency?: (freq: 'off' | 'daily' | 'weekly') => void;
+  onManualSync?: () => Promise<void>;
 }
 
 export function BackupModal({
@@ -37,12 +41,15 @@ export function BackupModal({
   onImportData,
   onClearAll,
   onToggleReminder,
+  onSetAutoBackupFrequency,
+  onManualSync,
 }: BackupModalProps) {
   useBodyScrollLock(isOpen);
 
   const t = translations[language];
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [feedback, setFeedback] = useState<string | null>(null);
+  const [isSyncing, setIsSyncing] = useState(false);
   const [isConfirmClearOpen, setIsConfirmClearOpen] = useState(false);
   const [isLegalModalOpen, setIsLegalModalOpen] = useState(false);
   const [reminderEnabled, setReminderEnabled] = useState(Boolean(state.dailyReminderEnabled));
@@ -193,6 +200,92 @@ export function BackupModal({
                 <span>{language === "ja" ? "CSVレポート出力" : "Export CSV"}</span>
               </button>
             </div>
+          </div>
+
+          {/* Scheduled Cloud Auto-Backup */}
+          <div className="p-3.5 rounded-2xl border border-[var(--border-subtle)] bg-[var(--bg-subtle)] space-y-3">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center space-x-2.5 min-w-0 pr-2">
+                <div className="w-7 h-7 rounded-lg bg-indigo-500/10 border border-indigo-500/20 text-indigo-400 flex items-center justify-center shrink-0">
+                  <Cloud className="w-3.5 h-3.5" />
+                </div>
+                <div className="min-w-0">
+                  <p className="text-xs font-bold text-[var(--text-main)] truncate">
+                    {language === 'ja' ? '自動バックアップ・暗号化同期' : 'Scheduled Cloud Auto-Backup'}
+                  </p>
+                  <p className="text-[10px] text-[var(--text-muted)] line-clamp-1">
+                    {language === 'ja'
+                      ? '定期的に暗号化スナップショットを作成・同期します'
+                      : 'Automatically creates encrypted snapshots on schedule'}
+                  </p>
+                </div>
+              </div>
+
+              {onManualSync && (
+                <button
+                  type="button"
+                  disabled={isSyncing}
+                  onClick={async () => {
+                    setIsSyncing(true);
+                    try {
+                      await onManualSync();
+                      setFeedback(language === 'ja' ? 'バックアップを完了しました！' : 'Encrypted backup synchronized!');
+                    } catch {
+                      setFeedback(language === 'ja' ? 'バックアップ同期に失敗しました' : 'Backup synchronization failed');
+                    } finally {
+                      setIsSyncing(false);
+                      setTimeout(() => setFeedback(null), 2500);
+                    }
+                  }}
+                  className="px-2.5 py-1 rounded-xl bg-[var(--bg-surface-solid)] border border-[var(--border-subtle)] hover:border-emerald-500/50 text-[11px] font-bold text-[var(--text-main)] transition-all flex items-center space-x-1 cursor-pointer shrink-0"
+                >
+                  <RefreshCw className={`w-3 h-3 ${isSyncing ? 'animate-spin text-emerald-500' : ''}`} />
+                  <span>{language === 'ja' ? '今すぐ実行' : 'Sync Now'}</span>
+                </button>
+              )}
+            </div>
+
+            <div className="flex items-center justify-between pt-1 border-t border-[var(--border-subtle)] text-xs">
+              <span className="text-[11px] text-[var(--text-muted)] font-medium">
+                {language === 'ja' ? '同期頻度' : 'Frequency'}
+              </span>
+              <div className="flex items-center gap-1">
+                {(['off', 'daily', 'weekly'] as const).map((freq) => {
+                  const isSelected = (state.autoBackupFrequency || 'daily') === freq;
+                  const label =
+                    freq === 'off'
+                      ? (language === 'ja' ? '無効' : 'Off')
+                      : freq === 'daily'
+                      ? (language === 'ja' ? '毎日' : 'Daily')
+                      : (language === 'ja' ? '毎週' : 'Weekly');
+                  return (
+                    <button
+                      key={freq}
+                      type="button"
+                      onClick={() => {
+                        if (onSetAutoBackupFrequency) {
+                          onSetAutoBackupFrequency(freq);
+                        }
+                      }}
+                      className={`px-2.5 py-1 rounded-lg text-[11px] font-semibold transition-all cursor-pointer ${
+                        isSelected
+                          ? 'bg-[var(--btn-primary-bg)] text-[var(--btn-primary-text)] border border-[var(--btn-primary-border)] shadow-xs'
+                          : 'bg-[var(--bg-surface-solid)] border border-[var(--border-subtle)] text-[var(--text-muted)] hover:text-[var(--text-main)]'
+                      }`}
+                    >
+                      {label}
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+
+            {state.lastAutoBackupAt && (
+              <div className="text-[10px] text-[var(--text-muted)] flex items-center justify-between pt-0.5">
+                <span>{language === 'ja' ? '前回のバックアップ' : 'Last backup'}</span>
+                <span className="font-mono">{state.lastAutoBackupAt.slice(0, 16).replace('T', ' ')}</span>
+              </div>
+            )}
           </div>
 
           {/* Daily Reminder Setting */}

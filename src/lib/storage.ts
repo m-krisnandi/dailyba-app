@@ -20,6 +20,8 @@ export const DEFAULT_STATE: FinanceState = {
   monthStartDay: 1,
   dailyReminderEnabled: false,
   dailyReminderTime: '20:00',
+  autoBackupFrequency: 'daily',
+  lastAutoBackupAt: undefined,
 };
 
 // Known mock identifiers to purge permanently
@@ -68,6 +70,11 @@ export function getStoredState(): FinanceState {
         recurringBills: cleaned.recurringBills || [],
         monthlyBudgets: parsed.monthlyBudgets && typeof parsed.monthlyBudgets === 'object' ? parsed.monthlyBudgets : {},
         monthStartDay: typeof parsed.monthStartDay === 'number' && parsed.monthStartDay >= 1 && parsed.monthStartDay <= 31 ? parsed.monthStartDay : 1,
+        dailyReminderEnabled: typeof parsed.dailyReminderEnabled === 'boolean' ? parsed.dailyReminderEnabled : false,
+        dailyReminderTime: typeof parsed.dailyReminderTime === 'string' ? parsed.dailyReminderTime : '20:00',
+        autoBackupFrequency: parsed.autoBackupFrequency || 'daily',
+        lastAutoBackupAt: parsed.lastAutoBackupAt,
+        deletedTxIds: Array.isArray(parsed.deletedTxIds) ? parsed.deletedTxIds.slice(0, 500) : [],
       };
     }
   } catch (e) {
@@ -90,15 +97,31 @@ export function saveState(state: FinanceState): void {
 export function useFinanceStore() {
   const [state, setState] = useState<FinanceState>(DEFAULT_STATE);
   const [isHydrated, setIsHydrated] = useState(false);
-  const isHydratedRef = useRef(false);
+  const stateRef = useRef<FinanceState>(DEFAULT_STATE);
 
-  // Load from localStorage on mount and sanitize mock data
   useEffect(() => {
-    const stored = getStoredState();
-    setState(stored);
-    saveState(stored); // Ensure cleaned state is persisted back immediately
+    stateRef.current = state;
+  }, [state]);
+
+  useEffect(() => {
+    const initial = getStoredState();
+    setState(initial);
     setIsHydrated(true);
-    isHydratedRef.current = true;
+
+    const handleStorageChange = (e: StorageEvent) => {
+      if (e.key === STORAGE_KEY && e.newValue) {
+        try {
+          const parsed = JSON.parse(e.newValue);
+          const cleaned = filterOutMockData(parsed) as FinanceState;
+          setState(cleaned);
+        } catch (err) {
+          console.error('Failed to sync storage event:', err);
+        }
+      }
+    };
+
+    window.addEventListener('storage', handleStorageChange);
+    return () => window.removeEventListener('storage', handleStorageChange);
   }, []);
 
   const updateState = useCallback((updater: (prev: FinanceState) => FinanceState) => {
@@ -224,24 +247,18 @@ export function useFinanceStore() {
     });
   }, [updateState]);
 
-  const updateRecurringBill = useCallback((bill: RecurringBill) => {
-    updateState((prev) => {
-      const nextBills = prev.recurringBills.map((b) => (b.id === bill.id ? bill : b));
-      return {
-        ...prev,
-        recurringBills: nextBills,
-      };
-    });
+  const updateRecurringBill = useCallback((updatedBill: RecurringBill) => {
+    updateState((prev) => ({
+      ...prev,
+      recurringBills: prev.recurringBills.map((b) => (b.id === updatedBill.id ? updatedBill : b)),
+    }));
   }, [updateState]);
 
   const deleteRecurringBill = useCallback((id: string) => {
-    updateState((prev) => {
-      const nextBills = prev.recurringBills.filter((b) => b.id !== id);
-      return {
-        ...prev,
-        recurringBills: nextBills,
-      };
-    });
+    updateState((prev) => ({
+      ...prev,
+      recurringBills: prev.recurringBills.filter((b) => b.id !== id),
+    }));
   }, [updateState]);
 
   const setLanguage = useCallback((language: Language) => {
@@ -252,41 +269,41 @@ export function useFinanceStore() {
     updateState((prev) => ({ ...prev, currency }));
   }, [updateState]);
 
-  const setSavingsGoal = useCallback((savingsGoalMonthly: number, goalCurrency?: Currency) => {
+  const setSavingsGoal = useCallback((goal: number, currency?: Currency) => {
     updateState((prev) => ({
       ...prev,
-      savingsGoalMonthly,
-      savingsGoalCurrency: goalCurrency || prev.savingsGoalCurrency || prev.currency,
+      savingsGoalMonthly: goal,
+      ...(currency ? { savingsGoalCurrency: currency } : {}),
     }));
   }, [updateState]);
 
-  const setDailySpendTarget = useCallback((dailySpendTarget: number, targetCurrency?: Currency) => {
+  const setDailySpendTarget = useCallback((target: number, currency?: Currency) => {
     updateState((prev) => ({
       ...prev,
-      dailySpendTarget,
-      dailySpendCurrency: targetCurrency || prev.dailySpendCurrency || prev.currency,
+      dailySpendTarget: target,
+      ...(currency ? { dailySpendCurrency: currency } : {}),
     }));
   }, [updateState]);
 
-  const updateMonthlyBudget = useCallback((month: string, plan: MonthlyBudgetPlan) => {
+  const updateMonthlyBudget = useCallback((monthKey: string, budget: MonthlyBudgetPlan) => {
     updateState((prev) => ({
       ...prev,
       monthlyBudgets: {
         ...(prev.monthlyBudgets || {}),
-        [month]: plan,
+        [monthKey]: budget,
       },
     }));
   }, [updateState]);
 
   const setDailyReminder = useCallback(
     (enabled: boolean, time?: string) => {
-      setState((prev) => ({
+      updateState((prev) => ({
         ...prev,
         dailyReminderEnabled: enabled,
         dailyReminderTime: time || prev.dailyReminderTime || '20:00',
       }));
     },
-    [setState]
+    [updateState]
   );
 
   const updateMonthStartDay = useCallback((day: number) => {
@@ -294,6 +311,20 @@ export function useFinanceStore() {
     updateState((prev) => ({
       ...prev,
       monthStartDay: safeDay,
+    }));
+  }, [updateState]);
+
+  const setAutoBackupFrequency = useCallback((frequency: 'off' | 'daily' | 'weekly') => {
+    updateState((prev) => ({
+      ...prev,
+      autoBackupFrequency: frequency,
+    }));
+  }, [updateState]);
+
+  const updateLastAutoBackupAt = useCallback((timestamp: string) => {
+    updateState((prev) => ({
+      ...prev,
+      lastAutoBackupAt: timestamp,
     }));
   }, [updateState]);
 
@@ -310,6 +341,7 @@ export function useFinanceStore() {
       hiddenCategories: [],
       recurringBills: [],
       monthlyBudgets: {},
+      autoBackupFrequency: 'daily',
     };
     saveState(next);
     setState(next);
@@ -328,6 +360,7 @@ export function useFinanceStore() {
       hiddenCategories: [],
       recurringBills: [],
       monthlyBudgets: {},
+      autoBackupFrequency: 'daily',
     };
     saveState(next);
     setState(next);
@@ -348,6 +381,8 @@ export function useFinanceStore() {
       recurringBills: Array.isArray(cleaned.recurringBills) ? cleaned.recurringBills : (Array.isArray(prev.recurringBills) ? prev.recurringBills : []),
       monthlyBudgets: importedState.monthlyBudgets && typeof importedState.monthlyBudgets === 'object' ? importedState.monthlyBudgets : (prev.monthlyBudgets || {}),
       monthStartDay: typeof importedState.monthStartDay === 'number' ? importedState.monthStartDay : (prev.monthStartDay || 1),
+      autoBackupFrequency: importedState.autoBackupFrequency || prev.autoBackupFrequency || 'daily',
+      lastAutoBackupAt: importedState.lastAutoBackupAt || prev.lastAutoBackupAt,
       deletedTxIds: Array.isArray(importedState.deletedTxIds)
         ? Array.from(new Set([...(importedState.deletedTxIds || []), ...(prev.deletedTxIds || [])])).slice(0, 500)
         : (prev.deletedTxIds || []),
@@ -375,6 +410,8 @@ export function useFinanceStore() {
     updateMonthlyBudget,
     updateMonthStartDay,
     setDailyReminder,
+    setAutoBackupFrequency,
+    updateLastAutoBackupAt,
     resetToSampleData,
     clearAllData,
     importData,

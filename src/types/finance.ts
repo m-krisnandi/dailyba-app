@@ -110,6 +110,8 @@ export interface FinanceState {
   dailyReminderEnabled?: boolean;
   dailyReminderTime?: string; // "HH:MM", default "20:00"
   deletedTxIds?: string[]; // Tombstones for deleted transaction IDs (capped at 500)
+  autoBackupFrequency?: 'off' | 'daily' | 'weekly';
+  lastAutoBackupAt?: string;
 }
 
 export interface PendingImportItem {
