@@ -3,8 +3,16 @@
 import { Transaction, Currency, Language } from '@/types/finance';
 import { convertCurrency, ExchangeRates, formatNumberWithCommas } from './currency';
 import { translations } from './i18n';
+import { Capacitor } from '@capacitor/core';
+import { Filesystem, Directory, Encoding } from '@capacitor/filesystem';
+import { Share } from '@capacitor/share';
+import * as XLSX from 'xlsx';
 
-export function exportMonthlyTransactionsToCSV(
+/**
+ * Export Monthly Transactions to CSV
+ * Supports both Web Browser (Blob download) and Native Mobile (Filesystem + Share)
+ */
+export async function exportMonthlyTransactionsToCSV(
   transactions: Transaction[],
   yearMonth: string, // 'YYYY-MM'
   currency: Currency,
@@ -66,18 +74,47 @@ export function exportMonthlyTransactionsToCSV(
   });
 
   const csvContent = '\uFEFF' + [headers.join(','), ...rows].join('\r\n');
+  const fileName = `dailyba_statement_${yearMonth}.csv`;
+
+  // Native Mobile handling via Capacitor Filesystem and Share
+  if (Capacitor.isNativePlatform()) {
+    try {
+      const fileResult = await Filesystem.writeFile({
+        path: fileName,
+        data: csvContent,
+        directory: Directory.Cache,
+        encoding: Encoding.UTF8,
+      });
+
+      await Share.share({
+        title: `Dailyba Statement - ${yearMonth}`,
+        text: `Dailyba Financial Statement (${yearMonth})`,
+        url: fileResult.uri,
+        dialogTitle: 'Share / Save Statement (.csv)',
+      });
+      return;
+    } catch (err) {
+      console.warn('Native CSV export/share failed, falling back to browser download:', err);
+    }
+  }
+
+  // Web Browser fallback
   const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
   const url = URL.createObjectURL(blob);
   const link = document.createElement('a');
   link.setAttribute('href', url);
-  link.setAttribute('download', `dailyba_statement_${yearMonth}.csv`);
+  link.setAttribute('download', fileName);
   document.body.appendChild(link);
   link.click();
   document.body.removeChild(link);
   URL.revokeObjectURL(url);
 }
 
-export function exportMonthlyStatementPrintPDF(
+/**
+ * Export Monthly Transactions to Microsoft Excel (.xlsx)
+ * Supports both Web Browser and Native Mobile (Filesystem + Share)
+ */
+export async function exportMonthlyTransactionsToExcel(
   transactions: Transaction[],
   yearMonth: string, // 'YYYY-MM'
   currency: Currency,
@@ -98,138 +135,123 @@ export function exportMonthlyStatementPrintPDF(
 
   const netSavings = totalIncome - totalExpense;
 
-  const rowsHtml = filtered
-    .map((tx) => {
-      const isExpense = tx.type === 'expense';
-      const isIncome = tx.type === 'income';
-      const isTransfer = tx.type === 'transfer';
+  // Header Rows
+  const sheetData: (string | number)[][] = [
+    ['DAILYBA FINANCIAL STATEMENT', '', '', '', '', '', '', '', ''],
+    ['Period:', yearMonth, '', '', '', '', '', '', ''],
+    ['Generated:', new Date().toLocaleDateString(), '', '', '', '', '', '', ''],
+    ['Total Income:', `${currency} ${formatNumberWithCommas(totalIncome)}`, '', '', '', '', '', '', ''],
+    ['Total Expense:', `${currency} ${formatNumberWithCommas(totalExpense)}`, '', '', '', '', '', '', ''],
+    ['Net Cash Flow:', `${currency} ${formatNumberWithCommas(netSavings)}`, '', '', '', '', '', '', ''],
+    [], // Blank separator row
+    [
+      'Date',
+      'Type',
+      'Category',
+      'Funding Source',
+      'Destination',
+      'Description / Note',
+      'Amount',
+      'Currency',
+      `Converted (${currency})`,
+    ],
+  ];
 
-      const typeBadgeColor = isExpense
-        ? 'color: #f43f5e; background: #fff1f2;'
-        : isIncome
-        ? 'color: #10b981; background: #ecfdf5;'
-        : isTransfer
-        ? 'color: #6366f1; background: #eef2ff;'
-        : 'color: #f59e0b; background: #fffbeb;';
+  filtered.forEach((tx) => {
+    const isExpense = tx.type === 'expense';
+    const isIncome = tx.type === 'income';
+    const isTransfer = tx.type === 'transfer';
 
-      const typeLabel = isTransfer
-        ? t.record.typeTransfer
-        : isExpense
-        ? t.record.typeExpense
-        : isIncome
-        ? t.record.typeIncome
-        : t.record.typeSavings;
+    const typeLabel = isTransfer
+      ? t.record.typeTransfer
+      : isExpense
+      ? t.record.typeExpense
+      : isIncome
+      ? t.record.typeIncome
+      : t.record.typeSavings;
 
-      const catLabel = isTransfer
-        ? `${t.sources[tx.source] || tx.source} → ${t.sources[tx.destinationSource || 'ewallet'] || tx.destinationSource || 'E-Wallet'}`
-        : isExpense
-        ? (t.expenseCategories as any)[tx.category] || tx.category
-        : isIncome
-        ? (t.incomeCategories as any)[tx.category] || tx.category
-        : t.record.typeSavings;
+    const catLabel = isTransfer
+      ? 'Internal Transfer'
+      : isExpense
+      ? (t.expenseCategories as any)[tx.category] || tx.category
+      : isIncome
+      ? (t.incomeCategories as any)[tx.category] || tx.category
+      : t.record.typeSavings;
 
-      const converted = convertCurrency(tx.amount, tx.currency || 'JPY', currency, rates);
-      const sign = isExpense ? '-' : isIncome ? '+' : '';
+    const converted = convertCurrency(tx.amount, tx.currency || 'JPY', currency, rates);
+    const sourceLabel = t.sources[tx.source] || tx.source;
+    const destLabel = tx.destinationSource ? (t.sources[tx.destinationSource] || tx.destinationSource) : '';
 
-      return `
-        <tr style="border-bottom: 1px solid #e2e8f0; font-size: 11px;">
-          <td style="padding: 8px 10px; font-family: monospace;">${tx.date}</td>
-          <td style="padding: 8px 10px;">
-            <span style="padding: 2px 6px; border-radius: 4px; font-weight: bold; font-size: 10px; ${typeBadgeColor}">
-              ${typeLabel}
-            </span>
-          </td>
-          <td style="padding: 8px 10px; font-weight: 600;">${catLabel}</td>
-          <td style="padding: 8px 10px; color: #64748b;">${tx.note || '-'}</td>
-          <td style="padding: 8px 10px; text-align: right; font-family: monospace; font-weight: bold;">
-            ${sign}${currency} ${formatNumberWithCommas(converted)}
-          </td>
-        </tr>
-      `;
-    })
-    .join('');
+    sheetData.push([
+      tx.date,
+      typeLabel,
+      catLabel,
+      sourceLabel,
+      destLabel,
+      tx.note || '',
+      tx.amount,
+      tx.currency || 'JPY',
+      converted,
+    ]);
+  });
 
-  const printWindow = window.open('', '_blank');
-  if (!printWindow) return;
+  const wb = XLSX.utils.book_new();
+  const ws = XLSX.utils.aoa_to_sheet(sheetData);
 
-  printWindow.document.write(`
-    <!DOCTYPE html>
-    <html>
-      <head>
-        <title>Dailyba Statement - ${yearMonth}</title>
-        <style>
-          body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; color: #0f172a; margin: 30px; }
-          .header { display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid #0f172a; padding-bottom: 15px; margin-bottom: 20px; }
-          .logo { font-size: 22px; font-weight: 800; letter-spacing: -0.5px; }
-          .card-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; margin-bottom: 25px; }
-          .card { border: 1px solid #cbd5e1; border-radius: 10px; padding: 12px; background: #f8fafc; }
-          .card-title { font-size: 10px; text-transform: uppercase; color: #64748b; font-weight: 700; margin-bottom: 4px; }
-          .card-val { font-size: 18px; font-weight: 800; font-family: monospace; }
-          table { width: 100%; border-collapse: collapse; margin-top: 15px; }
-          th { text-align: left; padding: 10px; background: #f1f5f9; font-size: 10px; text-transform: uppercase; color: #475569; }
-          @media print {
-            body { margin: 15px; }
-            .no-print { display: none; }
-          }
-        </style>
-      </head>
-      <body>
-        <div class="header">
-          <div>
-            <div class="logo">Dailyba</div>
-            <div style="font-size: 12px; color: #64748b;">Daily Balance & Wealth Tracker • Financial Statement</div>
-          </div>
-          <div style="text-align: right;">
-            <div style="font-size: 16px; font-weight: 700;">${yearMonth}</div>
-            <div style="font-size: 11px; color: #64748b;">Generated: ${new Date().toLocaleDateString()}</div>
-          </div>
-        </div>
+  // Set professional column widths
+  ws['!cols'] = [
+    { wch: 13 }, // Date
+    { wch: 14 }, // Type
+    { wch: 22 }, // Category
+    { wch: 16 }, // Source
+    { wch: 16 }, // Destination
+    { wch: 30 }, // Note
+    { wch: 15 }, // Amount
+    { wch: 10 }, // Currency
+    { wch: 18 }, // Converted
+  ];
 
-        <div class="card-grid">
-          <div class="card">
-            <div class="card-title">${t.summary.totalIncome}</div>
-            <div class="card-val" style="color: #10b981;">+${currency} ${formatNumberWithCommas(totalIncome)}</div>
-          </div>
-          <div class="card">
-            <div class="card-title">${t.summary.totalExpense}</div>
-            <div class="card-val" style="color: #f43f5e;">-${currency} ${formatNumberWithCommas(totalExpense)}</div>
-          </div>
-          <div class="card">
-            <div class="card-title">${t.summary.netCashFlow}</div>
-            <div class="card-val" style="color: ${netSavings >= 0 ? '#10b981' : '#f43f5e'};">
-              ${netSavings >= 0 ? '+' : ''}${currency} ${formatNumberWithCommas(netSavings)}
-            </div>
-          </div>
-        </div>
+  XLSX.utils.book_append_sheet(wb, ws, `Statement ${yearMonth}`);
+  const base64Data = XLSX.write(wb, { bookType: 'xlsx', type: 'base64' });
+  const fileName = `dailyba_statement_${yearMonth}.xlsx`;
 
-        <table>
-          <thead>
-            <tr>
-              <th>Date</th>
-              <th>Type</th>
-              <th>Category</th>
-              <th>Description / Note</th>
-              <th style="text-align: right;">Amount (${currency})</th>
-            </tr>
-          </thead>
-          <tbody>
-            ${rowsHtml || '<tr><td colspan="5" style="text-align: center; padding: 20px; color: #94a3b8;">No transactions found for this period.</td></tr>'}
-          </tbody>
-        </table>
+  // Native Mobile handling via Capacitor Filesystem and Share
+  if (Capacitor.isNativePlatform()) {
+    try {
+      const fileResult = await Filesystem.writeFile({
+        path: fileName,
+        data: base64Data,
+        directory: Directory.Cache,
+      });
 
-        <div style="margin-top: 40px; font-size: 10px; color: #94a3b8; text-align: center; border-top: 1px solid #e2e8f0; padding-top: 12px;">
-          Dailyba Personal Finance Vault • Privacy-First & Locally Encrypted Statement
-        </div>
+      await Share.share({
+        title: `Dailyba Statement - ${yearMonth}`,
+        text: `Dailyba Financial Statement (${yearMonth})`,
+        url: fileResult.uri,
+        dialogTitle: 'Share / Save Excel Statement (.xlsx)',
+      });
+      return;
+    } catch (err) {
+      console.warn('Native Excel export/share failed, falling back to browser download:', err);
+    }
+  }
 
-        <script>
-          window.onload = function() {
-            setTimeout(function() {
-              window.print();
-            }, 300);
-          };
-        </script>
-      </body>
-    </html>
-  `);
-  printWindow.document.close();
+  // Web Browser fallback
+  const byteCharacters = atob(base64Data);
+  const byteNumbers = new Array(byteCharacters.length);
+  for (let i = 0; i < byteCharacters.length; i++) {
+    byteNumbers[i] = byteCharacters.charCodeAt(i);
+  }
+  const byteArray = new Uint8Array(byteNumbers);
+  const blob = new Blob([byteArray], {
+    type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+  });
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement('a');
+  link.setAttribute('href', url);
+  link.setAttribute('download', fileName);
+  document.body.appendChild(link);
+  link.click();
+  document.body.removeChild(link);
+  URL.revokeObjectURL(url);
 }

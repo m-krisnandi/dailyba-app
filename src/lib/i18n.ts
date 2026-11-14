@@ -164,6 +164,7 @@ export interface Translations {
     targetVsActual: string;
     exportStatement: string;
     exportCsv: string;
+    exportExcel: string;
     exportPdf: string;
     leftoverNotice: string;
     carryoverNotice: string;
@@ -567,6 +568,7 @@ export const translations: Record<Language, Translations> = {
       targetVsActual: 'Planned vs Actual Spent',
       exportStatement: 'Export Statement',
       exportCsv: 'Export CSV (.csv)',
+      exportExcel: 'Export Excel (.xlsx)',
       exportPdf: 'Print / Save as PDF',
       leftoverNotice: 'leftover from last month. Tap to bring it into this month budget.',
       carryoverNotice: 'Surplus carryover from previous month active.',
@@ -968,6 +970,7 @@ export const translations: Record<Language, Translations> = {
       targetVsActual: '計画予算と実支出',
       exportStatement: '明細書出力',
       exportCsv: 'CSV出力 (.csv)',
+      exportExcel: 'Excel出力 (.xlsx)',
       exportPdf: '印刷 / PDF保存',
       leftoverNotice: '前月の余剰金を今月の活動資金（繰越金）として計上できます。',
       carryoverNotice: '前月からの繰越金が有効です。',

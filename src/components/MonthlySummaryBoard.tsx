@@ -35,7 +35,8 @@ import {
   Printer,
 } from 'lucide-react';
 import { FormattedAmountInput } from './FormattedAmountInput';
-import { exportMonthlyTransactionsToCSV, exportMonthlyStatementPrintPDF } from '@/lib/exportStatement';
+import { exportMonthlyTransactionsToCSV, exportMonthlyTransactionsToExcel } from '@/lib/exportStatement';
+import { StatementPreviewModal } from './StatementPreviewModal';
 import {
   ResponsiveContainer,
   BarChart,
@@ -103,19 +104,20 @@ export function MonthlySummaryBoard({
         setIsExportOpen(false);
       }
     };
-    if (isCyclePickerOpen) {
+    if (isCyclePickerOpen || isExportOpen) {
       document.addEventListener('mousedown', handleClickOutsideCycle);
     }
     return () => {
       document.removeEventListener('mousedown', handleClickOutsideCycle);
     };
-  }, [isCyclePickerOpen]);
+  }, [isCyclePickerOpen, isExportOpen]);
 
   // Budget Modal State
   const [isBudgetModalOpen, setIsBudgetModalOpen] = useState(false);
   useBodyScrollLock(isBudgetModalOpen);
   const [isAddTxModalOpen, setIsAddTxModalOpen] = useState(false);
   const [isReceiptScannerOpen, setIsReceiptScannerOpen] = useState(false);
+  const [isStatementPreviewOpen, setIsStatementPreviewOpen] = useState(false);
   const [addTxInitialType, setAddTxInitialType] = useState<TransactionType>('expense');
   const [addTxInitialCategory, setAddTxInitialCategory] = useState<string | undefined>(undefined);
   const [addTxInitialAmount, setAddTxInitialAmount] = useState<number | undefined>(undefined);
@@ -631,7 +633,7 @@ export function MonthlySummaryBoard({
             </button>
 
             {isExportOpen && (
-              <div className="absolute right-0 top-full mt-2 w-48 rounded-2xl border border-[var(--border-strong)] bg-[var(--bg-surface-solid)] shadow-xl p-1.5 z-50 animate-fade-in space-y-1">
+              <div className="absolute right-0 top-full mt-2 w-52 rounded-2xl border border-[var(--border-strong)] bg-[var(--bg-surface-solid)] shadow-xl p-1.5 z-50 animate-fade-in space-y-1">
                 <button
                   type="button"
                   onClick={() => {
@@ -640,18 +642,29 @@ export function MonthlySummaryBoard({
                   }}
                   className="w-full flex items-center space-x-2 px-3 py-2 rounded-xl text-xs font-semibold text-[var(--text-main)] hover:bg-[var(--bg-subtle)] transition-all cursor-pointer text-left"
                 >
-                  <FileSpreadsheet className="w-3.5 h-3.5 text-emerald-400" />
+                  <FileSpreadsheet className="w-3.5 h-3.5 text-emerald-400 shrink-0" />
                   <span>{t.summary.exportCsv}</span>
                 </button>
                 <button
                   type="button"
                   onClick={() => {
-                    exportMonthlyStatementPrintPDF(transactions, selectedMonth, currency, rates, language);
+                    exportMonthlyTransactionsToExcel(transactions, selectedMonth, currency, rates, language);
                     setIsExportOpen(false);
                   }}
                   className="w-full flex items-center space-x-2 px-3 py-2 rounded-xl text-xs font-semibold text-[var(--text-main)] hover:bg-[var(--bg-subtle)] transition-all cursor-pointer text-left"
                 >
-                  <Printer className="w-3.5 h-3.5 text-blue-400" />
+                  <FileSpreadsheet className="w-3.5 h-3.5 text-teal-400 shrink-0" />
+                  <span>{t.summary.exportExcel}</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setIsStatementPreviewOpen(true);
+                    setIsExportOpen(false);
+                  }}
+                  className="w-full flex items-center space-x-2 px-3 py-2 rounded-xl text-xs font-semibold text-[var(--text-main)] hover:bg-[var(--bg-subtle)] transition-all cursor-pointer text-left"
+                >
+                  <Printer className="w-3.5 h-3.5 text-blue-400 shrink-0" />
                   <span>{t.summary.exportPdf}</span>
                 </button>
               </div>
@@ -1393,6 +1406,17 @@ export function MonthlySummaryBoard({
           onAddTransaction={onAddTransaction}
         />
       )}
+
+      {/* Monthly Statement Print / PDF Preview Modal */}
+      <StatementPreviewModal
+        isOpen={isStatementPreviewOpen}
+        onClose={() => setIsStatementPreviewOpen(false)}
+        transactions={transactions}
+        yearMonth={selectedMonth}
+        currency={currency}
+        rates={rates}
+        language={language}
+      />
     </div>
   );
 }
