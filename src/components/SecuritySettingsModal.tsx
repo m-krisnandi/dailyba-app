@@ -1,6 +1,8 @@
 'use client';
 
 import React, { useState, useEffect, useRef } from 'react';
+import { createPortal } from 'react-dom';
+import { useBodyScrollLock } from '@/lib/useBodyScrollLock';
 import {
   X,
   Shield,
@@ -37,6 +39,12 @@ export function SecuritySettingsModal({
   language,
 }: SecuritySettingsModalProps) {
   const t = translations[language];
+  const [mounted, setMounted] = useState(false);
+  useBodyScrollLock(isOpen);
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
   const [enabled, setEnabled] = useState(false);
   const [mode, setMode] = useState<ModalMode>('idle');
   const [biometryInfo, setBiometryInfo] = useState({ available: false, biometryType: 'None' });
@@ -76,7 +84,7 @@ export function SecuritySettingsModal({
     }
   }, [mode]);
 
-  if (!isOpen) return null;
+  if (!isOpen || !mounted) return null;
 
   // Trigger biometrics verification to disable lock
   const triggerBiometricDisable = async () => {
@@ -240,14 +248,14 @@ export function SecuritySettingsModal({
     });
   };
 
-  return (
+  return createPortal(
     <div
       onClick={onClose}
-      className="fixed inset-0 z-[110] flex items-center justify-center p-4 bg-slate-950/60 backdrop-blur-md animate-fade-in cursor-pointer"
+      className="fixed inset-0 z-[200] flex items-center justify-center p-4 bg-slate-950/70 backdrop-blur-md animate-fade-in cursor-pointer overflow-y-auto"
     >
       <div
         onClick={(e) => e.stopPropagation()}
-        className="relative w-full max-w-md rounded-3xl border border-[var(--border-strong)] bg-[var(--bg-surface-solid)] backdrop-blur-3xl shadow-2xl overflow-hidden p-6 sm:p-7 space-y-5 cursor-default animate-in zoom-in-95 duration-150"
+        className="relative w-full max-w-md rounded-3xl border border-[var(--border-strong)] bg-[var(--bg-surface-solid)] backdrop-blur-3xl shadow-2xl overflow-hidden p-6 sm:p-7 space-y-5 cursor-default animate-in zoom-in-95 duration-150 my-auto"
       >
         {/* Subtle Ambient Liquid Glow */}
         <div className="absolute -top-20 left-1/2 -translate-x-1/2 w-64 h-32 bg-indigo-500/15 blur-3xl pointer-events-none rounded-full" />
@@ -587,6 +595,7 @@ export function SecuritySettingsModal({
           </button>
         </div>
       </div>
-    </div>
+    </div>,
+    document.body
   );
 }
