@@ -466,8 +466,8 @@ export function ReceiptScannerModal({
               <Sparkles className="w-4 h-4 text-emerald-500 shrink-0 mt-0.5" />
               <span>
                 {language === 'ja'
-                  ? '💡 長いレシートは「店名（上部）」と「合計金額（下部）」が枠内に収まるように撮影してください。AIが自動認識します。'
-                  : '💡 For long receipts, make sure Store Name (top) and Grand Total (bottom) are visible inside the frame. AI will auto-detect the rest.'}
+                  ? '長いレシートは「店名（上部）」と「合計金額（下部）」が枠内に収まるように撮影してください。AIが自動認識します。'
+                  : 'For long receipts, make sure Store Name (top) and Grand Total (bottom) are visible inside the frame. AI will auto-detect the rest.'}
               </span>
             </div>
 
@@ -568,8 +568,8 @@ export function ReceiptScannerModal({
               {isNetworkFailure && imagePreview && (
                 <p className="text-[11px] text-amber-500/90 pt-1">
                   {language === 'ja'
-                    ? '💡 写真は保持されています。写真を見ながら手動入力ですぐに記録できます。'
-                    : '💡 Photo is saved in memory. You can record quickly using manual entry.'}
+                    ? '写真は保持されています。写真を見ながら手動入力ですぐに記録できます。'
+                    : 'Photo is saved in memory. You can record quickly using manual entry.'}
                 </p>
               )}
             </div>

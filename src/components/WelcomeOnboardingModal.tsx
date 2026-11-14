@@ -139,7 +139,7 @@ export function WelcomeOnboardingModal({
                 }`}
               >
                 <div className="flex items-center space-x-3">
-                  <span className="text-2xl">🇺🇸</span>
+                  <div className="w-8 h-8 rounded-xl bg-blue-500/15 border border-blue-500/30 text-blue-400 font-bold text-xs flex items-center justify-center font-mono shrink-0">EN</div>
                   <div className="text-left">
                     <p className="text-sm font-bold text-[var(--text-main)]">English</p>
                     <p className="text-[11px] text-[var(--text-muted)]">International English</p>
@@ -158,7 +158,7 @@ export function WelcomeOnboardingModal({
                 }`}
               >
                 <div className="flex items-center space-x-3">
-                  <span className="text-2xl">🇯🇵</span>
+                  <div className="w-8 h-8 rounded-xl bg-rose-500/15 border border-rose-500/30 text-rose-400 font-bold text-xs flex items-center justify-center font-mono shrink-0">JA</div>
                   <div className="text-left">
                     <p className="text-sm font-bold text-[var(--text-main)]">日本語</p>
                     <p className="text-[11px] text-[var(--text-muted)]">日本の家計簿フォーマット</p>

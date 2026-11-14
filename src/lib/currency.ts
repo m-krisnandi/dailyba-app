@@ -233,7 +233,7 @@ export function formatNumberWithCommas(raw: string | number | null | undefined):
   const decPart = parts.length > 1 ? parts.slice(1).join('') : null;
 
   // Format integer portion with commas
-  const formattedInt = intPart.replace(/\B(?=(\d{3})+(?!\\d))/g, ',');
+  const formattedInt = intPart.replace(/\B(?=(\d{3})+(?!\d))/g, ',');
   const prefix = isNegative ? '-' : '';
 
   if (decPart !== null) {

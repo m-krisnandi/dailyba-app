@@ -39,6 +39,7 @@ import {
 import {
   Check,
   Calculator,
+  Lightbulb,
   Trash2,
   FileSpreadsheet,
   Sparkles,
@@ -866,7 +867,7 @@ export function QuickRecordBoard({
               </div>
               <div>
                 <h3 className="text-sm sm:text-base font-extrabold text-[var(--text-main)]">
-                  {language === 'ja' ? 'Dailyba へようこそ！🌸 クイックスタートガイド' : 'Welcome to Dailyba! 🌸 Quick Start Guide'}
+                  {language === 'ja' ? 'Dailyba へようこそ！ クイックスタートガイド' : 'Welcome to Dailyba! Quick Start Guide'}
                 </h3>
                 <p className="text-xs text-[var(--text-muted)] mt-0.5">
                   {language === 'ja'
@@ -1119,7 +1120,7 @@ export function QuickRecordBoard({
 
           {/* Calculator Helper Tip */}
           <div className="text-[11px] text-[var(--text-faint)] flex items-center space-x-1 font-sans">
-            <span>💡</span>
+            <Lightbulb className="w-3.5 h-3.5 text-amber-400 shrink-0" />
             <span>
               {language === 'ja'
                 ? '計算式を直接入力できます (例: 15000*3 または 50k+20k)'
