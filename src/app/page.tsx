@@ -18,6 +18,9 @@ import { APP_VERSION } from '@/lib/version';
 import { AuthModal } from '@/components/AuthModal';
 import { BankEmailSyncModal } from '@/components/BankEmailSyncModal';
 import { AppLockOverlay } from '@/components/AppLockOverlay';
+import { WelcomeOnboardingModal } from '@/components/WelcomeOnboardingModal';
+import { AppReviewPromptModal } from '@/components/AppReviewPromptModal';
+import { Currency, Language } from '@/types/finance';
 import { isAppLockEnabled, isBiometricAuthenticating, isRecentlyUnlocked } from '@/lib/biometricAuth';
 import { scheduleBillDueReminders } from '@/lib/localNotifications';
 import { dailybaApi } from '@/lib/api';
@@ -83,6 +86,52 @@ export default function Home() {
   const [isChangelogModalOpen, setIsChangelogModalOpen] = useState(false);
   const [isEmailSyncModalOpen, setIsEmailSyncModalOpen] = useState(false);
   const [pendingEmailSyncCount, setPendingEmailSyncCount] = useState(0);
+  const [isOnboardingOpen, setIsOnboardingOpen] = useState(false);
+  const [isReviewPromptOpen, setIsReviewPromptOpen] = useState(false);
+
+  useEffect(() => {
+    if (typeof window !== "undefined" && isHydrated) {
+      const hasCompleted = localStorage.getItem("dailyba_onboarding_completed_v1");
+      if (!hasCompleted && state.transactions.length === 0) {
+        setIsOnboardingOpen(true);
+      }
+    }
+  }, [isHydrated, state.transactions.length]);
+
+  const handleCompleteOnboarding = (opts: {
+    language: Language;
+    currency: Currency;
+    dailySpendTarget?: number;
+  }) => {
+    setLanguage(opts.language);
+    setCurrency(opts.currency);
+    if (opts.dailySpendTarget) {
+      setDailySpendTarget(opts.dailySpendTarget);
+    }
+    try {
+      localStorage.setItem("dailyba_onboarding_completed_v1", "true");
+    } catch {}
+    setIsOnboardingOpen(false);
+  };
+
+  const checkReviewMilestone = useCallback((txCount: number) => {
+    if (typeof window === "undefined") return;
+    try {
+      const dismissed = localStorage.getItem("dailyba_review_dismissed_v1");
+      if (dismissed === "forever") return;
+      const snoozeUntil = Number(localStorage.getItem("dailyba_review_snooze_until") || 0);
+      if (Date.now() < snoozeUntil) return;
+
+      if (txCount >= 7) {
+        setIsReviewPromptOpen(true);
+      }
+    } catch {}
+  }, []);
+
+  const handleAddTransactionWithReview = useCallback((tx: Parameters<typeof addTransaction>[0]) => {
+    addTransaction(tx);
+    checkReviewMilestone(state.transactions.length + 1);
+  }, [addTransaction, checkReviewMilestone, state.transactions.length]);
 
   const refreshEmailSyncCount = useCallback(() => {
     if (typeof window !== 'undefined' && isAuthenticated) {
@@ -389,7 +438,7 @@ export default function Home() {
             dailySpendTarget={state.dailySpendTarget}
             pendingEmailSyncCount={pendingEmailSyncCount}
             onOpenEmailSync={() => setIsEmailSyncModalOpen(true)}
-            onAddTransaction={addTransaction}
+            onAddTransaction={handleAddTransactionWithReview}
             onDeleteTransaction={deleteTransaction}
             onUpdateTransaction={updateTransaction}
             onToggleHideCategory={toggleHideCategory}
@@ -525,6 +574,32 @@ export default function Home() {
         onApproveTransactions={handleApproveBankTransactions}
         onPendingCountChange={setPendingEmailSyncCount}
         existingTransactions={state.transactions}
+      />
+
+      {/* First-time Welcome Onboarding Modal */}
+      <WelcomeOnboardingModal
+        isOpen={isOnboardingOpen}
+        currentLanguage={state.language}
+        currentCurrency={state.currency}
+        onComplete={handleCompleteOnboarding}
+      />
+
+      {/* Google Play In-App Review Prompt Modal */}
+      <AppReviewPromptModal
+        isOpen={isReviewPromptOpen}
+        language={state.language}
+        onClose={() => {
+          try {
+            localStorage.setItem("dailyba_review_snooze_until", String(Date.now() + 14 * 86400000));
+          } catch {}
+          setIsReviewPromptOpen(false);
+        }}
+        onDismissForever={() => {
+          try {
+            localStorage.setItem("dailyba_review_dismissed_v1", "forever");
+          } catch {}
+          setIsReviewPromptOpen(false);
+        }}
       />
 
       {/* Biometric & PIN Security App Lock Overlay */}

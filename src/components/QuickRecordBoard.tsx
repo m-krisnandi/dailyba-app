@@ -26,6 +26,7 @@ import { parseSmartText } from '@/lib/parser';
 import { useBodyScrollLock } from '@/lib/useBodyScrollLock';
 import { getTodayLocalDate } from '@/lib/dateUtils';
 import { SubscriptionPresetsModal } from '@/components/SubscriptionPresetsModal';
+import { CsvImportModal } from '@/components/CsvImportModal';
 import { checkAndTriggerBudgetAlert } from '@/lib/localNotifications';
 import {
   EXPENSE_CATEGORY_ICONS,
@@ -37,6 +38,7 @@ import {
 import {
   Check,
   Trash2,
+  FileSpreadsheet,
   Sparkles,
   ScanText,
   ArrowDownRight,
@@ -278,6 +280,13 @@ export function QuickRecordBoard({
   const [txFilterSource, setTxFilterSource] = useState<'all' | FundingSource>('all');
   const [txSortBy, setTxSortBy] = useState<TransactionSortOption>('date-desc');
   const [txCurrentPage, setTxCurrentPage] = useState(1);
+  const [isCsvImportOpen, setIsCsvImportOpen] = useState(false);
+
+  const handleBatchImport = (items: Omit<Transaction, 'id'>[]) => {
+    items.forEach((item) => {
+      onAddTransaction(item);
+    });
+  };
   const [isPresetModalOpen, setIsPresetModalOpen] = useState(false);
   const [isAdvancedFilterOpen, setIsAdvancedFilterOpen] = useState(false);
   const [txDateFrom, setTxDateFrom] = useState('');
@@ -1427,6 +1436,15 @@ export function QuickRecordBoard({
             )}
           </div>
           <div className="flex items-center space-x-2">
+            <button
+              type="button"
+              onClick={() => setIsCsvImportOpen(true)}
+              className="px-2.5 py-1 rounded-xl border border-[var(--border-subtle)] bg-[var(--bg-subtle)] hover:bg-[var(--bg-surface-solid)] text-xs font-semibold text-[var(--text-muted)] hover:text-emerald-400 transition-all flex items-center space-x-1.5 cursor-pointer shadow-xs active:scale-95"
+              title={language === "ja" ? "CSV 取引履歴インポート" : "Import Transactions from CSV"}
+            >
+              <FileSpreadsheet className="w-3.5 h-3.5 text-emerald-400" />
+              <span>{language === "ja" ? "CSVインポート" : "Import CSV"}</span>
+            </button>
             <span className="text-xs text-[var(--text-muted)] font-mono">
               {transactions.length} {t.record.items}
             </span>
@@ -2206,6 +2224,15 @@ export function QuickRecordBoard({
           }
         }}
         onClose={() => setDeletingTx(null)}
+      />
+
+      {/* CSV Import Modal */}
+      <CsvImportModal
+        isOpen={isCsvImportOpen}
+        language={language}
+        currency={currency}
+        onImportTransactions={handleBatchImport}
+        onClose={() => setIsCsvImportOpen(false)}
       />
 
       {/* AI Receipt Scanner Modal */}

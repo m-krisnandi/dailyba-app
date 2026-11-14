@@ -10,4 +10,10 @@
     <string name="widget_within_target">Within Target</string>
     <string name="widget_btn_record">+ Record</string>
     <string name="widget_btn_scan">Scan Receipt</string>
+
+    <!-- App Shortcuts -->
+    <string name="shortcut_record_short">+ Record</string>
+    <string name="shortcut_record_long">Record Expense</string>
+    <string name="shortcut_scan_short">Scan</string>
+    <string name="shortcut_scan_long">Scan Receipt</string>
 </resources>
