@@ -2,12 +2,30 @@
 
 import React, { useEffect, useState } from 'react';
 import { createPortal } from 'react-dom';
-import { ArrowLeft, Printer, FileSpreadsheet, X, ShieldCheck } from 'lucide-react';
+import {
+  ArrowLeft,
+  FileSpreadsheet,
+  FileText,
+  Download,
+  Share2,
+  Printer,
+  CheckCircle2,
+  AlertCircle,
+  ShieldCheck,
+  Loader2,
+} from 'lucide-react';
 import { Transaction, Currency, Language } from '@/types/finance';
 import { convertCurrency, ExchangeRates, formatNumberWithCommas } from '@/lib/currency';
 import { translations } from '@/lib/i18n';
 import { useBodyScrollLock } from '@/lib/useBodyScrollLock';
-import { exportMonthlyTransactionsToExcel } from '@/lib/exportStatement';
+import {
+  exportMonthlyTransactionsToCSV,
+  exportMonthlyTransactionsToExcel,
+  exportMonthlyTransactionsToPDF,
+  DownloadResult,
+} from '@/lib/exportStatement';
+import { Capacitor } from '@capacitor/core';
+import { Share } from '@capacitor/share';
 
 interface StatementPreviewModalProps {
   isOpen: boolean;
@@ -25,10 +43,14 @@ export function StatementPreviewModal({
   transactions,
   yearMonth,
   currency,
-  rates = { JPY: 1, IDR: 114, USD: 1 / 158, MMK: 28, updatedAt: "" },
+  rates = { JPY: 1, IDR: 114, USD: 1 / 158, MMK: 28, updatedAt: '' },
   language,
 }: StatementPreviewModalProps) {
   const [mounted, setMounted] = useState(false);
+  const [isDownloading, setIsDownloading] = useState(false);
+  const [activeDownloadType, setActiveDownloadType] = useState<'pdf' | 'excel' | 'csv' | null>(null);
+  const [downloadFeedback, setDownloadFeedback] = useState<DownloadResult | null>(null);
+
   const t = translations[language];
 
   useBodyScrollLock(isOpen);
@@ -63,13 +85,55 @@ export function StatementPreviewModal({
 
   const netSavings = totalIncome - totalExpense;
 
-  const handlePrint = () => {
+  const handleDownload = async (type: 'pdf' | 'excel' | 'csv') => {
+    setIsDownloading(true);
+    setActiveDownloadType(type);
+    setDownloadFeedback(null);
+
+    try {
+      let result: DownloadResult;
+      if (type === 'pdf') {
+        result = await exportMonthlyTransactionsToPDF(transactions, yearMonth, currency, rates, language);
+      } else if (type === 'excel') {
+        result = await exportMonthlyTransactionsToExcel(transactions, yearMonth, currency, rates, language);
+      } else {
+        result = await exportMonthlyTransactionsToCSV(transactions, yearMonth, currency, rates, language);
+      }
+      setDownloadFeedback(result);
+    } catch (err: any) {
+      setDownloadFeedback({
+        success: false,
+        fileName: '',
+        error: err?.message || 'Download failed',
+      });
+    } finally {
+      setIsDownloading(false);
+      setActiveDownloadType(null);
+    }
+  };
+
+  const handleShareResult = async (result: DownloadResult) => {
+    if (result.uri) {
+      try {
+        await Share.share({
+          title: `Dailyba Statement - ${yearMonth}`,
+          text: `Dailyba Financial Statement (${yearMonth})`,
+          url: result.uri,
+          dialogTitle: 'Share / Send Statement',
+        });
+      } catch (e) {
+        console.warn('Share cancelled or failed:', e);
+      }
+    }
+  };
+
+  const handlePrintBrowser = () => {
     window.print();
   };
 
   return createPortal(
-    <div className="fixed inset-0 z-[120] bg-slate-950/80 backdrop-blur-md flex flex-col overflow-y-auto statement-modal-overlay">
-      {/* Print Stylesheet overrides */}
+    <div className="fixed inset-0 z-[120] bg-slate-950/85 backdrop-blur-md flex flex-col overflow-y-auto statement-modal-overlay">
+      {/* Print Stylesheet overrides for desktop browser print */}
       <style>{`
         @media print {
           body {
@@ -99,55 +163,125 @@ export function StatementPreviewModal({
         }
       `}</style>
 
-      {/* Top Navigation Bar (Hidden when printing) */}
-      <header className="sticky top-0 z-30 bg-[var(--bg-surface-solid)] border-b border-[var(--border-subtle)] px-4 py-3 sm:px-6 flex items-center justify-between shadow-md no-print">
-        <div className="flex items-center space-x-2">
+      {/* Top Navigation Bar with Clear Back Button and Download Buttons */}
+      <header className="sticky top-0 z-30 bg-[var(--bg-surface-solid)] border-b border-[var(--border-subtle)] px-3 sm:px-6 py-2.5 sm:py-3 shadow-md no-print">
+        <div className="max-w-5xl mx-auto flex items-center justify-between gap-2">
+          {/* Back Button */}
           <button
             type="button"
             onClick={onClose}
-            className="flex items-center space-x-1.5 px-3 py-2 rounded-xl bg-[var(--bg-subtle)] hover:bg-[var(--bg-subtle-hover)] border border-[var(--border-subtle)] text-xs font-bold text-[var(--text-main)] transition-all cursor-pointer active:scale-95 shadow-xs"
-            title="Back to Dailyba"
+            className="flex items-center space-x-1.5 px-3 py-2 rounded-xl bg-[var(--bg-subtle)] hover:bg-[var(--bg-subtle-hover)] border border-[var(--border-subtle)] text-xs font-bold text-[var(--text-main)] transition-all cursor-pointer active:scale-95 shadow-xs shrink-0"
+            title="Back to Monthly Summary"
           >
             <ArrowLeft className="w-4 h-4 text-indigo-400" />
             <span>{language === 'ja' ? '戻る' : 'Back'}</span>
           </button>
-          <div className="hidden sm:block">
-            <h2 className="text-xs font-bold text-[var(--text-main)] font-mono">
-              Dailyba Statement • {yearMonth}
-            </h2>
+
+          {/* Title indicator */}
+          <div className="text-center truncate hidden md:block">
+            <span className="text-xs font-mono font-bold text-[var(--text-main)]">
+              Statement Preview • {yearMonth}
+            </span>
+          </div>
+
+          {/* Download Action Buttons */}
+          <div className="flex items-center space-x-1.5 sm:space-x-2">
+            {/* Download PDF */}
+            <button
+              type="button"
+              onClick={() => handleDownload('pdf')}
+              disabled={isDownloading}
+              className="flex items-center space-x-1.5 px-3 py-2 rounded-xl bg-rose-500/15 hover:bg-rose-500/25 border border-rose-500/30 text-rose-400 text-xs font-bold transition-all cursor-pointer shadow-xs active:scale-95 disabled:opacity-50"
+              title="Download PDF"
+            >
+              {isDownloading && activeDownloadType === 'pdf' ? (
+                <Loader2 className="w-3.5 h-3.5 animate-spin" />
+              ) : (
+                <FileText className="w-3.5 h-3.5" />
+              )}
+              <span>PDF</span>
+            </button>
+
+            {/* Download Excel */}
+            <button
+              type="button"
+              onClick={() => handleDownload('excel')}
+              disabled={isDownloading}
+              className="flex items-center space-x-1.5 px-3 py-2 rounded-xl bg-emerald-500/15 hover:bg-emerald-500/25 border border-emerald-500/30 text-emerald-400 text-xs font-bold transition-all cursor-pointer shadow-xs active:scale-95 disabled:opacity-50"
+              title="Download Excel (.xlsx)"
+            >
+              {isDownloading && activeDownloadType === 'excel' ? (
+                <Loader2 className="w-3.5 h-3.5 animate-spin" />
+              ) : (
+                <FileSpreadsheet className="w-3.5 h-3.5" />
+              )}
+              <span>Excel</span>
+            </button>
+
+            {/* Download CSV */}
+            <button
+              type="button"
+              onClick={() => handleDownload('csv')}
+              disabled={isDownloading}
+              className="flex items-center space-x-1.5 px-3 py-2 rounded-xl bg-teal-500/15 hover:bg-teal-500/25 border border-teal-500/30 text-teal-400 text-xs font-bold transition-all cursor-pointer shadow-xs active:scale-95 disabled:opacity-50"
+              title="Download CSV (.csv)"
+            >
+              {isDownloading && activeDownloadType === 'csv' ? (
+                <Loader2 className="w-3.5 h-3.5 animate-spin" />
+              ) : (
+                <Download className="w-3.5 h-3.5" />
+              )}
+              <span>CSV</span>
+            </button>
+
+            {/* Desktop Web Print Button */}
+            {!Capacitor.isNativePlatform() && (
+              <button
+                type="button"
+                onClick={handlePrintBrowser}
+                className="hidden lg:flex items-center space-x-1.5 px-3 py-2 rounded-xl bg-indigo-500/15 hover:bg-indigo-500/25 border border-indigo-500/30 text-indigo-400 text-xs font-bold transition-all cursor-pointer shadow-xs active:scale-95"
+                title="Print Browser View"
+              >
+                <Printer className="w-3.5 h-3.5" />
+                <span>Print</span>
+              </button>
+            )}
           </div>
         </div>
-
-        <div className="flex items-center space-x-2">
-          <button
-            type="button"
-            onClick={() => exportMonthlyTransactionsToExcel(transactions, yearMonth, currency, rates, language)}
-            className="hidden sm:flex items-center space-x-1.5 px-3 py-2 rounded-xl bg-emerald-500/10 hover:bg-emerald-500/20 border border-emerald-500/30 text-emerald-400 text-xs font-bold transition-all cursor-pointer shadow-xs active:scale-95"
-            title="Download Excel"
-          >
-            <FileSpreadsheet className="w-4 h-4" />
-            <span>{language === 'ja' ? 'Excel出力' : 'Excel (.xlsx)'}</span>
-          </button>
-
-          <button
-            type="button"
-            onClick={handlePrint}
-            className="flex items-center space-x-1.5 px-4 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-bold transition-all cursor-pointer shadow-sm active:scale-95"
-            title="Print or Save as PDF"
-          >
-            <Printer className="w-4 h-4" />
-            <span>{language === 'ja' ? '印刷 / PDF保存' : 'Print / Save PDF'}</span>
-          </button>
-
-          <button
-            type="button"
-            onClick={onClose}
-            className="p-2 rounded-xl text-[var(--text-muted)] hover:text-[var(--text-main)] hover:bg-[var(--bg-subtle)] transition-all cursor-pointer sm:hidden"
-          >
-            <X className="w-4 h-4" />
-          </button>
-        </div>
       </header>
+
+      {/* Download Status Toast Banner */}
+      {downloadFeedback && (
+        <div className="max-w-4xl mx-auto w-full px-4 pt-3 no-print animate-fade-in">
+          {downloadFeedback.success ? (
+            <div className="flex items-center justify-between p-3 rounded-2xl bg-emerald-500/15 border border-emerald-500/30 text-emerald-400 text-xs font-semibold shadow-md">
+              <div className="flex items-center space-x-2 truncate mr-2">
+                <CheckCircle2 className="w-4 h-4 text-emerald-400 shrink-0" />
+                <span className="truncate">
+                  {language === 'ja'
+                    ? `ダウンロード完了: ${downloadFeedback.fileName} (${downloadFeedback.location || '端末内'})`
+                    : `Downloaded successfully: ${downloadFeedback.fileName} (${downloadFeedback.location || 'Device'})`}
+                </span>
+              </div>
+              {downloadFeedback.uri && Capacitor.isNativePlatform() && (
+                <button
+                  type="button"
+                  onClick={() => handleShareResult(downloadFeedback)}
+                  className="flex items-center space-x-1 px-3 py-1.5 rounded-xl bg-emerald-500/20 hover:bg-emerald-500/30 border border-emerald-500/40 text-emerald-300 text-[11px] font-bold transition-all cursor-pointer shrink-0"
+                >
+                  <Share2 className="w-3 h-3" />
+                  <span>Share / Open</span>
+                </button>
+              )}
+            </div>
+          ) : (
+            <div className="flex items-center space-x-2 p-3 rounded-2xl bg-rose-500/15 border border-rose-500/30 text-rose-400 text-xs font-semibold shadow-md">
+              <AlertCircle className="w-4 h-4 text-rose-400 shrink-0" />
+              <span>{downloadFeedback.error || 'Failed to download file'}</span>
+            </div>
+          )}
+        </div>
+      )}
 
       {/* Main Printable Document Sheet */}
       <main className="flex-1 p-3 sm:p-6 md:p-8 flex justify-center">
@@ -253,7 +387,7 @@ export function StatementPreviewModal({
 
                     const converted = convertCurrency(tx.amount, tx.currency || 'JPY', currency, rates);
                     const sourceText = isTransfer
-                      ? `${t.sources[tx.source] || tx.source} → ${t.sources[tx.destinationSource || 'ewallet'] || tx.destinationSource || 'E-Wallet'}`
+                      ? `${t.sources[tx.source] || tx.source} -> ${t.sources[tx.destinationSource || 'ewallet'] || tx.destinationSource || 'E-Wallet'}`
                       : t.sources[tx.source] || tx.source;
 
                     return (
