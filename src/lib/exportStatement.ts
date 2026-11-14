@@ -3,9 +3,8 @@
 import { Transaction, Currency, Language } from '@/types/finance';
 import { convertCurrency, ExchangeRates, formatNumberWithCommas } from './currency';
 import { translations } from './i18n';
-import { Capacitor } from '@capacitor/core';
+import { Capacitor, registerPlugin } from '@capacitor/core';
 import { Filesystem, Directory, Encoding } from '@capacitor/filesystem';
-import { Share } from '@capacitor/share';
 import * as XLSX from 'xlsx';
 import { jsPDF } from 'jspdf';
 import autoTable from 'jspdf-autotable';
@@ -18,7 +17,20 @@ export interface DownloadResult {
   uri?: string;
   location?: string;
   error?: string;
+  cancelled?: boolean;
 }
+
+interface NativeFileSaverPluginType {
+  saveWithPicker(options: {
+    fileName: string;
+    mimeType: string;
+    cachedPath?: string;
+    content?: string;
+    isBase64?: boolean;
+  }): Promise<{ success: boolean; uri: string; fileName: string; location: string }>;
+}
+
+const NativeFileSaver = registerPlugin<NativeFileSaverPluginType>('NativeFileSaver');
 
 /**
  * Universal helper to save or download files on both Web Browser and Native Mobile (Capacitor)
@@ -34,29 +46,67 @@ export async function saveAndDownloadFile(
   // 1. Native Mobile Platform (Android / iOS)
   if (Capacitor.isNativePlatform()) {
     try {
-      // If user requested System Picker (Save As) on Mobile, write to cache and trigger system file saver / share
+      // If user requested System Picker (Save As) on Mobile, directly invoke Android File Manager (SAF)
       if (targetLocation === 'SYSTEM_PICKER') {
-        const fileResult = await Filesystem.writeFile({
-          path: fileName,
-          data: content,
-          directory: Directory.Cache,
-          recursive: true,
-          ...(isBase64 ? {} : { encoding: Encoding.UTF8 }),
-        });
+        try {
+          let cachedPath: string | undefined;
+          try {
+            const cacheResult = await Filesystem.writeFile({
+              path: fileName,
+              data: content,
+              directory: Directory.Cache,
+              recursive: true,
+              ...(isBase64 ? {} : { encoding: Encoding.UTF8 }),
+            });
+            if (cacheResult.uri) {
+              cachedPath = cacheResult.uri.startsWith('file://')
+                ? decodeURIComponent(cacheResult.uri.replace('file://', ''))
+                : cacheResult.uri;
+            }
+          } catch (cErr) {
+            console.warn('Cache write before picker warning:', cErr);
+          }
 
-        await Share.share({
-          title: `Dailyba Statement`,
-          text: `Save ${fileName} to chosen folder`,
-          url: fileResult.uri,
-          dialogTitle: 'Save As / Pilih Folder Penyimpanan',
-        });
+          const pickerResult = await NativeFileSaver.saveWithPicker({
+            fileName,
+            mimeType,
+            cachedPath,
+            content: cachedPath ? undefined : content,
+            isBase64,
+          });
 
-        return {
-          success: true,
-          fileName,
-          uri: fileResult.uri,
-          location: 'Folder Pilihan (System)',
-        };
+          return {
+            success: true,
+            fileName: pickerResult.fileName || fileName,
+            uri: pickerResult.uri,
+            location: pickerResult.location || 'Folder Pilihan (File Manager)',
+          };
+        } catch (pickerErr: any) {
+          const errMsg = pickerErr?.message || String(pickerErr);
+          if (errMsg.toLowerCase().includes('cancel')) {
+            return {
+              success: false,
+              fileName,
+              cancelled: true,
+              error: 'Pemilihan folder dibatalkan',
+            };
+          }
+          console.warn('NativeFileSaver error, falling back to cache:', pickerErr);
+          const fallbackResult = await Filesystem.writeFile({
+            path: fileName,
+            data: content,
+            directory: Directory.Cache,
+            recursive: true,
+            ...(isBase64 ? {} : { encoding: Encoding.UTF8 }),
+          });
+
+          return {
+            success: true,
+            fileName,
+            uri: fallbackResult.uri,
+            location: 'Cache',
+          };
+        }
       }
 
       // Try chosen Directory (DOWNLOADS or DOCUMENTS)
@@ -165,7 +215,7 @@ export async function saveAndDownloadFile(
         };
       } catch (pickerErr: any) {
         if (pickerErr.name === 'AbortError') {
-          return { success: false, fileName, error: 'Download cancelled' };
+          return { success: false, fileName, cancelled: true, error: 'Pemilihan folder dibatalkan' };
         }
         console.warn('File picker failed, falling back to standard download:', pickerErr);
       }
@@ -210,61 +260,50 @@ export function generateMonthlyCSVText(
   const filtered = transactions.filter((tx) => tx.date && tx.date.startsWith(yearMonth));
 
   const headers = [
+    'ID',
     'Date',
     'Type',
     'Category',
-    'Amount',
-    'Currency',
-    `Converted (${currency})`,
-    'Funding Source',
-    'Destination (Transfer)',
+    'Source',
+    'Destination',
+    'Amount (Original)',
+    'Original Currency',
+    `Amount (${currency})`,
     'Note',
   ];
 
-  const rows = filtered.map((tx) => {
-    const isExpense = tx.type === 'expense';
-    const isIncome = tx.type === 'income';
-    const isTransfer = tx.type === 'transfer';
+  const escapeCSV = (val: any) => {
+    if (val === null || val === undefined) return '""';
+    const str = String(val).replace(/"/g, '""');
+    return `"${str}"`;
+  };
 
-    const typeLabel = isTransfer
-      ? t.record.typeTransfer
-      : isExpense
-      ? t.record.typeExpense
-      : isIncome
-      ? t.record.typeIncome
-      : t.record.typeSavings;
-
-    const catLabel = isTransfer
-      ? 'Internal Transfer'
-      : isExpense
-      ? (t.expenseCategories as any)[tx.category] || tx.category
-      : isIncome
-      ? (t.incomeCategories as any)[tx.category] || tx.category
-      : t.record.typeSavings;
-
+  const rows: string[][] = filtered.map((tx) => {
     const converted = convertCurrency(tx.amount, tx.currency || 'JPY', currency, rates);
-    const sourceLabel = t.sources[tx.source] || tx.source;
-    const destLabel = tx.destinationSource ? (t.sources[tx.destinationSource] || tx.destinationSource) : '';
-    const cleanNote = (tx.note || '').replace(/"/g, '""');
-
     return [
+      tx.id,
       tx.date,
-      `"${typeLabel}"`,
-      `"${catLabel}"`,
-      tx.amount,
+      tx.type,
+      tx.category,
+      t.sources[tx.source] || tx.source,
+      tx.destinationSource ? t.sources[tx.destinationSource] || tx.destinationSource : '',
+      String(tx.amount),
       tx.currency || 'JPY',
-      converted,
-      `"${sourceLabel}"`,
-      `"${destLabel}"`,
-      `"${cleanNote}"`,
-    ].join(',');
+      String(Math.round(converted * 100) / 100),
+      tx.note || '',
+    ];
   });
 
-  return '\uFEFF' + [headers.join(','), ...rows].join('\r\n');
+  const csvRows = [headers.map(escapeCSV).join(',')];
+  rows.forEach((r) => {
+    csvRows.push(r.map(escapeCSV).join(','));
+  });
+
+  return '\uFEFF' + csvRows.join('\r\n');
 }
 
 /**
- * Generate Excel data grid and Base64 string
+ * Generate Excel data structure for preview & export
  */
 export function generateMonthlyExcelData(
   transactions: Transaction[],
@@ -272,7 +311,7 @@ export function generateMonthlyExcelData(
   currency: Currency,
   rates: ExchangeRates,
   language: Language
-): { sheetData: (string | number)[][]; base64: string } {
+) {
   const t = translations[language];
   const filtered = transactions.filter((tx) => tx.date && tx.date.startsWith(yearMonth));
 
@@ -288,61 +327,56 @@ export function generateMonthlyExcelData(
   const netSavings = totalIncome - totalExpense;
 
   const sheetData: (string | number)[][] = [
-    ['DAILYBA FINANCIAL STATEMENT', '', '', '', '', '', '', '', ''],
-    ['Period:', yearMonth, '', '', '', '', '', '', ''],
-    ['Generated:', new Date().toLocaleDateString(), '', '', '', '', '', '', ''],
-    ['Total Income:', `${currency} ${formatNumberWithCommas(totalIncome)}`, '', '', '', '', '', '', ''],
-    ['Total Expense:', `${currency} ${formatNumberWithCommas(totalExpense)}`, '', '', '', '', '', '', ''],
-    ['Net Cash Flow:', `${currency} ${formatNumberWithCommas(netSavings)}`, '', '', '', '', '', '', ''],
+    ['DAILYBA FINANCIAL STATEMENT - ' + yearMonth],
+    ['Generated at:', new Date().toLocaleString()],
+    ['Currency:', currency],
+    ['Total Income:', totalIncome],
+    ['Total Expense:', totalExpense],
+    ['Net Savings:', netSavings],
     [],
     [
       'Date',
       'Type',
       'Category',
-      'Funding Source',
-      'Destination',
-      'Description / Note',
-      'Amount',
-      'Currency',
-      `Converted (${currency})`,
+      'Source / Account',
+      'Destination Account',
+      'Description',
+      `Original Amount`,
+      'Orig Currency',
+      `Converted Amount (${currency})`,
     ],
   ];
 
   filtered.forEach((tx) => {
-    const isExpense = tx.type === 'expense';
-    const isIncome = tx.type === 'income';
-    const isTransfer = tx.type === 'transfer';
-
-    const typeLabel = isTransfer
-      ? t.record.typeTransfer
-      : isExpense
-      ? t.record.typeExpense
-      : isIncome
-      ? t.record.typeIncome
-      : t.record.typeSavings;
-
-    const catLabel = isTransfer
-      ? 'Internal Transfer'
-      : isExpense
-      ? (t.expenseCategories as any)[tx.category] || tx.category
-      : isIncome
-      ? (t.incomeCategories as any)[tx.category] || tx.category
-      : t.record.typeSavings;
-
     const converted = convertCurrency(tx.amount, tx.currency || 'JPY', currency, rates);
-    const sourceLabel = t.sources[tx.source] || tx.source;
-    const destLabel = tx.destinationSource ? (t.sources[tx.destinationSource] || tx.destinationSource) : '';
+    const typeLabel =
+      tx.type === 'transfer'
+        ? t.record.typeTransfer
+        : tx.type === 'expense'
+        ? t.record.typeExpense
+        : tx.type === 'income'
+        ? t.record.typeIncome
+        : t.record.typeSavings;
+
+    const catLabel =
+      tx.type === 'transfer'
+        ? 'Transfer'
+        : tx.type === 'expense'
+        ? (t.expenseCategories as any)[tx.category] || tx.category
+        : tx.type === 'income'
+        ? (t.incomeCategories as any)[tx.category] || tx.category
+        : t.record.typeSavings;
 
     sheetData.push([
       tx.date,
       typeLabel,
       catLabel,
-      sourceLabel,
-      destLabel,
+      t.sources[tx.source] || tx.source,
+      tx.destinationSource ? t.sources[tx.destinationSource] || tx.destinationSource : '-',
       tx.note || '',
       tx.amount,
       tx.currency || 'JPY',
-      converted,
+      Math.round(converted * 100) / 100,
     ]);
   });
 
@@ -350,25 +384,28 @@ export function generateMonthlyExcelData(
   const ws = XLSX.utils.aoa_to_sheet(sheetData);
 
   ws['!cols'] = [
-    { wch: 13 },
     { wch: 14 },
-    { wch: 22 },
-    { wch: 16 },
-    { wch: 16 },
-    { wch: 30 },
-    { wch: 15 },
-    { wch: 10 },
+    { wch: 12 },
     { wch: 18 },
+    { wch: 16 },
+    { wch: 16 },
+    { wch: 25 },
+    { wch: 16 },
+    { wch: 12 },
+    { wch: 20 },
   ];
 
-  XLSX.utils.book_append_sheet(wb, ws, `Statement ${yearMonth}`);
+  XLSX.utils.book_append_sheet(wb, ws, `Statement_${yearMonth}`);
   const base64 = XLSX.write(wb, { bookType: 'xlsx', type: 'base64' });
 
-  return { sheetData, base64 };
+  return {
+    sheetData,
+    base64,
+  };
 }
 
 /**
- * Generate PDF Base64 string
+ * Generate PDF document base64
  */
 export function generateMonthlyPDFBase64(
   transactions: Transaction[],
@@ -391,99 +428,99 @@ export function generateMonthlyPDFBase64(
 
   const netSavings = totalIncome - totalExpense;
 
-  const doc = new jsPDF({ orientation: 'portrait', unit: 'pt', format: 'a4' });
+  const doc = new jsPDF({
+    orientation: 'portrait',
+    unit: 'mm',
+    format: 'a4',
+  });
 
-  // 1. Header & Title
+  doc.setFillColor(15, 23, 42);
+  doc.rect(0, 0, 210, 28, 'F');
+
+  doc.setTextColor(255, 255, 255);
+  doc.setFontSize(18);
   doc.setFont('helvetica', 'bold');
-  doc.setFontSize(20);
-  doc.setTextColor(15, 23, 42); // slate-900
-  doc.text('Dailyba', 40, 52);
+  doc.text('Dailyba', 14, 15);
 
+  doc.setFontSize(8);
   doc.setFont('helvetica', 'normal');
-  doc.setFontSize(10);
-  doc.setTextColor(100, 116, 139); // slate-500
-  doc.text('Daily Balance & Wealth Tracker • Financial Statement', 40, 68);
+  doc.setTextColor(148, 163, 184);
+  doc.text('Financial Statement & Wealth Report', 14, 21);
 
+  doc.setFontSize(11);
   doc.setFont('helvetica', 'bold');
-  doc.setFontSize(13);
-  doc.setTextColor(15, 23, 42);
-  doc.text(yearMonth, 555, 52, { align: 'right' });
+  doc.setTextColor(255, 255, 255);
+  doc.text(yearMonth, 196, 14, { align: 'right' });
 
+  doc.setFontSize(8);
   doc.setFont('helvetica', 'normal');
-  doc.setFontSize(9);
-  doc.setTextColor(100, 116, 139);
-  doc.text(`Generated: ${new Date().toLocaleDateString()}`, 555, 68, { align: 'right' });
+  doc.setTextColor(148, 163, 184);
+  doc.text(`Generated: ${new Date().toLocaleDateString()}`, 196, 21, { align: 'right' });
 
-  // Divider line
-  doc.setDrawColor(226, 232, 240);
-  doc.setLineWidth(1.5);
-  doc.line(40, 78, 555, 78);
+  const kpiY = 35;
+  const kpiW = 58;
+  const kpiH = 20;
 
-  // 2. Summary KPI Box
-  doc.setFillColor(248, 250, 252);
-  doc.roundedRect(40, 90, 515, 46, 6, 6, 'F');
-  doc.setDrawColor(203, 213, 225);
-  doc.setLineWidth(0.8);
-  doc.roundedRect(40, 90, 515, 46, 6, 6, 'S');
-
+  // Income Card
+  doc.setFillColor(240, 253, 244);
+  doc.setDrawColor(187, 247, 208);
+  doc.roundedRect(14, kpiY, kpiW, kpiH, 3, 3, 'FD');
+  doc.setFontSize(8);
+  doc.setTextColor(21, 128, 61);
   doc.setFont('helvetica', 'bold');
-  doc.setFontSize(8.5);
-  doc.setTextColor(71, 85, 105);
-  doc.text('TOTAL INCOME', 55, 105);
+  doc.text('TOTAL INCOME', 18, kpiY + 7);
   doc.setFontSize(11);
-  doc.setTextColor(16, 185, 129);
-  doc.text(`+${currency} ${formatNumberWithCommas(totalIncome)}`, 55, 123);
+  doc.text(`+${currency} ${formatNumberWithCommas(totalIncome)}`, 18, kpiY + 15);
 
+  // Expense Card
+  doc.setFillColor(254, 242, 242);
+  doc.setDrawColor(254, 202, 202);
+  doc.roundedRect(76, kpiY, kpiW, kpiH, 3, 3, 'FD');
+  doc.setFontSize(8);
+  doc.setTextColor(185, 28, 28);
   doc.setFont('helvetica', 'bold');
-  doc.setFontSize(8.5);
-  doc.setTextColor(71, 85, 105);
-  doc.text('TOTAL EXPENSE', 230, 105);
+  doc.text('TOTAL EXPENSE', 80, kpiY + 7);
   doc.setFontSize(11);
-  doc.setTextColor(244, 63, 94);
-  doc.text(`-${currency} ${formatNumberWithCommas(totalExpense)}`, 230, 123);
+  doc.text(`-${currency} ${formatNumberWithCommas(totalExpense)}`, 80, kpiY + 15);
 
+  // Net Savings Card
+  doc.setFillColor(netSavings >= 0 ? 238 : 254, netSavings >= 0 ? 242 : 242, netSavings >= 0 ? 255 : 242);
+  doc.setDrawColor(netSavings >= 0 ? 199 : 254, netSavings >= 0 ? 210 : 202, netSavings >= 0 ? 254 : 202);
+  doc.roundedRect(138, kpiY, kpiW, kpiH, 3, 3, 'FD');
+  doc.setFontSize(8);
+  doc.setTextColor(netSavings >= 0 ? 79 : 185, netSavings >= 0 ? 70 : 28, netSavings >= 0 ? 229 : 28);
   doc.setFont('helvetica', 'bold');
-  doc.setFontSize(8.5);
-  doc.setTextColor(71, 85, 105);
-  doc.text('NET CASH FLOW', 405, 105);
+  doc.text('NET SAVINGS', 142, kpiY + 7);
   doc.setFontSize(11);
-  if (netSavings >= 0) {
-    doc.setTextColor(99, 102, 241);
-    doc.text(`+${currency} ${formatNumberWithCommas(netSavings)}`, 405, 123);
-  } else {
-    doc.setTextColor(244, 63, 94);
-    doc.text(`-${currency} ${formatNumberWithCommas(Math.abs(netSavings))}`, 405, 123);
-  }
+  doc.text(`${netSavings >= 0 ? '+' : ''}${currency} ${formatNumberWithCommas(netSavings)}`, 142, kpiY + 15);
 
-  // 3. Transactions Table
-  const tableRows = filtered.map((tx) => {
+  const tableBody = filtered.map((tx) => {
     const isExpense = tx.type === 'expense';
     const isIncome = tx.type === 'income';
     const isTransfer = tx.type === 'transfer';
 
     const typeLabel = isTransfer
-      ? t.record.typeTransfer
+      ? 'Transfer'
       : isExpense
-      ? t.record.typeExpense
+      ? 'Expense'
       : isIncome
-      ? t.record.typeIncome
-      : t.record.typeSavings;
+      ? 'Income'
+      : 'Savings';
 
     const catLabel = isTransfer
-      ? 'Internal Transfer'
+      ? 'Transfer'
       : isExpense
       ? (t.expenseCategories as any)[tx.category] || tx.category
       : isIncome
       ? (t.incomeCategories as any)[tx.category] || tx.category
-      : t.record.typeSavings;
+      : 'Savings';
 
     const converted = convertCurrency(tx.amount, tx.currency || 'JPY', currency, rates);
     const sourceText = isTransfer
       ? `${t.sources[tx.source] || tx.source} -> ${t.sources[tx.destinationSource || 'ewallet'] || tx.destinationSource || 'E-Wallet'}`
       : t.sources[tx.source] || tx.source;
 
-    const sign = isExpense ? '-' : isIncome ? '+' : '';
-    const formattedAmt = `${sign}${currency} ${formatNumberWithCommas(converted)}`;
+    const formattedAmount = `${isExpense ? '-' : isIncome ? '+' : ''}${currency} ${formatNumberWithCommas(converted)}`;
 
     return [
       tx.date,
@@ -491,65 +528,55 @@ export function generateMonthlyPDFBase64(
       catLabel,
       sourceText,
       tx.note || '-',
-      formattedAmt,
+      formattedAmount,
     ];
   });
 
   autoTable(doc, {
-    startY: 150,
-    head: [['Date', 'Type', 'Category', 'Source', 'Description', `Amount (${currency})`]],
-    body: tableRows.length > 0 ? tableRows : [['-', '-', 'No transactions recorded', '-', '-', '-']],
-    headStyles: {
-      fillColor: [30, 41, 59],
-      textColor: [255, 255, 255],
-      fontStyle: 'bold',
-      fontSize: 8.5,
-      halign: 'left',
-    },
+    startY: 62,
+    head: [['Date', 'Type', 'Category', 'Account', 'Description', `Amount (${currency})`]],
+    body: tableBody.length > 0 ? tableBody : [['-', '-', 'No transactions found', '-', '-', '-']],
     styles: {
       fontSize: 8,
-      cellPadding: 6,
-      textColor: [30, 41, 59],
+      cellPadding: 2.5,
+      font: 'helvetica',
+      textColor: [51, 65, 85],
+    },
+    headStyles: {
+      fillColor: [241, 245, 249],
+      textColor: [15, 23, 42],
+      fontStyle: 'bold',
       lineColor: [226, 232, 240],
-      lineWidth: 0.5,
+      lineWidth: 0.2,
     },
     alternateRowStyles: {
       fillColor: [248, 250, 252],
     },
     columnStyles: {
-      0: { cellWidth: 62 },
-      1: { cellWidth: 55 },
-      2: { cellWidth: 85 },
-      3: { cellWidth: 85 },
-      4: { cellWidth: 128 },
-      5: { cellWidth: 100, halign: 'right', fontStyle: 'bold' },
+      0: { cellWidth: 22 },
+      1: { cellWidth: 20 },
+      2: { cellWidth: 28 },
+      3: { cellWidth: 35 },
+      4: { cellWidth: 'auto' },
+      5: { cellWidth: 30, halign: 'right', fontStyle: 'bold' },
     },
-    margin: { left: 40, right: 40, bottom: 40 },
     didDrawPage: (data) => {
-      const pageNumber = (doc as any).internal.getNumberOfPages();
-      doc.setFontSize(8);
-      doc.setFont('helvetica', 'normal');
+      const pageCount = (doc.internal as any).getNumberOfPages();
+      doc.setFontSize(7);
       doc.setTextColor(148, 163, 184);
       doc.text(
-        'Dailyba Personal Finance Vault • Privacy-First & Locally Encrypted Statement',
-        40,
-        820
-      );
-      doc.text(
-        `Page ${data.pageNumber} of ${pageNumber}`,
-        555,
-        820,
-        { align: 'right' }
+        `Dailyba Personal Finance Vault • Page ${data.pageNumber} of ${pageCount}`,
+        14,
+        290
       );
     },
   });
 
-  return doc.output('datauristring').split(',')[1];
+  const pdfOutput = doc.output('datauristring');
+  const base64 = pdfOutput.split(',')[1];
+  return base64;
 }
 
-/**
- * High-level export actions
- */
 export async function exportMonthlyTransactionsToCSV(
   transactions: Transaction[],
   yearMonth: string,

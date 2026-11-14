@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useEffect, useState, useMemo } from 'react';
+import React, { useEffect, useState, useMemo, useRef } from 'react';
 import { createPortal } from 'react-dom';
 import {
   ArrowLeft,
@@ -13,7 +13,9 @@ import {
   AlertCircle,
   ShieldCheck,
   Loader2,
-  FolderDown,
+  Folder,
+  FolderPlus,
+  ChevronDown,
   Copy,
   Check,
 } from 'lucide-react';
@@ -44,6 +46,7 @@ interface StatementPreviewModalProps {
 }
 
 const STORAGE_DEFAULT_LOCATION = 'dailyba_export_default_location_v1';
+const STORAGE_LAST_FOLDER_LABEL = 'dailyba_export_last_folder_label_v1';
 
 export function StatementPreviewModal({
   isOpen,
@@ -57,10 +60,13 @@ export function StatementPreviewModal({
   const [mounted, setMounted] = useState(false);
   const [activeTab, setActiveTab] = useState<'pdf' | 'excel' | 'csv'>('pdf');
   const [targetLocation, setTargetLocation] = useState<TargetExportLocation>('DOCUMENTS');
+  const [lastSavedLocation, setLastSavedLocation] = useState<string>('');
+  const [isFolderMenuOpen, setIsFolderMenuOpen] = useState(false);
   const [isDownloading, setIsDownloading] = useState(false);
   const [downloadFeedback, setDownloadFeedback] = useState<DownloadResult | null>(null);
   const [isCopied, setIsCopied] = useState(false);
 
+  const folderMenuRef = useRef<HTMLDivElement>(null);
   const t = translations[language];
 
   useBodyScrollLock(isOpen);
@@ -72,6 +78,10 @@ export function StatementPreviewModal({
       if (savedLoc && ['DOCUMENTS', 'DOWNLOADS', 'SYSTEM_PICKER'].includes(savedLoc)) {
         setTargetLocation(savedLoc);
       }
+      const savedLabel = localStorage.getItem(STORAGE_LAST_FOLDER_LABEL);
+      if (savedLabel) {
+        setLastSavedLocation(savedLabel);
+      }
     } catch {
       // ignore
     }
@@ -81,15 +91,33 @@ export function StatementPreviewModal({
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.key === 'Escape' && isOpen) {
-        onClose();
+        if (isFolderMenuOpen) {
+          setIsFolderMenuOpen(false);
+        } else {
+          onClose();
+        }
       }
     };
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [isOpen, onClose]);
+  }, [isOpen, onClose, isFolderMenuOpen]);
+
+  // Handle outside click to close folder menu
+  useEffect(() => {
+    const handleOutsideClick = (e: MouseEvent) => {
+      if (folderMenuRef.current && !folderMenuRef.current.contains(e.target as Node)) {
+        setIsFolderMenuOpen(false);
+      }
+    };
+    if (isFolderMenuOpen) {
+      document.addEventListener('mousedown', handleOutsideClick);
+    }
+    return () => document.removeEventListener('mousedown', handleOutsideClick);
+  }, [isFolderMenuOpen]);
 
   const handleLocationChange = (newLoc: TargetExportLocation) => {
     setTargetLocation(newLoc);
+    setIsFolderMenuOpen(false);
     try {
       localStorage.setItem(STORAGE_DEFAULT_LOCATION, newLoc);
     } catch {
@@ -162,7 +190,16 @@ export function StatementPreviewModal({
           targetLocation
         );
       }
+
       setDownloadFeedback(result);
+      if (result.success && result.location) {
+        setLastSavedLocation(result.location);
+        try {
+          localStorage.setItem(STORAGE_LAST_FOLDER_LABEL, result.location);
+        } catch {
+          // ignore
+        }
+      }
     } catch (err: any) {
       setDownloadFeedback({
         success: false,
@@ -198,6 +235,17 @@ export function StatementPreviewModal({
   };
 
   const isNative = Capacitor.isNativePlatform();
+
+  const getTargetLocationLabel = () => {
+    switch (targetLocation) {
+      case 'DOCUMENTS':
+        return 'Documents';
+      case 'DOWNLOADS':
+        return 'Downloads';
+      case 'SYSTEM_PICKER':
+        return isNative ? 'Pilih Folder (Save As)' : 'Choose Folder';
+    }
+  };
 
   return createPortal(
     <div className="fixed inset-0 z-[120] bg-slate-950/85 backdrop-blur-md flex flex-col overflow-y-auto statement-modal-overlay">
@@ -298,27 +346,136 @@ export function StatementPreviewModal({
             </div>
           </div>
 
-          {/* Right: Destination Folder Picker & Download Button */}
+          {/* Right: Custom Folder Destination Dropdown & Download Button */}
           <div className="w-full sm:w-auto flex items-center justify-end space-x-2">
-            {/* Target Folder Selector */}
-            <div className="flex items-center space-x-1.5 bg-[var(--bg-subtle)] border border-[var(--border-subtle)] rounded-xl px-2.5 py-1.5 text-xs text-[var(--text-muted)]">
-              <FolderDown className="w-3.5 h-3.5 text-indigo-400 shrink-0" />
-              <select
-                value={targetLocation}
-                onChange={(e) => handleLocationChange(e.target.value as TargetExportLocation)}
-                className="bg-transparent text-[11px] sm:text-xs font-bold text-[var(--text-main)] outline-none cursor-pointer"
-                title="Select destination folder (saved as default)"
+            {/* Custom Destination Selector Dropdown (Zero Emojis, Pure Lucide Icons) */}
+            <div className="relative" ref={folderMenuRef}>
+              <button
+                type="button"
+                onClick={() => setIsFolderMenuOpen(!isFolderMenuOpen)}
+                className="flex items-center space-x-2 bg-[var(--bg-subtle)] hover:bg-[var(--bg-subtle-hover)] border border-[var(--border-subtle)] rounded-xl px-3 py-2 text-xs font-bold text-[var(--text-main)] transition-all cursor-pointer shadow-xs active:scale-95"
+                title="Pilih folder tujuan (tersimpan sebagai default)"
               >
-                <option value="DOCUMENTS" className="bg-[var(--bg-surface-solid)] text-[var(--text-main)]">
-                  📁 Documents
-                </option>
-                <option value="DOWNLOADS" className="bg-[var(--bg-surface-solid)] text-[var(--text-main)]">
-                  📥 Downloads
-                </option>
-                <option value="SYSTEM_PICKER" className="bg-[var(--bg-surface-solid)] text-[var(--text-main)]">
-                  🧭 {isNative ? 'Pilih Folder (Save As)' : 'Choose Folder (Save As)'}
-                </option>
-              </select>
+                {targetLocation === 'DOCUMENTS' && <Folder className="w-3.5 h-3.5 text-amber-400 shrink-0" />}
+                {targetLocation === 'DOWNLOADS' && <Download className="w-3.5 h-3.5 text-emerald-400 shrink-0" />}
+                {targetLocation === 'SYSTEM_PICKER' && <FolderPlus className="w-3.5 h-3.5 text-indigo-400 shrink-0" />}
+
+                <span className="truncate max-w-[120px] sm:max-w-none">{getTargetLocationLabel()}</span>
+                <ChevronDown
+                  className={`w-3.5 h-3.5 text-[var(--text-muted)] transition-transform duration-200 ${
+                    isFolderMenuOpen ? 'rotate-180' : ''
+                  }`}
+                />
+              </button>
+
+              {/* Dropdown Menu Modal */}
+              {isFolderMenuOpen && (
+                <div className="absolute right-0 top-full mt-2 w-72 sm:w-80 rounded-2xl bg-[var(--bg-surface-solid)] border border-[var(--border-subtle)] shadow-2xl p-2 z-50 animate-fade-in">
+                  <div className="px-3 py-2 border-b border-[var(--border-subtle)] mb-1">
+                    <p className="text-xs font-bold text-[var(--text-main)]">
+                      {language === 'ja' ? '保存先フォルダ' : 'Lokasi Simpan / Save Destination'}
+                    </p>
+                    <p className="text-[10px] text-[var(--text-muted)] mt-0.5">
+                      {language === 'ja'
+                        ? '選択した場所は次回以降デフォルトになります'
+                        : 'Pilihan ini akan otomatis tersimpan sebagai default'}
+                    </p>
+                  </div>
+
+                  <div className="space-y-1">
+                    {/* Option 1: Documents */}
+                    <button
+                      type="button"
+                      onClick={() => handleLocationChange('DOCUMENTS')}
+                      className={`w-full flex items-center justify-between p-2.5 rounded-xl text-left transition-all cursor-pointer ${
+                        targetLocation === 'DOCUMENTS'
+                          ? 'bg-amber-500/15 border border-amber-500/30 text-[var(--text-main)]'
+                          : 'hover:bg-[var(--bg-subtle)] text-[var(--text-main)]'
+                      }`}
+                    >
+                      <div className="flex items-center space-x-2.5">
+                        <div className="w-8 h-8 rounded-xl bg-amber-500/15 border border-amber-500/25 flex items-center justify-center shrink-0">
+                          <Folder className="w-4 h-4 text-amber-400" />
+                        </div>
+                        <div>
+                          <p className="text-xs font-bold leading-tight">Documents</p>
+                          <p className="text-[10px] text-[var(--text-muted)] mt-0.5">
+                            {language === 'ja' ? 'アプリ内ドキュメント' : 'Folder Dokumen Aplikasi (Internal)'}
+                          </p>
+                        </div>
+                      </div>
+                      {targetLocation === 'DOCUMENTS' && <Check className="w-4 h-4 text-emerald-400 shrink-0 ml-2" />}
+                    </button>
+
+                    {/* Option 2: Downloads */}
+                    <button
+                      type="button"
+                      onClick={() => handleLocationChange('DOWNLOADS')}
+                      className={`w-full flex items-center justify-between p-2.5 rounded-xl text-left transition-all cursor-pointer ${
+                        targetLocation === 'DOWNLOADS'
+                          ? 'bg-emerald-500/15 border border-emerald-500/30 text-[var(--text-main)]'
+                          : 'hover:bg-[var(--bg-subtle)] text-[var(--text-main)]'
+                      }`}
+                    >
+                      <div className="flex items-center space-x-2.5">
+                        <div className="w-8 h-8 rounded-xl bg-emerald-500/15 border border-emerald-500/25 flex items-center justify-center shrink-0">
+                          <Download className="w-4 h-4 text-emerald-400" />
+                        </div>
+                        <div>
+                          <p className="text-xs font-bold leading-tight">Downloads</p>
+                          <p className="text-[10px] text-[var(--text-muted)] mt-0.5">
+                            {language === 'ja' ? '端末のダウンロードフォルダ' : 'Folder Unduhan Publik Perangkat'}
+                          </p>
+                        </div>
+                      </div>
+                      {targetLocation === 'DOWNLOADS' && <Check className="w-4 h-4 text-emerald-400 shrink-0 ml-2" />}
+                    </button>
+
+                    {/* Option 3: System Picker / File Manager (Save As) */}
+                    <button
+                      type="button"
+                      onClick={() => handleLocationChange('SYSTEM_PICKER')}
+                      className={`w-full flex items-center justify-between p-2.5 rounded-xl text-left transition-all cursor-pointer ${
+                        targetLocation === 'SYSTEM_PICKER'
+                          ? 'bg-indigo-500/15 border border-indigo-500/30 text-[var(--text-main)]'
+                          : 'hover:bg-[var(--bg-subtle)] text-[var(--text-main)]'
+                      }`}
+                    >
+                      <div className="flex items-center space-x-2.5">
+                        <div className="w-8 h-8 rounded-xl bg-indigo-500/15 border border-indigo-500/25 flex items-center justify-center shrink-0">
+                          <FolderPlus className="w-4 h-4 text-indigo-400" />
+                        </div>
+                        <div>
+                          <p className="text-xs font-bold leading-tight">
+                            {isNative ? 'Pilih Folder (File Manager)' : 'Choose Folder (Save As)'}
+                          </p>
+                          <p className="text-[10px] text-[var(--text-muted)] mt-0.5">
+                            {isNative
+                              ? 'Buka Pengelola File Android langsung'
+                              : 'Buka dialog penjelajah file komputer'}
+                          </p>
+                        </div>
+                      </div>
+                      {targetLocation === 'SYSTEM_PICKER' && (
+                        <Check className="w-4 h-4 text-emerald-400 shrink-0 ml-2" />
+                      )}
+                    </button>
+                  </div>
+
+                  {/* Dropdown Footer */}
+                  <div className="px-3 py-2 mt-1.5 border-t border-[var(--border-subtle)] flex items-center justify-between text-[10px] text-[var(--text-muted)]">
+                    <span className="flex items-center space-x-1.5 text-emerald-400 font-semibold">
+                      <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400 shrink-0" />
+                      <span>Default Tersimpan</span>
+                    </span>
+                    {lastSavedLocation && (
+                      <span className="truncate max-w-[120px] font-mono text-[9px] text-[var(--text-muted)]">
+                        {lastSavedLocation}
+                      </span>
+                    )}
+                  </div>
+                </div>
+              )}
             </div>
 
             {/* Active Download Button */}
@@ -365,7 +522,7 @@ export function StatementPreviewModal({
       </header>
 
       {/* Download Status Toast Banner */}
-      {downloadFeedback && (
+      {downloadFeedback && !downloadFeedback.cancelled && (
         <div className="max-w-4xl mx-auto w-full px-4 pt-3 no-print animate-fade-in">
           {downloadFeedback.success ? (
             <div className="flex items-center justify-between p-3 rounded-2xl bg-emerald-500/15 border border-emerald-500/30 text-emerald-400 text-xs font-semibold shadow-md">
@@ -374,7 +531,7 @@ export function StatementPreviewModal({
                 <span className="truncate">
                   {language === 'ja'
                     ? `ダウンロード完了: ${downloadFeedback.fileName} (${downloadFeedback.location})`
-                    : `Downloaded successfully: ${downloadFeedback.fileName} (${downloadFeedback.location})`}
+                    : `Berhasil disimpan di ${downloadFeedback.location}: ${downloadFeedback.fileName}`}
                 </span>
               </div>
               {downloadFeedback.uri && isNative && (
@@ -384,16 +541,25 @@ export function StatementPreviewModal({
                   className="flex items-center space-x-1 px-3 py-1.5 rounded-xl bg-emerald-500/20 hover:bg-emerald-500/30 border border-emerald-500/40 text-emerald-300 text-[11px] font-bold transition-all cursor-pointer shrink-0"
                 >
                   <Share2 className="w-3 h-3" />
-                  <span>Share / Open</span>
+                  <span>Buka / Bagikan</span>
                 </button>
               )}
             </div>
           ) : (
             <div className="flex items-center space-x-2 p-3 rounded-2xl bg-rose-500/15 border border-rose-500/30 text-rose-400 text-xs font-semibold shadow-md">
               <AlertCircle className="w-4 h-4 text-rose-400 shrink-0" />
-              <span>{downloadFeedback.error || 'Failed to download file'}</span>
+              <span>{downloadFeedback.error || 'Gagal menyimpan file'}</span>
             </div>
           )}
+        </div>
+      )}
+
+      {downloadFeedback?.cancelled && (
+        <div className="max-w-4xl mx-auto w-full px-4 pt-3 no-print animate-fade-in">
+          <div className="flex items-center space-x-2 p-2.5 rounded-2xl bg-[var(--bg-subtle)] border border-[var(--border-subtle)] text-[var(--text-muted)] text-xs font-medium">
+            <AlertCircle className="w-4 h-4 text-[var(--text-muted)] shrink-0" />
+            <span>Pemilihan folder dibatalkan</span>
+          </div>
         </div>
       )}
 
