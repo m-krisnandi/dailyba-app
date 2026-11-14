@@ -180,11 +180,11 @@ export function parseSmartText(raw: string, defaultSource: FundingSource = 'cash
   }
 
   // 3. Expense Categories
-  // Train & Transit
-  if (/\b(train|kereta|densha|subway|metro|station|stasiun|jr|bus|transit|commuter)\b|電車|でんしゃ|メトロ|地下鉄|駅|切符|きっぷ|新幹線|定期|定期券|乗車券|交通費|suica|pasmo|icoca/i.test(noteToAnalyze)) {
+  // Transportation (Train, Transit, Ride-hail, Taxi, Fuel, Parking, Toll)
+  if (/\b(transport|transportasi|train|kereta|densha|subway|metro|station|stasiun|jr|bus|transit|commuter|gojek|grab|ride|ojol|taksi|taxi|uber|fuel|gas|petrol|bensin|pertamax|pertalite|solar|parking|parkir|toll|tol)\b|交通|交通費|電車|でんしゃ|メトロ|地下鉄|駅|切符|きっぷ|新幹線|定期|定期券|乗車券|suica|pasmo|icoca|タクシー|配車|ガソリン|給油|駐車場|パーキング|高速|有料道路/i.test(noteToAnalyze)) {
     return {
       type: 'expense',
-      category: 'train',
+      category: 'transport',
       amount,
       source: (source === 'cash' && /\b(suica|pasmo|icoca|メトロ|電車|jr)\b/i.test(remainingText)) ? 'ewallet' : source,
       note: cleanNote || remainingText,
@@ -213,16 +213,6 @@ export function parseSmartText(raw: string, defaultSource: FundingSource = 'cash
     };
   }
 
-  // Ride / Taxi / Fuel
-  if (/\b(gojek|grab|ride|ojol|taksi|taxi|uber|fuel|gas|petrol|parking|toll)\b|タクシー|配車|ガソリン|駐車場|パーキング|高速|有料道路/i.test(noteToAnalyze)) {
-    return {
-      type: 'expense',
-      category: 'ride',
-      amount,
-      source,
-      note: cleanNote || remainingText,
-    };
-  }
 
   // Laundry
   if (/\b(laundry|cuci|laundromat|coin laundry|sentaku|wash|dry)\b|洗濯|コインランドリー|クリーニング/i.test(noteToAnalyze)) {

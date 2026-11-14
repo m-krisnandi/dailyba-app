@@ -79,8 +79,7 @@ interface QuickRecordBoardProps {
 const ALL_EXPENSE_CATEGORIES: ExpenseCategory[] = [
   'food_drinks',
   'shopping',
-  'train',
-  'ride',
+  'transport',
   'laundry',
   'rent',
   'family',
@@ -275,7 +274,7 @@ export function QuickRecordBoard({
 
   // Transactions Feed Filters & Pagination
   const [txSearchQuery, setTxSearchQuery] = useState('');
-  const [txFilterType, setTxFilterType] = useState<'all' | TransactionType>('all');
+  const [txFilterType, setTxFilterType] = useState<'all' | 'expense' | 'income' | 'savings'>('all');
   const [txFilterSource, setTxFilterSource] = useState<'all' | FundingSource>('all');
   const [txSortBy, setTxSortBy] = useState<TransactionSortOption>('date-desc');
   const [txCurrentPage, setTxCurrentPage] = useState(1);
@@ -388,7 +387,7 @@ export function QuickRecordBoard({
 
     const parsed = parseSmartText(smartText, source);
     if (!parsed) {
-      setStatusMessage(language === "ja" ? '入力を解析できませんでした。例: 「電車 500」や「セブン 850 現金」' : 'Could not parse text. Format e.g. "train 220 bank" or "lunch 35k ewallet"');
+      setStatusMessage(language === "ja" ? '入力を解析できませんでした。例: 「電車 500」や「セブン 850 現金」' : 'Could not parse text. Format e.g. "transport 220 bank" or "lunch 35k ewallet"');
       setTimeout(() => setStatusMessage(null), 3000);
       return;
     }
@@ -678,7 +677,7 @@ export function QuickRecordBoard({
     setTxCurrentPage(1);
   };
 
-  const handleFilterTypeChange = (nextType: 'all' | TransactionType) => {
+  const handleFilterTypeChange = (nextType: 'all' | 'expense' | 'income' | 'savings') => {
     setTxFilterType(nextType);
     setTxCurrentPage(1);
   };
@@ -708,6 +707,10 @@ export function QuickRecordBoard({
 
   const filteredTransactions = useMemo(() => {
     const list = transactions.filter((tx) => {
+      // Hide internal transfer from recent transactions
+      if (tx.type === 'transfer') {
+        return false;
+      }
       // Type filter
       if (txFilterType !== 'all' && tx.type !== txFilterType) {
         return false;
@@ -751,8 +754,6 @@ export function QuickRecordBoard({
             ? t.expenseCategories[tx.category as ExpenseCategory] || ''
             : tx.type === 'income'
             ? t.incomeCategories[tx.category as IncomeCategory] || ''
-            : tx.type === 'transfer'
-            ? t.record.typeTransfer
             : t.record.typeSavings
         ).toLowerCase();
         const catMatch = catRaw.includes(query) || catLabel.includes(query);
@@ -1501,8 +1502,8 @@ export function QuickRecordBoard({
               />
             </div>
 
-            {/* Row 3: 5 Type Filter Pills - full width grid so all 5 types fit with NO horizontal scroll */}
-            <div className="grid grid-cols-5 gap-1 p-1 bg-[var(--bg-subtle)] rounded-xl border border-[var(--border-subtle)] w-full">
+            {/* Row 3: 4 Type Filter Pills - full width grid so all 4 types fit with NO horizontal scroll */}
+            <div className="grid grid-cols-4 gap-1 p-1 bg-[var(--bg-subtle)] rounded-xl border border-[var(--border-subtle)] w-full">
               <button
                 type="button"
                 onClick={() => handleFilterTypeChange('all')}
@@ -1546,17 +1547,6 @@ export function QuickRecordBoard({
                 }`}
               >
                 {language === 'ja' ? '貯蓄' : 'Savings'}
-              </button>
-              <button
-                type="button"
-                onClick={() => handleFilterTypeChange('transfer')}
-                className={`py-1.5 rounded-lg text-[10px] sm:text-xs font-semibold transition-all cursor-pointer text-center truncate ${
-                  txFilterType === 'transfer'
-                    ? 'bg-indigo-500/20 text-indigo-400 border border-indigo-500/40 shadow-xs'
-                    : 'text-[var(--text-muted)] hover:text-[var(--text-main)]'
-                }`}
-              >
-                {language === 'ja' ? '振替' : 'Transfer'}
               </button>
             </div>
 

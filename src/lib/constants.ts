@@ -2,6 +2,7 @@ import { ExpenseCategory, FundingSource, IncomeCategory, RecurringBill, Transact
 import {
   UtensilsCrossed,
   ShoppingBag,
+  Car,
   Train,
   Bike,
   Shirt,
@@ -26,6 +27,7 @@ import {
 export const EXPENSE_CATEGORY_ICONS: Record<ExpenseCategory, LucideIcon> = {
   food_drinks: UtensilsCrossed,
   shopping: ShoppingBag,
+  transport: Car,
   train: Train,
   ride: Bike,
   laundry: Shirt,
@@ -136,10 +138,10 @@ export function getCategoryBadgeStyle(type: TransactionType | string, category?:
       return { bg: 'bg-amber-500/15', text: 'text-amber-500 dark:text-amber-400', border: 'border-amber-500/30' };
     case 'shopping':
       return { bg: 'bg-purple-500/15', text: 'text-purple-500 dark:text-purple-400', border: 'border-purple-500/30' };
+    case 'transport':
     case 'train':
-      return { bg: 'bg-teal-500/15', text: 'text-teal-500 dark:text-teal-400', border: 'border-teal-500/30' };
     case 'ride':
-      return { bg: 'bg-emerald-500/15', text: 'text-emerald-500 dark:text-emerald-400', border: 'border-emerald-500/30' };
+      return { bg: 'bg-teal-500/15', text: 'text-teal-500 dark:text-teal-400', border: 'border-teal-500/30' };
     case 'laundry':
       return { bg: 'bg-indigo-500/15', text: 'text-indigo-500 dark:text-indigo-400', border: 'border-indigo-500/30' };
     case 'rent':

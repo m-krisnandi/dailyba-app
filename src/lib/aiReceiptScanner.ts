@@ -162,8 +162,7 @@ Your task: Extract financial transaction details into strictly valid JSON with n
 Allowed categories:
 - "food_drinks": groceries, dining, supermarket, restaurant, fast food, cafe, coffee, bakery, snacks, bento, konbini food, bar, izakaya
 - "shopping": clothes, retail, electronics, stationery, books, cosmetics, home supplies, general merchandise, amazon, unbranded shopping
-- "train": train, subway, metro, railway, JR, KRL, MRT, LRT, bullet train, Shinkansen, transit tickets
-- "ride": taxi, cab, ride-hailing (Gojek, Grab, Uber, Lyft, DiDi), fuel/gasoline (Pertamina, Shell, ENEOS), parking fees, toll roads
+- "transport": train, subway, metro, railway, JR, KRL, MRT, LRT, bullet train, transit tickets, taxi, ride-hailing (Gojek, Grab, Uber), fuel/gasoline (Pertamina, Shell, ENEOS), parking fees, toll roads
 - "laundry": laundry, laundromat, dry cleaning, coin laundry
 - "rent": house rent, apartment, dorm, kosan, monthly tenancy, HOA/maintenance fees
 - "mobile": mobile data, cellular subscription, phone bill (Telkomsel, Indosat, Docomo, Softbank, AT&T, Verizon), home internet, wifi
@@ -202,7 +201,7 @@ Special Rules for Japanese Receipts (日本国内のレシート・領収書):
   * NEVER extract \"小計\" (subtotal) or \"内消費税等\" / \"内税\" (tax amount)!
 - Train Stations & Railway Transit (JR東日本, JR西日本, 東京メトロ, 都営地下鉄, 私鉄, 券売機・精算機 領収書):
   * Look for slips titled \"領収書\" with words: \"乗車券\", \"定期券\", \"新幹線特急券\", \"特急券\", \"精算\", \"入場券\", \"東日本旅客鉄道\", \"東京メトロ\".
-  * Always set category to \"train\".
+  * Always set category to \"transport\".
 - Payment Method Recognition in Japan:
   * \"交通系IC\", \"交通系電子マネー\", \"Suica\", \"PASMO\", \"ICOCA\" -> source: \"ewallet\"
   * \"コード決済\", \"PayPay\", \"LINE Pay\", \"楽天ペイ\", \"d払い\", \"au PAY\" -> source: \"ewallet\"
@@ -214,7 +213,7 @@ JSON Schema to output:
   "amount": number,
   "currency": "IDR" | "JPY" | "USD" | "MMK",
   "date": "YYYY-MM-DD" | null,
-  "category": "food_drinks" | "shopping" | "train" | "ride" | "laundry" | "rent" | "family" | "gifts" | "vps" | "mobile" | "others",
+  "category": "food_drinks" | "shopping" | "transport" | "laundry" | "rent" | "family" | "gifts" | "vps" | "mobile" | "others",
   "source": "cash" | "bank" | "credit_card" | "ewallet",
   "merchant": string, // Store or vendor name
   "itemsSummary": string, // 2-4 words summarizing main purchased items
@@ -285,13 +284,14 @@ Language Requirements:
       let rawCat = parsed.category;
       if (rawCat === 'housing' || rawCat === 'dorm') rawCat = 'rent';
       if (rawCat === 'utilities' || rawCat === 'bills') rawCat = 'others';
-      if (rawCat === 'transport' || rawCat === 'transit') rawCat = 'ride';
+      if (rawCat === 'train' || rawCat === 'ride' || rawCat === 'transit') rawCat = 'transport';
       if (rawCat === 'groceries' || rawCat === 'dining') rawCat = 'food_drinks';
       if (rawCat === 'other_expense') rawCat = 'others';
 
       const validCategories: ExpenseCategory[] = [
         'food_drinks',
         'shopping',
+        'transport',
         'train',
         'ride',
         'laundry',
