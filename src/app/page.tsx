@@ -22,7 +22,7 @@ import { WelcomeOnboardingModal } from '@/components/WelcomeOnboardingModal';
 import { AppReviewPromptModal } from '@/components/AppReviewPromptModal';
 import { Currency, Language } from '@/types/finance';
 import { isAppLockEnabled, isBiometricAuthenticating, isRecentlyUnlocked } from '@/lib/biometricAuth';
-import { scheduleBillDueReminders } from '@/lib/localNotifications';
+import { scheduleBillDueReminders, scheduleDailyReminder } from '@/lib/localNotifications';
 import { dailybaApi } from '@/lib/api';
 import { Transaction } from '@/types/finance';
 import { getTodayLocalDate } from '@/lib/dateUtils';
@@ -108,11 +108,21 @@ export default function Home() {
     if (opts.dailySpendTarget) {
       setDailySpendTarget(opts.dailySpendTarget);
     }
+    setDailyReminder(true, "20:00");
+    scheduleDailyReminder(true, "20:00", opts.language);
     try {
       localStorage.setItem("dailyba_onboarding_completed_v1", "true");
     } catch {}
     setIsOnboardingOpen(false);
   };
+
+  // Schedule daily 20:00 local reminder
+  useEffect(() => {
+    if (!isHydrated) return;
+    if (state.dailyReminderEnabled) {
+      scheduleDailyReminder(true, state.dailyReminderTime || "20:00", state.language);
+    }
+  }, [isHydrated, state.dailyReminderEnabled, state.dailyReminderTime, state.language]);
 
   const checkReviewMilestone = useCallback((txCount: number) => {
     if (typeof window === "undefined") return;

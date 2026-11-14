@@ -18,8 +18,10 @@ import {
   Bell,
   Cloud,
   RefreshCw,
+  HardDrive,
 } from 'lucide-react';
 import { scheduleDailyReminder } from '@/lib/localNotifications';
+import { backupToGoogleDrive, getLastGoogleDriveBackupTime } from '@/lib/googleDriveBackup';
 
 interface BackupModalProps {
   isOpen: boolean;
@@ -56,6 +58,8 @@ export function BackupModal({
   const [reminderEnabled, setReminderEnabled] = useState(Boolean(state.dailyReminderEnabled));
   const [reminderTime, setReminderTime] = useState(state.dailyReminderTime || '20:00');
   const [isScheduling, setIsScheduling] = useState(false);
+  const [isGDriveBackingUp, setIsGDriveBackingUp] = useState(false);
+  const [lastGDriveBackup, setLastGDriveBackup] = useState<string | null>(getLastGoogleDriveBackupTime());
 
   const handleToggleReminder = async (enabled: boolean, timeVal?: string) => {
     const targetTime = timeVal || reminderTime;
@@ -70,6 +74,24 @@ export function BackupModal({
       setFeedback(t.actions.permissionDenied);
     }
     setTimeout(() => setFeedback(null), 3000);
+  };
+
+  const handleGoogleDriveBackup = async () => {
+    setIsGDriveBackingUp(true);
+    try {
+      const res = await backupToGoogleDrive(state, language);
+      if (res.success) {
+        setLastGDriveBackup(res.backupTime || new Date().toISOString());
+        setFeedback(res.message);
+      } else {
+        setFeedback(res.message);
+      }
+    } catch {
+      setFeedback(language === 'ja' ? 'Google Drive バックアップに失敗しました' : 'Failed to backup to Google Drive');
+    } finally {
+      setIsGDriveBackingUp(false);
+      setTimeout(() => setFeedback(null), 3000);
+    }
   };
 
   if (!isOpen) return null;
@@ -128,70 +150,71 @@ export function BackupModal({
         const parsed = JSON.parse(content);
         if (parsed && (Array.isArray(parsed.transactions) || Array.isArray(parsed.investments))) {
           onImportData(parsed);
-          setFeedback(language === "ja" ? "データを正常に復元しました！" : "Data imported successfully!");
-          setTimeout(() => setFeedback(null), 2500);
+          setFeedback(language === "ja" ? "データを正常に復元しました！" : "Data restored successfully!");
         } else {
-          setFeedback(language === "ja" ? "バックアップファイルの形式が無効です。" : "Invalid JSON backup file structure.");
-          setTimeout(() => setFeedback(null), 3000);
+          setFeedback(language === "ja" ? "無効なバックアップファイルです" : "Invalid backup file structure");
         }
-      } catch {
-        setFeedback(language === "ja" ? "バックアップファイルの読み込みに失敗しました。" : "Error parsing JSON backup file.");
-        setTimeout(() => setFeedback(null), 3000);
+      } catch (err) {
+        setFeedback(language === "ja" ? "JSONの解析に失敗しました" : "Failed to parse JSON file");
       }
+      setTimeout(() => setFeedback(null), 2500);
     };
     reader.readAsText(file);
-    if (fileInputRef.current) fileInputRef.current.value = '';
+    e.target.value = '';
   };
 
   return (
-    <div
-      className="fixed inset-0 z-[100] bg-black/65 backdrop-blur-xl flex items-center justify-center p-3 sm:p-6 animate-fade-in overflow-y-auto"
-      onClick={(e) => {
-        if (e.target === e.currentTarget) {
-          onClose();
-        }
-      }}
-    >
-      <div
-        className="liquid-glass-modal rounded-3xl max-w-md w-full my-auto p-6 sm:p-7 space-y-6 shadow-2xl"
-        onClick={(e) => e.stopPropagation()}
-      >
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/70 backdrop-blur-xs animate-fade-in">
+      <div className="bg-[var(--bg-surface-solid)] border border-[var(--border-strong)] w-full max-w-md rounded-3xl p-5 sm:p-6 shadow-2xl relative space-y-4 max-h-[90vh] overflow-y-auto">
+        {/* Header */}
         <div className="flex items-center justify-between border-b border-[var(--border-subtle)] pb-3">
-          <h3 className="text-base font-bold text-[var(--text-main)] flex items-center space-x-2">
-            <span>{t.actions.export}</span>
-            <span className="w-1.5 h-1.5 rounded-full bg-[var(--accent-emerald)]" />
-          </h3>
+          <div className="flex items-center space-x-2">
+            <div className="w-8 h-8 rounded-xl bg-emerald-500/10 border border-emerald-500/20 text-emerald-500 flex items-center justify-center">
+              <Cloud className="w-4 h-4" />
+            </div>
+            <div>
+              <h3 className="text-base font-bold text-[var(--text-main)]">
+                {t.actions.export}
+              </h3>
+              <p className="text-[10px] text-[var(--text-muted)]">
+                {language === "ja" ? "バックアップ・Google Drive同期・管理" : "Backups, Google Drive sync & settings"}
+              </p>
+            </div>
+          </div>
           <button
             type="button"
             onClick={onClose}
-            className="p-1.5 rounded-xl hover:bg-[var(--bg-subtle-hover)] text-[var(--text-muted)] hover:text-[var(--text-main)] transition-all cursor-pointer"
+            className="w-8 h-8 rounded-full bg-[var(--bg-subtle)] hover:bg-[var(--bg-subtle-hover)] text-[var(--text-muted)] hover:text-[var(--text-main)] flex items-center justify-center transition-all cursor-pointer"
           >
             <X className="w-4 h-4" />
           </button>
         </div>
 
+        {/* Feedback Alert */}
         {feedback && (
-          <div className="p-3.5 rounded-xl bg-[var(--accent-emerald-soft)] border border-[var(--accent-emerald)] text-[var(--accent-emerald)] text-xs font-semibold flex items-center space-x-2">
-            <Check className="w-4 h-4" />
+          <div className="p-3 rounded-2xl bg-emerald-500/10 border border-emerald-500/30 text-emerald-400 text-xs flex items-center space-x-2 animate-fade-in font-medium">
+            <Check className="w-4 h-4 shrink-0" />
             <span>{feedback}</span>
           </div>
         )}
 
+        {/* Body content */}
         <div className="space-y-4">
-          {/* Export Options */}
+          {/* Quick Manual Export */}
           <div className="space-y-2">
             <p className="text-xs font-bold text-[var(--text-muted)] uppercase tracking-wider">
-              {language === "ja" ? "データ出力" : "Export Data"}
+              {language === "ja" ? "ファイル出力" : "Export Files"}
             </p>
-            <div className="grid grid-cols-2 gap-2.5">
+            <div className="grid grid-cols-2 gap-2">
               <button
                 type="button"
                 onClick={handleExportJSON}
                 className="p-3 rounded-2xl border border-[var(--border-subtle)] bg-[var(--bg-subtle)] hover:bg-[var(--bg-subtle-hover)] flex items-center justify-center space-x-2 text-xs font-bold text-[var(--text-main)] transition-all shadow-xs cursor-pointer"
               >
                 <FileJson className="w-4 h-4 text-amber-500" />
-                <span>{language === "ja" ? "JSONバックアップ" : "Backup JSON"}</span>
+                <span>{language === "ja" ? "JSONバックアップ" : "Export JSON"}</span>
               </button>
+
               <button
                 type="button"
                 onClick={handleExportCSV}
@@ -201,6 +224,63 @@ export function BackupModal({
                 <span>{language === "ja" ? "CSVレポート出力" : "Export CSV"}</span>
               </button>
             </div>
+          </div>
+
+          {/* Google Drive Cloud Backup */}
+          <div className="p-3.5 rounded-2xl border border-emerald-500/30 bg-emerald-500/5 space-y-3">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center space-x-2.5 min-w-0 pr-2">
+                <div className="w-7 h-7 rounded-lg bg-emerald-500/15 border border-emerald-500/30 text-emerald-400 flex items-center justify-center shrink-0">
+                  <HardDrive className="w-3.5 h-3.5" />
+                </div>
+                <div className="min-w-0">
+                  <p className="text-xs font-bold text-[var(--text-main)] truncate">
+                    {language === 'ja' ? 'Google Drive クラウドバックアップ' : 'Google Drive Cloud Backup'}
+                  </p>
+                  <p className="text-[10px] text-[var(--text-muted)] line-clamp-1">
+                    {language === 'ja'
+                      ? 'Google Drive へ直接バックアップ・復元（機種変更時も安心）'
+                      : 'Backup & restore directly with Google Drive across devices'}
+                  </p>
+                </div>
+              </div>
+
+              <span className="px-2 py-0.5 rounded-full text-[10px] font-mono font-bold bg-emerald-500/15 text-emerald-400 border border-emerald-500/30 shrink-0">
+                Google Drive
+              </span>
+            </div>
+
+            <div className="grid grid-cols-2 gap-2 pt-1">
+              <button
+                type="button"
+                disabled={isGDriveBackingUp}
+                onClick={handleGoogleDriveBackup}
+                className="p-2.5 rounded-xl border border-emerald-500/30 bg-[var(--bg-surface-solid)] hover:bg-emerald-500/10 flex items-center justify-center space-x-1.5 text-xs font-bold text-emerald-400 transition-all cursor-pointer shadow-xs active:scale-[0.98]"
+              >
+                <Cloud className={`w-3.5 h-3.5 ${isGDriveBackingUp ? 'animate-bounce' : ''}`} />
+                <span className="truncate">
+                  {language === 'ja' ? 'Drive に保存' : 'Backup to Drive'}
+                </span>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => fileInputRef.current?.click()}
+                className="p-2.5 rounded-xl border border-[var(--border-subtle)] bg-[var(--bg-surface-solid)] hover:border-indigo-500/50 flex items-center justify-center space-x-1.5 text-xs font-bold text-[var(--text-main)] transition-all cursor-pointer shadow-xs active:scale-[0.98]"
+              >
+                <Upload className="w-3.5 h-3.5 text-indigo-400" />
+                <span className="truncate">
+                  {language === 'ja' ? 'Drive から復元' : 'Restore from Drive'}
+                </span>
+              </button>
+            </div>
+
+            {lastGDriveBackup && (
+              <div className="text-[10px] text-[var(--text-muted)] flex items-center justify-between pt-1 border-t border-emerald-500/20">
+                <span>{language === 'ja' ? '最終 Drive バックアップ' : 'Last Google Drive backup'}</span>
+                <span className="font-mono text-emerald-400 font-semibold">{lastGDriveBackup.slice(0, 16).replace('T', ' ')}</span>
+              </div>
+            )}
           </div>
 
           {/* Scheduled Cloud Auto-Backup */}

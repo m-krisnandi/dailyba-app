@@ -46,11 +46,11 @@ export async function scheduleDailyReminder(
   const hour = parseInt(hourStr || '20', 10);
   const minute = parseInt(minStr || '0', 10);
 
-  const title = language === 'ja' ? 'Dailyba • 今日の収支記録' : 'Dailyba • Daily Balance Check';
+  const title = language === 'ja' ? 'Dailyba • 今日の支出記録' : 'Dailyba • Daily Expense Reminder';
   const body =
     language === 'ja'
-      ? '今日の支出や使ったお金は記録しましたか？1分でサッと記録して、日々のバランスを保ちましょう。'
-      : 'Did you record your spending today? Take a quick minute to log and stay within your target.';
+      ? '今日の支出は記録しましたか？わずか5秒で記録できます！'
+      : "Have you recorded today's expenses? It only takes 5 seconds!";
 
   // 1. Native Mobile (Android & iOS)
   if (Capacitor.isNativePlatform()) {
