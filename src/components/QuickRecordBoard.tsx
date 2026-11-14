@@ -9,6 +9,7 @@ import {
   Language,
   RecurringBill,
   Transaction,
+  CustomCategory,
   TransactionSortOption,
   TransactionType,
 } from '@/types/finance';
@@ -33,8 +34,11 @@ import {
   EXPENSE_CATEGORY_ICONS,
   INCOME_CATEGORY_ICONS,
   FUNDING_SOURCE_ICONS,
+  CUSTOM_CATEGORY_ICONS,
+  getCategoryIconComponent,
   getCategoryBadgeStyle,
   getFundingSourceBadgeStyle,
+  getCustomCategoryBadgeStyle,
 } from '@/lib/constants';
 import {
   Check,
@@ -79,6 +83,9 @@ interface QuickRecordBoardProps {
   dailySpendTarget?: number;
   pendingEmailSyncCount?: number;
   onOpenEmailSync?: () => void;
+  customCategories?: CustomCategory[];
+  onAddCustomCategory?: (category: Omit<CustomCategory, 'id'>) => void;
+  onDeleteCustomCategory?: (id: string) => void;
 }
 
 const ALL_EXPENSE_CATEGORIES: ExpenseCategory[] = [
@@ -119,6 +126,11 @@ export function QuickRecordBoard({
   onDeleteRecurringBill,
   dailySpendTarget,
   initialScanOpen = false,
+  pendingEmailSyncCount = 0,
+  onOpenEmailSync,
+  customCategories = [],
+  onAddCustomCategory,
+  onDeleteCustomCategory,
 }: QuickRecordBoardProps) {
   const t = translations[language];
   const [editingTx, setEditingTx] = useState<Transaction | null>(null);
@@ -143,8 +155,12 @@ export function QuickRecordBoard({
 
   // Active (visible) categories
   const visibleExpenseCategories = useMemo(() => {
-    return ALL_EXPENSE_CATEGORIES.filter((c) => !hiddenCategories.includes(c));
-  }, [hiddenCategories]);
+    const defaults = ALL_EXPENSE_CATEGORIES.filter((c) => !hiddenCategories.includes(c));
+    const customs = (customCategories || [])
+      .map((c) => c.id)
+      .filter((id) => !hiddenCategories.includes(id));
+    return [...defaults, ...customs];
+  }, [hiddenCategories, customCategories]);
 
   const visibleIncomeCategories = useMemo(() => {
     return ALL_INCOME_CATEGORIES.filter((c) => !hiddenCategories.includes(c));
@@ -177,18 +193,20 @@ export function QuickRecordBoard({
     []
   );
 
-  const billCategoryOptions = useMemo<CustomSelectOption<ExpenseCategory>[]>(
+  const billCategoryOptions = useMemo<CustomSelectOption<string>[]>(
     () =>
       visibleExpenseCategories.map((cat) => {
-        const style = getCategoryBadgeStyle("expense", cat);
+        const customCat = customCategories?.find((c) => c.id === cat);
+        const style = getCategoryBadgeStyle("expense", cat, customCategories);
+        const Icon = getCategoryIconComponent(cat, customCategories);
         return {
           value: cat,
-          label: t.expenseCategories[cat] || cat,
-          icon: EXPENSE_CATEGORY_ICONS[cat],
+          label: customCat ? customCat.name : (t.expenseCategories[cat as ExpenseCategory] || cat),
+          icon: Icon,
           badgeClass: `${style.border} ${style.bg} ${style.text}`,
         };
       }),
-    [visibleExpenseCategories, t]
+    [visibleExpenseCategories, customCategories, t]
   );
 
   const billSourceOptions = useMemo<CustomSelectOption<FundingSource>[]>(
@@ -225,6 +243,18 @@ export function QuickRecordBoard({
       });
     });
 
+    (customCategories || []).forEach((c) => {
+      const style = getCategoryBadgeStyle('expense', c.id, customCategories);
+      const Icon = getCategoryIconComponent(c.id, customCategories);
+      opts.push({
+        value: c.id,
+        label: c.name,
+        sublabel: language === 'ja' ? '支出' : 'Expense',
+        icon: Icon,
+        badgeClass: `${style.border} ${style.bg} ${style.text}`,
+      });
+    });
+
     ALL_INCOME_CATEGORIES.forEach((cat) => {
       const style = getCategoryBadgeStyle('income', cat);
       opts.push({
@@ -247,7 +277,11 @@ export function QuickRecordBoard({
     result: number;
     formattedResult: string;
   } | null>(null);
-  const [selectedExpenseCat, setSelectedExpenseCat] = useState<ExpenseCategory>('food_drinks');
+  const [selectedExpenseCat, setSelectedExpenseCat] = useState<string>('food_drinks');
+  const [categoryModalTab, setCategoryModalTab] = useState<'visibility' | 'custom'>('visibility');
+  const [newCustomCatName, setNewCustomCatName] = useState('');
+  const [newCustomCatIcon, setNewCustomCatIcon] = useState('Sparkles');
+  const [newCustomCatColor, setNewCustomCatColor] = useState('indigo');
   const [selectedIncomeCat, setSelectedIncomeCat] = useState<IncomeCategory>('salary');
   const [source, setSource] = useState<FundingSource>('cash');
   const [date, setDate] = useState<string>('');
@@ -276,7 +310,7 @@ export function QuickRecordBoard({
   // Bill form state
   const [billName, setBillName] = useState('');
   const [billAmountStr, setBillAmountStr] = useState('');
-  const [billCategory, setBillCategory] = useState<ExpenseCategory>('rent');
+  const [billCategory, setBillCategory] = useState<string>('rent');
   const [billCurrency, setBillCurrency] = useState<Currency>(currency);
   const [billSource, setBillSource] = useState<FundingSource>('bank');
   const [billDay, setBillDay] = useState<string>('25');
@@ -657,7 +691,7 @@ export function QuickRecordBoard({
     setEditingBill(bill);
     setBillName(bill.name || (bill.titleKey ? t.expenseCategories[bill.titleKey as ExpenseCategory] || bill.titleKey : bill.category));
     setBillAmountStr(formatNumberWithCommas(bill.defaultAmount));
-    setBillCategory(visibleExpenseCategories.includes(bill.category as ExpenseCategory) ? (bill.category as ExpenseCategory) : (visibleExpenseCategories[0] || 'rent'));
+    setBillCategory(visibleExpenseCategories.includes(bill.category) ? bill.category : (visibleExpenseCategories[0] || 'rent'));
     setBillCurrency(bill.currency);
     setBillSource(bill.source);
     setBillDay(bill.dayOfMonth ? String(bill.dayOfMonth) : '');
@@ -1152,9 +1186,11 @@ export function QuickRecordBoard({
 
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 sm:gap-2.5">
               {visibleExpenseCategories.map((catKey) => {
-                const Icon = EXPENSE_CATEGORY_ICONS[catKey] || AlertCircle;
+                const customCat = customCategories?.find((c) => c.id === catKey);
+                const Icon = getCategoryIconComponent(catKey, customCategories);
                 const isSelected = selectedExpenseCat === catKey;
-                const catStyle = getCategoryBadgeStyle("expense", catKey);
+                const catStyle = getCategoryBadgeStyle("expense", catKey, customCategories);
+                const label = customCat ? customCat.name : (t.expenseCategories[catKey as ExpenseCategory] || catKey);
                 return (
                   <button
                     key={catKey}
@@ -1170,7 +1206,7 @@ export function QuickRecordBoard({
                       <Icon className="w-3.5 h-3.5" />
                     </div>
                     <span className="text-xs truncate">
-                      {t.expenseCategories[catKey]}
+                      {label}
                     </span>
                   </button>
                 );
@@ -1870,8 +1906,11 @@ export function QuickRecordBoard({
               const isIncome = tx.type === 'income';
               const isTransfer = tx.type === 'transfer';
 
+              const customCat = customCategories?.find((c) => c.id === tx.category);
               const catLabel = isTransfer
                 ? t.record.typeTransfer
+                : customCat
+                ? customCat.name
                 : isExpense
                 ? t.expenseCategories[tx.category as ExpenseCategory] || tx.category
                 : isIncome
@@ -1881,7 +1920,7 @@ export function QuickRecordBoard({
               const Icon = isTransfer
                 ? ArrowRightLeft
                 : isExpense
-                ? EXPENSE_CATEGORY_ICONS[tx.category as ExpenseCategory] || AlertCircle
+                ? getCategoryIconComponent(tx.category, customCategories)
                 : isIncome
                 ? INCOME_CATEGORY_ICONS[tx.category as IncomeCategory] || ArrowUpRight
                 : Wallet;
@@ -1894,7 +1933,7 @@ export function QuickRecordBoard({
               );
               const catStyle = isTransfer
                 ? { bg: 'bg-indigo-500/15', text: 'text-indigo-400', border: 'border-indigo-500/30' }
-                : getCategoryBadgeStyle(tx.type, tx.category);
+                : getCategoryBadgeStyle(tx.type, tx.category, customCategories);
 
               const subLabel = isTransfer
                 ? `${tx.date} • ${t.sources[tx.source]} → ${tx.destinationSource ? t.sources[tx.destinationSource] : '?'}${tx.note ? ` • ${tx.note}` : ''}`
@@ -2041,100 +2080,314 @@ export function QuickRecordBoard({
               </button>
             </div>
 
+            {/* Modal Tabs */}
+            <div className="flex border-b border-[var(--border-subtle)] bg-[var(--bg-subtle)] px-5 pt-3">
+              <button
+                type="button"
+                onClick={() => setCategoryModalTab('visibility')}
+                className={`flex items-center space-x-2 pb-3 px-3 text-xs font-bold border-b-2 transition-all cursor-pointer ${
+                  categoryModalTab === 'visibility'
+                    ? 'border-[var(--text-main)] text-[var(--text-main)]'
+                    : 'border-transparent text-[var(--text-muted)] hover:text-[var(--text-main)]'
+                }`}
+              >
+                <SlidersHorizontal className="w-3.5 h-3.5" />
+                <span>{t.record.categoryVisibilityTab}</span>
+              </button>
+              <button
+                type="button"
+                onClick={() => setCategoryModalTab('custom')}
+                className={`flex items-center space-x-2 pb-3 px-3 text-xs font-bold border-b-2 transition-all cursor-pointer ${
+                  categoryModalTab === 'custom'
+                    ? 'border-[var(--text-main)] text-[var(--text-main)]'
+                    : 'border-transparent text-[var(--text-muted)] hover:text-[var(--text-main)]'
+                }`}
+              >
+                <Plus className="w-3.5 h-3.5" />
+                <span>{t.record.customCategoriesTab}</span>
+                {customCategories && customCategories.length > 0 && (
+                  <span className="px-1.5 py-0.5 rounded-full text-[10px] font-bold bg-indigo-500/20 text-indigo-400">
+                    {customCategories.length}
+                  </span>
+                )}
+              </button>
+            </div>
+
             {/* Scrollable Body */}
             <div className="overflow-y-auto flex-1 p-5 sm:p-6 space-y-5">
-              <div className="p-3.5 rounded-2xl bg-cyan-500/10 border border-cyan-500/20 text-cyan-800 dark:text-cyan-300 text-xs">
-              {t.record.hiddenCategoriesNotice}
-            </div>
+              {categoryModalTab === 'visibility' ? (
+                <>
+                  <div className="p-3.5 rounded-2xl bg-cyan-500/10 border border-cyan-500/20 text-cyan-800 dark:text-cyan-300 text-xs">
+                    {t.record.hiddenCategoriesNotice}
+                  </div>
 
-            {/* Expense Categories List with Checkbox UI */}
-            <div className="space-y-3">
-              <h4 className="text-xs font-bold text-[var(--text-muted)] uppercase tracking-wider">
-                {t.record.typeExpense} ({visibleExpenseCategories.length}/{ALL_EXPENSE_CATEGORIES.length} {t.record.visible})
-              </h4>
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                {ALL_EXPENSE_CATEGORIES.map((catKey) => {
-                  const Icon = EXPENSE_CATEGORY_ICONS[catKey] || AlertCircle;
-                  const isHidden = hiddenCategories.includes(catKey);
-                  const catStyle = getCategoryBadgeStyle("expense", catKey);
-                  return (
-                    <div
-                      key={catKey}
-                      onClick={() => onToggleHideCategory && onToggleHideCategory(catKey)}
-                      className={`p-3 rounded-2xl border flex items-center justify-between cursor-pointer select-none transition-all ${
-                        isHidden
-                          ? 'border-[var(--border-subtle)] bg-[var(--bg-subtle)] opacity-50'
-                          : 'border-[var(--border-subtle)] bg-[var(--bg-surface)] hover:border-[var(--border-strong)]'
-                      }`}
-                    >
-                      <div className="flex items-center space-x-2.5 min-w-0">
-                        <div className={`w-7 h-7 rounded-lg flex items-center justify-center shrink-0 border ${catStyle.border} ${catStyle.bg} ${catStyle.text}`}>
-                          <Icon className="w-3.5 h-3.5" />
-                        </div>
-                        <span className={`text-xs font-medium truncate ${isHidden ? 'line-through text-[var(--text-muted)]' : 'text-[var(--text-main)]'}`}>
-                          {t.expenseCategories[catKey]}
-                        </span>
-                      </div>
-                      {/* Modern Executive Checkbox */}
-                      <div
-                        className={`w-5 h-5 rounded-lg border flex items-center justify-center shrink-0 transition-all ${
-                          !isHidden
-                            ? 'bg-emerald-500 border-emerald-500 text-white shadow-xs'
-                            : 'border-[var(--border-strong)] bg-[var(--bg-subtle)] text-transparent'
-                        }`}
-                      >
-                        <Check className="w-3.5 h-3.5 stroke-[2.5]" />
+                  {/* Expense Categories List with Checkbox UI */}
+                  <div className="space-y-3">
+                    <h4 className="text-xs font-bold text-[var(--text-muted)] uppercase tracking-wider">
+                      {t.record.typeExpense} ({visibleExpenseCategories.length}/{ALL_EXPENSE_CATEGORIES.length + (customCategories?.length || 0)} {t.record.visible})
+                    </h4>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                      {/* Default Expense Categories */}
+                      {ALL_EXPENSE_CATEGORIES.map((catKey) => {
+                        const Icon = EXPENSE_CATEGORY_ICONS[catKey] || AlertCircle;
+                        const isHidden = hiddenCategories.includes(catKey);
+                        const catStyle = getCategoryBadgeStyle("expense", catKey);
+                        return (
+                          <div
+                            key={catKey}
+                            onClick={() => onToggleHideCategory && onToggleHideCategory(catKey)}
+                            className={`p-3 rounded-2xl border flex items-center justify-between cursor-pointer select-none transition-all ${
+                              isHidden
+                                ? 'border-[var(--border-subtle)] bg-[var(--bg-subtle)] opacity-50'
+                                : 'border-[var(--border-subtle)] bg-[var(--bg-surface)] hover:border-[var(--border-strong)]'
+                            }`}
+                          >
+                            <div className="flex items-center space-x-2.5 min-w-0">
+                              <div className={`w-7 h-7 rounded-lg flex items-center justify-center shrink-0 border ${catStyle.border} ${catStyle.bg} ${catStyle.text}`}>
+                                <Icon className="w-3.5 h-3.5" />
+                              </div>
+                              <span className={`text-xs font-medium truncate ${isHidden ? 'line-through text-[var(--text-muted)]' : 'text-[var(--text-main)]'}`}>
+                                {t.expenseCategories[catKey]}
+                              </span>
+                            </div>
+                            <div
+                              className={`w-5 h-5 rounded-lg border flex items-center justify-center shrink-0 transition-all ${
+                                !isHidden
+                                  ? 'bg-emerald-500 border-emerald-500 text-white shadow-xs'
+                                  : 'border-[var(--border-strong)] bg-[var(--bg-subtle)] text-transparent'
+                              }`}
+                            >
+                              <Check className="w-3.5 h-3.5 stroke-[2.5]" />
+                            </div>
+                          </div>
+                        );
+                      })}
+
+                      {/* Custom Categories in Visibility Tab */}
+                      {(customCategories || []).map((c) => {
+                        const Icon = getCategoryIconComponent(c.id, customCategories);
+                        const isHidden = hiddenCategories.includes(c.id);
+                        const catStyle = getCategoryBadgeStyle("expense", c.id, customCategories);
+                        return (
+                          <div
+                            key={c.id}
+                            onClick={() => onToggleHideCategory && onToggleHideCategory(c.id)}
+                            className={`p-3 rounded-2xl border flex items-center justify-between cursor-pointer select-none transition-all ${
+                              isHidden
+                                ? 'border-[var(--border-subtle)] bg-[var(--bg-subtle)] opacity-50'
+                                : 'border-[var(--border-subtle)] bg-[var(--bg-surface)] hover:border-[var(--border-strong)]'
+                            }`}
+                          >
+                            <div className="flex items-center space-x-2.5 min-w-0">
+                              <div className={`w-7 h-7 rounded-lg flex items-center justify-center shrink-0 border ${catStyle.border} ${catStyle.bg} ${catStyle.text}`}>
+                                <Icon className="w-3.5 h-3.5" />
+                              </div>
+                              <div className="min-w-0">
+                                <span className={`text-xs font-medium truncate block ${isHidden ? 'line-through text-[var(--text-muted)]' : 'text-[var(--text-main)]'}`}>
+                                  {c.name}
+                                </span>
+                              </div>
+                            </div>
+                            <div
+                              className={`w-5 h-5 rounded-lg border flex items-center justify-center shrink-0 transition-all ${
+                                !isHidden
+                                  ? 'bg-emerald-500 border-emerald-500 text-white shadow-xs'
+                                  : 'border-[var(--border-strong)] bg-[var(--bg-subtle)] text-transparent'
+                              }`}
+                            >
+                              <Check className="w-3.5 h-3.5 stroke-[2.5]" />
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+
+                  {/* Income Categories List */}
+                  <div className="space-y-3">
+                    <h4 className="text-xs font-bold text-[var(--text-muted)] uppercase tracking-wider">
+                      {t.record.typeIncome} ({visibleIncomeCategories.length}/{ALL_INCOME_CATEGORIES.length} {t.record.visible})
+                    </h4>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                      {ALL_INCOME_CATEGORIES.map((catKey) => {
+                        const Icon = INCOME_CATEGORY_ICONS[catKey] || ArrowUpRight;
+                        const isHidden = hiddenCategories.includes(catKey);
+                        const catStyle = getCategoryBadgeStyle("income", catKey);
+                        return (
+                          <div
+                            key={catKey}
+                            onClick={() => onToggleHideCategory && onToggleHideCategory(catKey)}
+                            className={`p-3 rounded-2xl border flex items-center justify-between cursor-pointer select-none transition-all ${
+                              isHidden
+                                ? 'border-[var(--border-subtle)] bg-[var(--bg-subtle)] opacity-50'
+                                : 'border-[var(--border-subtle)] bg-[var(--bg-surface)] hover:border-[var(--border-strong)]'
+                            }`}
+                          >
+                            <div className="flex items-center space-x-2.5 min-w-0">
+                              <div className={`w-7 h-7 rounded-lg flex items-center justify-center shrink-0 border ${catStyle.border} ${catStyle.bg} ${catStyle.text}`}>
+                                <Icon className="w-3.5 h-3.5" />
+                              </div>
+                              <span className={`text-xs font-medium truncate ${isHidden ? 'line-through text-[var(--text-muted)]' : 'text-[var(--text-main)]'}`}>
+                                {t.incomeCategories[catKey]}
+                              </span>
+                            </div>
+                            <div
+                              className={`w-5 h-5 rounded-lg border flex items-center justify-center shrink-0 transition-all ${
+                                !isHidden
+                                  ? 'bg-emerald-500 border-emerald-500 text-white shadow-xs'
+                                  : 'border-[var(--border-strong)] bg-[var(--bg-subtle)] text-transparent'
+                              }`}
+                            >
+                              <Check className="w-3.5 h-3.5 stroke-[2.5]" />
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+                </>
+              ) : (
+                /* Custom Categories Management Tab */
+                <div className="space-y-5">
+                  {/* Create New Category Form */}
+                  <div className="p-4 rounded-2xl border border-[var(--border-subtle)] bg-[var(--bg-subtle)] space-y-4">
+                    <h4 className="text-xs font-bold text-[var(--text-main)] uppercase tracking-wider flex items-center space-x-1.5">
+                      <Plus className="w-3.5 h-3.5 text-indigo-400" />
+                      <span>{t.record.addCustomCategory}</span>
+                    </h4>
+
+                    {/* Name input */}
+                    <div className="space-y-1">
+                      <label className="text-[11px] font-semibold text-[var(--text-muted)]">
+                        {language === 'ja' ? 'カテゴリ名' : 'Category Name'}
+                      </label>
+                      <input
+                        type="text"
+                        value={newCustomCatName}
+                        onChange={(e) => setNewCustomCatName(e.target.value)}
+                        placeholder={t.record.customCategoryNamePlaceholder}
+                        maxLength={24}
+                        className="w-full px-3.5 py-2.5 rounded-xl border border-[var(--border-subtle)] bg-[var(--bg-surface-solid)] text-[var(--text-main)] placeholder-[var(--text-faint)] text-xs focus:outline-none focus:border-indigo-500 transition-all shadow-xs"
+                      />
+                    </div>
+
+                    {/* Icon picker */}
+                    <div className="space-y-1.5">
+                      <label className="text-[11px] font-semibold text-[var(--text-muted)]">
+                        {t.record.selectIcon}
+                      </label>
+                      <div className="grid grid-cols-7 gap-1.5 p-2 rounded-xl border border-[var(--border-subtle)] bg-[var(--bg-surface-solid)]">
+                        {Object.entries(CUSTOM_CATEGORY_ICONS).map(([iconKey, IconComp]) => {
+                          const isSelected = newCustomCatIcon === iconKey;
+                          return (
+                            <button
+                              key={iconKey}
+                              type="button"
+                              onClick={() => setNewCustomCatIcon(iconKey)}
+                              className={`p-2 rounded-lg flex items-center justify-center transition-all cursor-pointer ${
+                                isSelected
+                                  ? 'bg-indigo-600 text-white shadow-xs'
+                                  : 'text-[var(--text-muted)] hover:text-[var(--text-main)] hover:bg-[var(--bg-subtle)]'
+                              }`}
+                              title={iconKey}
+                            >
+                              <IconComp className="w-4 h-4" />
+                            </button>
+                          );
+                        })}
                       </div>
                     </div>
-                  );
-                })}
-              </div>
-            </div>
 
-            {/* Income Categories List with Checkbox UI */}
-            <div className="space-y-3">
-              <h4 className="text-xs font-bold text-[var(--text-muted)] uppercase tracking-wider">
-                {t.record.typeIncome} ({visibleIncomeCategories.length}/{ALL_INCOME_CATEGORIES.length} {t.record.visible})
-              </h4>
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                {ALL_INCOME_CATEGORIES.map((catKey) => {
-                  const Icon = INCOME_CATEGORY_ICONS[catKey] || ArrowUpRight;
-                  const isHidden = hiddenCategories.includes(catKey);
-                  const catStyle = getCategoryBadgeStyle("income", catKey);
-                  return (
-                    <div
-                      key={catKey}
-                      onClick={() => onToggleHideCategory && onToggleHideCategory(catKey)}
-                      className={`p-3 rounded-2xl border flex items-center justify-between cursor-pointer select-none transition-all ${
-                        isHidden
-                          ? 'border-[var(--border-subtle)] bg-[var(--bg-subtle)] opacity-50'
-                          : 'border-[var(--border-subtle)] bg-[var(--bg-surface)] hover:border-[var(--border-strong)]'
-                      }`}
-                    >
-                      <div className="flex items-center space-x-2.5 min-w-0">
-                        <div className={`w-7 h-7 rounded-lg flex items-center justify-center shrink-0 border ${catStyle.border} ${catStyle.bg} ${catStyle.text}`}>
-                          <Icon className="w-3.5 h-3.5" />
-                        </div>
-                        <span className={`text-xs font-medium truncate ${isHidden ? 'line-through text-[var(--text-muted)]' : 'text-[var(--text-main)]'}`}>
-                          {t.incomeCategories[catKey]}
-                        </span>
-                      </div>
-                      {/* Modern Executive Checkbox */}
-                      <div
-                        className={`w-5 h-5 rounded-lg border flex items-center justify-center shrink-0 transition-all ${
-                          !isHidden
-                            ? 'bg-emerald-500 border-emerald-500 text-white shadow-xs'
-                            : 'border-[var(--border-strong)] bg-[var(--bg-subtle)] text-transparent'
-                        }`}
-                      >
-                        <Check className="w-3.5 h-3.5 stroke-[2.5]" />
+                    {/* Color palette */}
+                    <div className="space-y-1.5">
+                      <label className="text-[11px] font-semibold text-[var(--text-muted)]">
+                        {t.record.selectColor}
+                      </label>
+                      <div className="flex flex-wrap gap-2">
+                        {(['indigo', 'emerald', 'amber', 'violet', 'pink', 'cyan', 'rose', 'blue'] as const).map((col) => {
+                          const isSelected = newCustomCatColor === col;
+                          const badge = getCustomCategoryBadgeStyle(col);
+                          return (
+                            <button
+                              key={col}
+                              type="button"
+                              onClick={() => setNewCustomCatColor(col)}
+                              className={`w-7 h-7 rounded-xl border flex items-center justify-center transition-all cursor-pointer ${badge.bg} ${badge.border} ${
+                                isSelected ? 'ring-2 ring-white scale-110 shadow-xs' : 'opacity-80 hover:opacity-100'
+                              }`}
+                            >
+                              {isSelected && <Check className={`w-3.5 h-3.5 ${badge.text}`} />}
+                            </button>
+                          );
+                        })}
                       </div>
                     </div>
-                  );
-                })}
-              </div>
-            </div>
 
+                    <button
+                      type="button"
+                      disabled={!newCustomCatName.trim()}
+                      onClick={() => {
+                        if (newCustomCatName.trim() && onAddCustomCategory) {
+                          onAddCustomCategory({
+                            name: newCustomCatName.trim(),
+                            icon: newCustomCatIcon,
+                            color: newCustomCatColor,
+                          });
+                          setNewCustomCatName('');
+                        }
+                      }}
+                      className="w-full py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-500 disabled:opacity-40 text-white font-bold text-xs transition-all flex items-center justify-center space-x-1.5 cursor-pointer shadow-xs active:scale-[0.98]"
+                    >
+                      <Plus className="w-4 h-4" />
+                      <span>{t.record.addCustomCategory}</span>
+                    </button>
+                  </div>
+
+                  {/* List of Custom Categories */}
+                  <div className="space-y-2.5">
+                    <h4 className="text-xs font-bold text-[var(--text-muted)] uppercase tracking-wider">
+                      {t.record.yourCustomCategories} ({customCategories?.length || 0})
+                    </h4>
+
+                    {(!customCategories || customCategories.length === 0) ? (
+                      <div className="p-5 rounded-2xl border border-dashed border-[var(--border-subtle)] text-center text-xs text-[var(--text-muted)] space-y-1.5 bg-[var(--bg-subtle)]">
+                        <Sparkles className="w-5 h-5 mx-auto text-indigo-400 opacity-60" />
+                        <p>{t.record.noCustomCategories}</p>
+                      </div>
+                    ) : (
+                      <div className="space-y-1.5">
+                        {customCategories.map((c) => {
+                          const Icon = getCategoryIconComponent(c.id, customCategories);
+                          const badge = getCategoryBadgeStyle("expense", c.id, customCategories);
+                          return (
+                            <div
+                              key={c.id}
+                              className="p-3 rounded-2xl border border-[var(--border-subtle)] bg-[var(--bg-subtle)] flex items-center justify-between"
+                            >
+                              <div className="flex items-center space-x-2.5 min-w-0">
+                                <div className={`w-7 h-7 rounded-lg flex items-center justify-center shrink-0 border ${badge.border} ${badge.bg} ${badge.text}`}>
+                                  <Icon className="w-3.5 h-3.5" />
+                                </div>
+                                <span className="text-xs font-bold text-[var(--text-main)] truncate">
+                                  {c.name}
+                                </span>
+                              </div>
+                              <button
+                                type="button"
+                                onClick={() => onDeleteCustomCategory && onDeleteCustomCategory(c.id)}
+                                className="p-1.5 rounded-lg text-[var(--text-muted)] hover:text-rose-400 hover:bg-rose-500/10 transition-all cursor-pointer"
+                                title={language === 'ja' ? '削除' : 'Delete'}
+                              >
+                                <Trash2 className="w-3.5 h-3.5" />
+                              </button>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    )}
+                  </div>
+                </div>
+              )}
             </div>
 
             {/* Pinned Modal Footer */}
@@ -2234,7 +2487,7 @@ export function QuickRecordBoard({
                 </label>
                 <CustomSelect
                   value={billCategory}
-                  onChange={(val) => setBillCategory(val as ExpenseCategory)}
+                  onChange={(val) => setBillCategory(val)}
                   options={billCategoryOptions}
                 />
               </div>
@@ -2311,6 +2564,7 @@ export function QuickRecordBoard({
         transaction={editingTx}
         language={language}
         currency={currency}
+        customCategories={customCategories}
         onClose={() => setEditingTx(null)}
         onSave={(updated) => {
           if (onUpdateTransaction) onUpdateTransaction(updated);
@@ -2324,6 +2578,7 @@ export function QuickRecordBoard({
         language={language}
         currency={currency}
         rates={rates}
+        customCategories={customCategories}
         onClose={() => setSelectedDetailTx(null)}
         onEdit={(tx) => setEditingTx(tx)}
         onDelete={(id) => onDeleteTransaction(id)}

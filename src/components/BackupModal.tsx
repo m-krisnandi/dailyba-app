@@ -19,9 +19,13 @@ import {
   Cloud,
   RefreshCw,
   HardDrive,
+  Fingerprint,
+  KeyRound,
 } from 'lucide-react';
 import { scheduleDailyReminder } from '@/lib/localNotifications';
 import { backupToGoogleDrive, getLastGoogleDriveBackupTime } from '@/lib/googleDriveBackup';
+import { isAppLockEnabled, setAppLockEnabled, getAppLockPin } from '@/lib/biometricAuth';
+import { SecuritySettingsModal } from './SecuritySettingsModal';
 
 interface BackupModalProps {
   isOpen: boolean;
@@ -60,6 +64,26 @@ export function BackupModal({
   const [isScheduling, setIsScheduling] = useState(false);
   const [isGDriveBackingUp, setIsGDriveBackingUp] = useState(false);
   const [lastGDriveBackup, setLastGDriveBackup] = useState<string | null>(getLastGoogleDriveBackupTime());
+  const [isAppLockOn, setIsAppLockOn] = useState(() => isAppLockEnabled());
+  const [isSecurityModalOpen, setIsSecurityModalOpen] = useState(false);
+
+  const handleToggleAppLock = (enable: boolean) => {
+    if (enable) {
+      const hasPin = Boolean(getAppLockPin());
+      if (!hasPin) {
+        setIsSecurityModalOpen(true);
+        return;
+      }
+      setAppLockEnabled(true);
+      setIsAppLockOn(true);
+      setFeedback(language === 'ja' ? 'アプリロックを有効にしました' : 'App lock enabled');
+    } else {
+      setAppLockEnabled(false);
+      setIsAppLockOn(false);
+      setFeedback(language === 'ja' ? 'アプリロックを解除しました' : 'App lock disabled');
+    }
+    setTimeout(() => setFeedback(null), 2500);
+  };
 
   const handleToggleReminder = async (enabled: boolean, timeVal?: string) => {
     const targetTime = timeVal || reminderTime;
@@ -415,6 +439,49 @@ export function BackupModal({
             )}
           </div>
 
+          {/* Biometric & App Lock Setting */}
+          <div className="p-3.5 rounded-2xl border border-[var(--border-subtle)] bg-[var(--bg-subtle)] space-y-3">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center space-x-2.5 min-w-0 pr-2">
+                <div className="w-7 h-7 rounded-lg bg-cyan-500/10 border border-cyan-500/20 text-cyan-400 flex items-center justify-center shrink-0">
+                  <Fingerprint className="w-3.5 h-3.5" />
+                </div>
+                <div className="min-w-0">
+                  <p className="text-xs font-bold text-[var(--text-main)] truncate">
+                    {t.security.biometricLock}
+                  </p>
+                  <p className="text-[10px] text-[var(--text-muted)] line-clamp-1">
+                    {t.security.biometricLockDesc}
+                  </p>
+                </div>
+              </div>
+
+              <label className="relative inline-flex items-center cursor-pointer shrink-0">
+                <input
+                  type="checkbox"
+                  checked={isAppLockOn}
+                  onChange={(e) => handleToggleAppLock(e.target.checked)}
+                  className="sr-only peer"
+                />
+                <div className="w-9 h-5 bg-[var(--border-strong)] peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-[var(--accent-emerald)]"></div>
+              </label>
+            </div>
+
+            <div className="pt-2 border-t border-[var(--border-subtle)] flex items-center justify-between text-xs">
+              <span className="text-[11px] text-[var(--text-muted)] font-medium">
+                {language === 'ja' ? 'PINコード・認証設定' : 'PIN & Security Configuration'}
+              </span>
+              <button
+                type="button"
+                onClick={() => setIsSecurityModalOpen(true)}
+                className="px-2.5 py-1 rounded-xl bg-[var(--bg-surface-solid)] border border-[var(--border-subtle)] hover:border-cyan-500/50 text-[11px] font-bold text-[var(--text-main)] transition-all flex items-center space-x-1 cursor-pointer shrink-0 shadow-xs active:scale-95"
+              >
+                <KeyRound className="w-3 h-3 text-cyan-400" />
+                <span>{language === 'ja' ? '設定を変更' : 'Configure'}</span>
+              </button>
+            </div>
+          </div>
+
           {/* Import JSON */}
           <div className="space-y-2 pt-1">
             <p className="text-xs font-bold text-[var(--text-muted)] uppercase tracking-wider">
@@ -481,6 +548,15 @@ export function BackupModal({
       <LegalModal
         isOpen={isLegalModalOpen}
         onClose={() => setIsLegalModalOpen(false)}
+        language={language}
+      />
+
+      <SecuritySettingsModal
+        isOpen={isSecurityModalOpen}
+        onClose={() => {
+          setIsSecurityModalOpen(false);
+          setIsAppLockOn(isAppLockEnabled());
+        }}
         language={language}
       />
     </div>

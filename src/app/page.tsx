@@ -63,6 +63,8 @@ export default function Home() {
     setDailySpendTarget,
     updateMonthlyBudget,
     updateMonthStartDay,
+    addCustomCategory,
+    deleteCustomCategory,
     clearAllData,
     importData,
     setDailyReminder,
@@ -444,6 +446,9 @@ export default function Home() {
             rates={rates}
             transactions={state.transactions}
             hiddenCategories={state.hiddenCategories || []}
+            customCategories={state.customCategories || []}
+            onAddCustomCategory={addCustomCategory}
+            onDeleteCustomCategory={deleteCustomCategory}
             recurringBills={state.recurringBills}
             dailySpendTarget={state.dailySpendTarget}
             pendingEmailSyncCount={pendingEmailSyncCount}

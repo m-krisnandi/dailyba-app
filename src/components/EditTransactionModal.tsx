@@ -12,6 +12,7 @@ import {
   Language,
   Transaction,
   TransactionType,
+  CustomCategory,
 } from '@/types/finance';
 import { translations } from '@/lib/i18n';
 import { getTodayLocalDate } from '@/lib/dateUtils';
@@ -20,6 +21,7 @@ import {
   INCOME_CATEGORY_ICONS,
   FUNDING_SOURCE_ICONS,
   getCategoryBadgeStyle,
+  getCategoryIconComponent,
   getFundingSourceBadgeStyle,
 } from '@/lib/constants';
 import { formatNumberWithCommas, parseRawNumber } from '@/lib/currency';
@@ -42,6 +44,7 @@ interface EditTransactionModalProps {
   currency: Currency;
   onClose: () => void;
   onSave: (updated: Transaction) => void;
+  customCategories?: CustomCategory[];
 }
 
 export function EditTransactionModal({
@@ -51,6 +54,7 @@ export function EditTransactionModal({
   currency,
   onClose,
   onSave,
+  customCategories,
 }: EditTransactionModalProps) {
   useBodyScrollLock(isOpen && !!transaction);
 
@@ -91,8 +95,8 @@ export function EditTransactionModal({
 
   const categoryOptions = useMemo<CustomSelectOption[]>(() => {
     if (type === 'expense') {
-      return expenseCategories.map((cat) => {
-        const style = getCategoryBadgeStyle("expense", cat);
+      const defaultOptions = expenseCategories.map((cat) => {
+        const style = getCategoryBadgeStyle("expense", cat, customCategories);
         return {
           value: cat,
           label: t.expenseCategories[cat] || cat,
@@ -100,6 +104,17 @@ export function EditTransactionModal({
           badgeClass: `${style.border} ${style.bg} ${style.text}`,
         };
       });
+      const customOptions = (customCategories || []).map((c) => {
+        const style = getCategoryBadgeStyle("expense", c.id, customCategories);
+        const Icon = getCategoryIconComponent(c.id, customCategories);
+        return {
+          value: c.id,
+          label: c.name,
+          icon: Icon,
+          badgeClass: `${style.border} ${style.bg} ${style.text}`,
+        };
+      });
+      return [...defaultOptions, ...customOptions];
     }
     return incomeCategories.map((cat) => {
       const style = getCategoryBadgeStyle("income", cat);
@@ -110,7 +125,7 @@ export function EditTransactionModal({
         badgeClass: `${style.border} ${style.bg} ${style.text}`,
       };
     });
-  }, [type, t]);
+  }, [type, t, customCategories]);
 
   if (!isOpen || !transaction) return null;
 

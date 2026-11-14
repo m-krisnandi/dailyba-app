@@ -1,9 +1,9 @@
 'use client';
 
 import React, { useMemo, useState, useEffect, useRef } from 'react';
-import { Currency, ExpenseCategory, Language, MonthlyBudgetPlan, Transaction, TransactionType } from '@/types/finance';
+import { Currency, ExpenseCategory, Language, MonthlyBudgetPlan, Transaction, TransactionType, CustomCategory } from '@/types/finance';
 import { formatCurrency, translations } from '@/lib/i18n';
-import { EXPENSE_CATEGORY_ICONS, getCategoryBadgeStyle } from '@/lib/constants';
+import { EXPENSE_CATEGORY_ICONS, getCategoryBadgeStyle, getCategoryIconComponent } from '@/lib/constants';
 import { getMonthDateRange, isDateInMonthCycle, getTodayLocalDate } from '@/lib/dateUtils';
 import { AddTransactionModal } from '@/components/AddTransactionModal';
 import { ReceiptScannerModal } from '@/components/ReceiptScannerModal';
@@ -39,11 +39,14 @@ import {
   ResponsiveContainer,
   BarChart,
   Bar,
+  AreaChart,
+  Area,
   XAxis,
   YAxis,
   Tooltip,
   Cell,
   LabelList,
+  ReferenceLine,
 } from 'recharts';
 
 interface MonthlySummaryBoardProps {
@@ -52,6 +55,7 @@ interface MonthlySummaryBoardProps {
   rates?: ExchangeRates;
   transactions: Transaction[];
   hiddenCategories?: string[];
+  customCategories?: CustomCategory[];
   monthlyBudgets?: Record<string, MonthlyBudgetPlan>;
   onUpdateMonthlyBudget?: (month: string, plan: MonthlyBudgetPlan) => void;
   onAddTransaction?: (tx: Omit<Transaction, 'id' | 'createdAt'>) => void;
@@ -68,6 +72,7 @@ export function MonthlySummaryBoard({
   rates = DEFAULT_RATES,
   transactions,
   hiddenCategories = [],
+  customCategories = [],
   monthlyBudgets = {},
   onUpdateMonthlyBudget,
   onAddTransaction,
@@ -194,6 +199,87 @@ export function MonthlySummaryBoard({
   const prevMonthTransactions = useMemo(() => {
     return transactions.filter((tx) => isDateInMonthCycle(tx.date, prevMonthStr, monthStartDay));
   }, [transactions, prevMonthStr, monthStartDay]);
+
+  const [trendsView, setTrendsView] = useState<'daily' | 'weekly'>('daily');
+
+  // Interactive Daily Spending Trend calculation across the full cycle
+  const dailyTrendsData = useMemo(() => {
+    const startDate = new Date(activeCycle.startDate);
+    const endDate = new Date(activeCycle.endDate);
+    const days: {
+      dayNumber: number;
+      dateStr: string;
+      shortLabel: string;
+      fullLabel: string;
+      amount: number;
+      count: number;
+    }[] = [];
+
+    const curr = new Date(startDate);
+    let dayNum = 1;
+    while (curr.getTime() <= endDate.getTime()) {
+      const y = curr.getFullYear();
+      const m = String(curr.getMonth() + 1).padStart(2, '0');
+      const d = String(curr.getDate()).padStart(2, '0');
+      const dateStr = `${y}-${m}-${d}`;
+
+      const shortLabel = `${curr.getDate()}`;
+      const fullLabel = language === 'ja'
+        ? `${curr.getMonth() + 1}月${curr.getDate()}日`
+        : curr.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+
+      days.push({
+        dayNumber: dayNum++,
+        dateStr,
+        shortLabel,
+        fullLabel,
+        amount: 0,
+        count: 0,
+      });
+
+      curr.setDate(curr.getDate() + 1);
+    }
+
+    const dayMap = new Map<string, number>();
+    days.forEach((day, index) => {
+      dayMap.set(day.dateStr, index);
+    });
+
+    monthTransactions.forEach((tx) => {
+      if (tx.type !== 'expense') return;
+      const idx = dayMap.get(tx.date);
+      if (idx !== undefined) {
+        const converted = convertCurrency(tx.amount, tx.currency || 'JPY', currency, rates);
+        days[idx].amount += converted;
+        days[idx].count += 1;
+      }
+    });
+
+    let peakDay = days[0];
+    let peakAmount = 0;
+    let daysWithSpending = 0;
+    let totalExpense = 0;
+
+    days.forEach((d) => {
+      totalExpense += d.amount;
+      if (d.amount > 0) daysWithSpending++;
+      if (d.amount > peakAmount) {
+        peakAmount = d.amount;
+        peakDay = d;
+      }
+    });
+
+    const averageDaily = days.length > 0 ? totalExpense / days.length : 0;
+
+    return {
+      days,
+      peakDay,
+      peakAmount,
+      daysWithSpending,
+      totalExpense,
+      averageDaily,
+    };
+  }, [monthTransactions, activeCycle, currency, rates, language]);
 
   // Interactive Weekly Expense Trends calculation
   const weeklyTrendsData = useMemo(() => {
@@ -350,7 +436,10 @@ export function MonthlySummaryBoard({
         category,
         amount,
         percentage,
-        label: t.expenseCategories[category as ExpenseCategory] || category,
+        label: (() => {
+          const custom = customCategories?.find((c) => c.id === category);
+          return custom ? custom.name : (t.expenseCategories[category as ExpenseCategory] || category);
+        })(),
       };
     });
 
@@ -358,7 +447,7 @@ export function MonthlySummaryBoard({
       categoryBreakdown: list.sort((a, b) => b.amount - a.amount),
       categorySpentMap: map,
     };
-  }, [monthTransactions, totalExpense, t.expenseCategories, currency, rates, hiddenCategories]);
+  }, [monthTransactions, totalExpense, t.expenseCategories, currency, rates, hiddenCategories, customCategories]);
 
   // Chart data
   const chartData = useMemo(() => {
@@ -1096,39 +1185,83 @@ export function MonthlySummaryBoard({
         </div>
       </div>
 
-      {/* Interactive Weekly Expense Trends Card */}
+      {/* Interactive Spending Trends Card (Daily Curve & Weekly Breakdown) */}
       <div className="p-5 sm:p-7 rounded-3xl border border-[var(--border-subtle)] bg-[var(--bg-surface)] shadow-[var(--card-shadow)] space-y-5">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
           <div>
             <h3 className="text-sm font-bold text-[var(--text-main)] flex items-center space-x-2">
-              <span>{language === 'ja' ? '週次支出トレンド & 進行パターン' : 'Weekly Expense Trends & Progression'}</span>
+              <span>{language === 'ja' ? '支出トレンド & 推移パターン' : 'Spending Trends & Progression'}</span>
               <span className="w-1.5 h-1.5 rounded-full bg-[var(--accent-emerald)]" />
             </h3>
             <p className="text-xs text-[var(--text-muted)] mt-0.5">
               {language === 'ja'
-                ? '給与日・月次サイクル内の週別支出推移とピーク分析'
-                : 'Spending rhythm and distribution across cycle weeks'}
+                ? '日別支出カーブおよび週別推移から支出の増減・ピークを可視化'
+                : 'Visualize daily spending curves and weekly distribution at a glance'}
             </p>
           </div>
+
           <div className="flex items-center gap-2 flex-wrap">
-            {weeklyTrendsData.peakAmount > 0 && (
-              <span className="px-3 py-1 rounded-full text-xs font-mono font-bold bg-rose-500/10 text-rose-500 border border-rose-500/20 flex items-center space-x-1.5">
-                <Flame className="w-3.5 h-3.5" />
-                <span>
-                  {language === 'ja'
-                    ? `ピーク: ${weeklyTrendsData.peakWeek.name}`
-                    : `Peak: ${weeklyTrendsData.peakWeek.name}`}
+            {/* View Switcher Toggle: Daily vs Weekly */}
+            <div className="flex items-center p-0.5 rounded-xl bg-[var(--bg-subtle)] border border-[var(--border-subtle)]">
+              <button
+                type="button"
+                onClick={() => setTrendsView('daily')}
+                className={`px-3 py-1 rounded-lg text-xs font-bold transition-all cursor-pointer ${
+                  trendsView === 'daily'
+                    ? 'bg-emerald-500 text-slate-950 shadow-xs'
+                    : 'text-[var(--text-muted)] hover:text-[var(--text-main)]'
+                }`}
+              >
+                {language === 'ja' ? '日別トレンド' : 'Daily Trend'}
+              </button>
+              <button
+                type="button"
+                onClick={() => setTrendsView('weekly')}
+                className={`px-3 py-1 rounded-lg text-xs font-bold transition-all cursor-pointer ${
+                  trendsView === 'weekly'
+                    ? 'bg-emerald-500 text-slate-950 shadow-xs'
+                    : 'text-[var(--text-muted)] hover:text-[var(--text-main)]'
+                }`}
+              >
+                {language === 'ja' ? '週別' : 'Weekly'}
+              </button>
+            </div>
+
+            {trendsView === 'daily' ? (
+              dailyTrendsData.peakAmount > 0 && (
+                <span className="px-3 py-1 rounded-full text-xs font-mono font-bold bg-rose-500/10 text-rose-500 border border-rose-500/20 flex items-center space-x-1.5">
+                  <Flame className="w-3.5 h-3.5" />
+                  <span>
+                    {language === 'ja'
+                      ? `ピーク: ${dailyTrendsData.peakDay.fullLabel}`
+                      : `Peak: ${dailyTrendsData.peakDay.fullLabel}`}
+                  </span>
                 </span>
-              </span>
+              )
+            ) : (
+              weeklyTrendsData.peakAmount > 0 && (
+                <span className="px-3 py-1 rounded-full text-xs font-mono font-bold bg-rose-500/10 text-rose-500 border border-rose-500/20 flex items-center space-x-1.5">
+                  <Flame className="w-3.5 h-3.5" />
+                  <span>
+                    {language === 'ja'
+                      ? `ピーク: ${weeklyTrendsData.peakWeek.name}`
+                      : `Peak: ${weeklyTrendsData.peakWeek.name}`}
+                  </span>
+                </span>
+              )
             )}
             <span className="px-3 py-1 rounded-full text-xs font-mono font-bold bg-[var(--bg-subtle)] text-[var(--text-muted)] border border-[var(--border-subtle)]">
-              {language === 'ja' ? '週平均: ' : 'Weekly Avg: '}
-              <strong className="text-[var(--text-main)]">{formatCurrency(weeklyTrendsData.averageWeekly, currency)}</strong>
+              {trendsView === 'daily'
+                ? (language === 'ja' ? '日平均: ' : 'Daily Avg: ')
+                : (language === 'ja' ? '週平均: ' : 'Weekly Avg: ')}
+              <strong className="text-[var(--text-main)] font-bold">
+                {formatCurrency(trendsView === 'daily' ? dailyTrendsData.averageDaily : weeklyTrendsData.averageWeekly, currency)}
+              </strong>
             </span>
           </div>
         </div>
 
-        {weeklyTrendsData.totalExpenseAllWeeks === 0 ? (
+        {totalExpense === 0 ? (
           <div className="py-10 text-center border border-dashed border-[var(--border-subtle)] rounded-2xl p-6 bg-[var(--bg-subtle)]">
             <p className="text-xs text-[var(--text-muted)]">
               {language === 'ja' ? 'この月の支出データはまだありません' : 'No expense transactions recorded in this month cycle'}
@@ -1136,106 +1269,221 @@ export function MonthlySummaryBoard({
           </div>
         ) : (
           <div className="space-y-4">
-            <div className="h-56 w-full">
-              <ResponsiveContainer width="100%" height="100%">
-                <BarChart data={weeklyTrendsData.weeks} margin={{ top: 20, right: 10, left: -20, bottom: 10 }}>
-                  <XAxis
-                    dataKey="name"
-                    stroke="var(--text-muted)"
-                    fontSize={11}
-                    tickLine={false}
-                    axisLine={{ stroke: 'var(--border-subtle)' }}
-                  />
-                  <YAxis
-                    stroke="var(--text-muted)"
-                    fontSize={10}
-                    tickLine={false}
-                    axisLine={{ stroke: 'var(--border-subtle)' }}
-                    tickFormatter={(val) => {
-                      if (val >= 1000000) return `${(val / 1000000).toFixed(1)}M`;
-                      if (val >= 1000) return `${Math.round(val / 1000)}k`;
-                      return String(val);
-                    }}
-                  />
-                  <Tooltip
-                    cursor={false}
-                    contentStyle={{
-                      backgroundColor: 'var(--bg-surface-solid)',
-                      borderColor: 'var(--border-strong)',
-                      borderRadius: '16px',
-                      fontSize: '12px',
-                      boxShadow: 'var(--modal-shadow)',
-                      backdropFilter: 'blur(30px)',
-                      padding: '10px 14px',
-                    }}
-                    formatter={(val) => [formatCurrency(Number(val) || 0, currency), language === 'ja' ? '週合計' : 'Total']}
-                  />
-                  <Bar dataKey="amount" radius={[8, 8, 0, 0]}>
-                    {weeklyTrendsData.weeks.map((entry, index) => (
-                      <Cell
-                        key={`weekly-cell-${index}`}
-                        fill={entry.amount === weeklyTrendsData.peakAmount && entry.amount > 0 ? '#f43f5e' : '#10b981'}
-                        opacity={0.88}
+            {trendsView === 'daily' ? (
+              /* Daily Trend Area Chart */
+              <div className="space-y-4">
+                <div className="h-60 w-full">
+                  <ResponsiveContainer width="100%" height="100%">
+                    <AreaChart data={dailyTrendsData.days} margin={{ top: 20, right: 10, left: -20, bottom: 10 }}>
+                      <defs>
+                        <linearGradient id="spendingCurveGradient" x1="0" y1="0" x2="0" y2="1">
+                          <stop offset="5%" stopColor="#10b981" stopOpacity={0.4} />
+                          <stop offset="95%" stopColor="#10b981" stopOpacity={0.0} />
+                        </linearGradient>
+                      </defs>
+                      <XAxis
+                        dataKey="shortLabel"
+                        stroke="var(--text-muted)"
+                        fontSize={10}
+                        tickLine={false}
+                        axisLine={{ stroke: 'var(--border-subtle)' }}
+                        interval={Math.max(1, Math.floor(dailyTrendsData.days.length / 8))}
                       />
-                    ))}
-                    <LabelList
-                      dataKey="amount"
-                      position="top"
-                      offset={6}
-                      formatter={(val) => (Number(val) > 0 ? formatCurrency(Number(val), currency) : '')}
-                      style={{
-                        fill: 'var(--text-main)',
-                        fontSize: 10,
-                        fontWeight: 700,
-                        fontFamily: 'monospace',
-                      }}
-                    />
-                  </Bar>
-                </BarChart>
-              </ResponsiveContainer>
-            </div>
+                      <YAxis
+                        stroke="var(--text-muted)"
+                        fontSize={10}
+                        tickLine={false}
+                        axisLine={{ stroke: 'var(--border-subtle)' }}
+                        tickFormatter={(val) => {
+                          if (val >= 1000000) return `${(val / 1000000).toFixed(1)}M`;
+                          if (val >= 1000) return `${Math.round(val / 1000)}k`;
+                          return String(val);
+                        }}
+                      />
+                      <Tooltip
+                        cursor={{ stroke: 'var(--border-strong)', strokeDasharray: '3 3' }}
+                        contentStyle={{
+                          backgroundColor: 'var(--bg-surface-solid)',
+                          borderColor: 'var(--border-strong)',
+                          borderRadius: '16px',
+                          fontSize: '12px',
+                          boxShadow: 'var(--modal-shadow)',
+                          backdropFilter: 'blur(30px)',
+                          padding: '10px 14px',
+                        }}
+                        formatter={(val) => [formatCurrency(Number(val) || 0, currency), language === 'ja' ? '支出合計' : 'Daily Spent']}
+                        labelFormatter={(_, payload) => payload?.[0]?.payload?.fullLabel || ''}
+                      />
+                      <ReferenceLine
+                        y={dailyTrendsData.averageDaily}
+                        stroke="#6366f1"
+                        strokeDasharray="4 4"
+                        strokeWidth={1.5}
+                        label={{
+                          value: `${language === 'ja' ? '平均' : 'Avg'}: ${formatCurrency(Math.round(dailyTrendsData.averageDaily), currency)}`,
+                          fill: '#818cf8',
+                          fontSize: 10,
+                          position: 'insideTopRight',
+                          fontWeight: 700,
+                          fontFamily: 'monospace',
+                        }}
+                      />
+                      <Area
+                        type="monotone"
+                        dataKey="amount"
+                        stroke="#10b981"
+                        strokeWidth={2.5}
+                        fillOpacity={1}
+                        fill="url(#spendingCurveGradient)"
+                      />
+                    </AreaChart>
+                  </ResponsiveContainer>
+                </div>
 
-            {/* Weekly Detailed Cards Grid */}
-            <div className={`grid gap-2.5 ${weeklyTrendsData.weeks.length === 5 ? 'grid-cols-2 sm:grid-cols-5' : 'grid-cols-2 sm:grid-cols-4'}`}>
-              {weeklyTrendsData.weeks.map((w, idx) => {
-                const prevWeek = idx > 0 ? weeklyTrendsData.weeks[idx - 1] : null;
-                const diffFromPrev = prevWeek && prevWeek.amount > 0 ? Math.round(((w.amount - prevWeek.amount) / prevWeek.amount) * 100) : null;
-                const pctOfTotal = weeklyTrendsData.totalExpenseAllWeeks > 0 ? Math.round((w.amount / weeklyTrendsData.totalExpenseAllWeeks) * 100) : 0;
-                const isPeak = w.amount === weeklyTrendsData.peakAmount && w.amount > 0;
-
-                return (
-                  <div
-                    key={w.id}
-                    className={`p-3 rounded-2xl border transition-all ${
-                      isPeak
-                        ? 'border-rose-500/30 bg-rose-500/5'
-                        : 'border-[var(--border-subtle)] bg-[var(--bg-subtle)]'
-                    }`}
-                  >
-                    <div className="flex items-center justify-between text-[11px] font-bold text-[var(--text-muted)]">
-                      <span>{w.name}</span>
-                      <span className="font-mono text-[10px]">{pctOfTotal}%</span>
-                    </div>
+                {/* Daily Stat Cards */}
+                <div className="grid grid-cols-3 gap-2.5 pt-1">
+                  <div className="p-3 rounded-2xl border border-[var(--border-subtle)] bg-[var(--bg-subtle)]">
+                    <span className="text-[10px] text-[var(--text-muted)] font-medium block">
+                      {language === 'ja' ? '最大支出日' : 'Highest Day'}
+                    </span>
+                    <p className="text-xs sm:text-sm font-extrabold text-rose-500 font-mono mt-1 truncate">
+                      {dailyTrendsData.peakAmount > 0 ? formatCurrency(dailyTrendsData.peakAmount, currency) : '-'}
+                    </p>
                     <p className="text-[10px] text-[var(--text-muted)] truncate mt-0.5">
-                      {w.range}
+                      {dailyTrendsData.peakAmount > 0 ? dailyTrendsData.peakDay.fullLabel : '-'}
                     </p>
-                    <p className="text-xs sm:text-sm font-extrabold text-[var(--text-main)] font-mono tabular-numbers mt-1.5 truncate">
-                      {formatCurrency(w.amount, currency)}
-                    </p>
-                    <div className="flex items-center justify-between pt-1 mt-1 border-t border-[var(--border-subtle)] text-[10px]">
-                      <span className="text-[var(--text-muted)]">{w.count} {language === 'ja' ? '件' : 'tx'}</span>
-                      {diffFromPrev !== null ? (
-                        <span className={`font-mono font-semibold ${diffFromPrev > 0 ? 'text-rose-500' : 'text-emerald-500'}`}>
-                          {diffFromPrev > 0 ? `+${diffFromPrev}%` : `${diffFromPrev}%`}
-                        </span>
-                      ) : (
-                        <span className="text-[var(--text-faint)] font-mono">-</span>
-                      )}
-                    </div>
                   </div>
-                );
-              })}
-            </div>
+
+                  <div className="p-3 rounded-2xl border border-[var(--border-subtle)] bg-[var(--bg-subtle)]">
+                    <span className="text-[10px] text-[var(--text-muted)] font-medium block">
+                      {language === 'ja' ? '1日の平均支出' : 'Daily Average'}
+                    </span>
+                    <p className="text-xs sm:text-sm font-extrabold text-[var(--text-main)] font-mono mt-1 truncate">
+                      {formatCurrency(Math.round(dailyTrendsData.averageDaily), currency)}
+                    </p>
+                    <p className="text-[10px] text-[var(--text-muted)] truncate mt-0.5">
+                      {language === 'ja' ? '月間サイクル内' : 'across cycle'}
+                    </p>
+                  </div>
+
+                  <div className="p-3 rounded-2xl border border-[var(--border-subtle)] bg-[var(--bg-subtle)]">
+                    <span className="text-[10px] text-[var(--text-muted)] font-medium block">
+                      {language === 'ja' ? '支出発生日数' : 'Active Days'}
+                    </span>
+                    <p className="text-xs sm:text-sm font-extrabold text-emerald-400 font-mono mt-1 truncate">
+                      {dailyTrendsData.daysWithSpending} / {dailyTrendsData.days.length} {language === 'ja' ? '日' : 'days'}
+                    </p>
+                    <p className="text-[10px] text-[var(--text-muted)] truncate mt-0.5">
+                      {Math.round((dailyTrendsData.daysWithSpending / Math.max(1, dailyTrendsData.days.length)) * 100)}% {language === 'ja' ? 'の日で支出' : 'of month'}
+                    </p>
+                  </div>
+                </div>
+              </div>
+            ) : (
+              /* Weekly Breakdown Bar Chart */
+              <div className="space-y-4">
+                <div className="h-56 w-full">
+                  <ResponsiveContainer width="100%" height="100%">
+                    <BarChart data={weeklyTrendsData.weeks} margin={{ top: 20, right: 10, left: -20, bottom: 10 }}>
+                      <XAxis
+                        dataKey="name"
+                        stroke="var(--text-muted)"
+                        fontSize={11}
+                        tickLine={false}
+                        axisLine={{ stroke: 'var(--border-subtle)' }}
+                      />
+                      <YAxis
+                        stroke="var(--text-muted)"
+                        fontSize={10}
+                        tickLine={false}
+                        axisLine={{ stroke: 'var(--border-subtle)' }}
+                        tickFormatter={(val) => {
+                          if (val >= 1000000) return `${(val / 1000000).toFixed(1)}M`;
+                          if (val >= 1000) return `${Math.round(val / 1000)}k`;
+                          return String(val);
+                        }}
+                      />
+                      <Tooltip
+                        cursor={false}
+                        contentStyle={{
+                          backgroundColor: 'var(--bg-surface-solid)',
+                          borderColor: 'var(--border-strong)',
+                          borderRadius: '16px',
+                          fontSize: '12px',
+                          boxShadow: 'var(--modal-shadow)',
+                          backdropFilter: 'blur(30px)',
+                          padding: '10px 14px',
+                        }}
+                        formatter={(val) => [formatCurrency(Number(val) || 0, currency), language === 'ja' ? '週合計' : 'Total']}
+                      />
+                      <Bar dataKey="amount" radius={[8, 8, 0, 0]}>
+                        {weeklyTrendsData.weeks.map((entry, index) => (
+                          <Cell
+                            key={`weekly-cell-${index}`}
+                            fill={entry.amount === weeklyTrendsData.peakAmount && entry.amount > 0 ? '#f43f5e' : '#10b981'}
+                            opacity={0.88}
+                          />
+                        ))}
+                        <LabelList
+                          dataKey="amount"
+                          position="top"
+                          offset={6}
+                          formatter={(val) => (Number(val) > 0 ? formatCurrency(Number(val), currency) : '')}
+                          style={{
+                            fill: 'var(--text-main)',
+                            fontSize: 10,
+                            fontWeight: 700,
+                            fontFamily: 'monospace',
+                          }}
+                        />
+                      </Bar>
+                    </BarChart>
+                  </ResponsiveContainer>
+                </div>
+
+                {/* Weekly Detailed Cards Grid */}
+                <div className={`grid gap-2.5 ${weeklyTrendsData.weeks.length === 5 ? 'grid-cols-2 sm:grid-cols-5' : 'grid-cols-2 sm:grid-cols-4'}`}>
+                  {weeklyTrendsData.weeks.map((w, idx) => {
+                    const prevWeek = idx > 0 ? weeklyTrendsData.weeks[idx - 1] : null;
+                    const diffFromPrev = prevWeek && prevWeek.amount > 0 ? Math.round(((w.amount - prevWeek.amount) / prevWeek.amount) * 100) : null;
+                    const pctOfTotal = weeklyTrendsData.totalExpenseAllWeeks > 0 ? Math.round((w.amount / weeklyTrendsData.totalExpenseAllWeeks) * 100) : 0;
+                    const isPeak = w.amount === weeklyTrendsData.peakAmount && w.amount > 0;
+
+                    return (
+                      <div
+                        key={w.id}
+                        className={`p-3 rounded-2xl border transition-all ${
+                          isPeak
+                            ? 'border-rose-500/30 bg-rose-500/5'
+                            : 'border-[var(--border-subtle)] bg-[var(--bg-subtle)]'
+                        }`}
+                      >
+                        <div className="flex items-center justify-between text-[11px] font-bold text-[var(--text-muted)]">
+                          <span>{w.name}</span>
+                          <span className="font-mono text-[10px]">{pctOfTotal}%</span>
+                        </div>
+                        <p className="text-[10px] text-[var(--text-muted)] truncate mt-0.5">
+                          {w.range}
+                        </p>
+                        <p className="text-xs sm:text-sm font-extrabold text-[var(--text-main)] font-mono tabular-numbers mt-1.5 truncate">
+                          {formatCurrency(w.amount, currency)}
+                        </p>
+                        <div className="flex items-center justify-between pt-1 mt-1 border-t border-[var(--border-subtle)] text-[10px]">
+                          <span className="text-[var(--text-muted)]">{w.count} {language === 'ja' ? '件' : 'tx'}</span>
+                          {diffFromPrev !== null ? (
+                            <span className={`font-mono font-semibold ${diffFromPrev > 0 ? 'text-rose-500' : 'text-emerald-500'}`}>
+                              {diffFromPrev > 0 ? `+${diffFromPrev}%` : `${diffFromPrev}%`}
+                            </span>
+                          ) : (
+                            <span className="text-[var(--text-faint)] font-mono">-</span>
+                          )}
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
           </div>
         )}
       </div>
@@ -1255,8 +1503,8 @@ export function MonthlySummaryBoard({
           ) : (
             <div className="space-y-3">
               {categoryBreakdown.map((item) => {
-                const Icon = EXPENSE_CATEGORY_ICONS[item.category as ExpenseCategory] || TrendingDown;
-                const catStyle = getCategoryBadgeStyle("expense", item.category);
+                const Icon = getCategoryIconComponent(item.category, customCategories);
+                const catStyle = getCategoryBadgeStyle("expense", item.category, customCategories);
                 return (
                   <div key={item.category} className="space-y-1.5">
                     <div className="flex items-center justify-between text-xs font-semibold">

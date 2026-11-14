@@ -90,6 +90,14 @@ export interface RecurringBill {
   dueDayEnd?: number;
 }
 
+export interface CustomCategory {
+  id: string;
+  name: string;
+  icon?: string;
+  color?: string;
+  createdAt?: string;
+}
+
 export interface MonthlyBudgetPlan {
   totalTarget?: number;
   categoryTargets?: Partial<Record<ExpenseCategory | string, number>>;
@@ -113,6 +121,7 @@ export interface FinanceState {
   deletedTxIds?: string[]; // Tombstones for deleted transaction IDs (capped at 500)
   autoBackupFrequency?: 'off' | 'daily' | 'weekly';
   lastAutoBackupAt?: string;
+  customCategories?: CustomCategory[];
 }
 
 export interface PendingImportItem {

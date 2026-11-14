@@ -8,6 +8,7 @@ import {
   IncomeCategory,
   Language,
   Transaction,
+  CustomCategory,
 } from '@/types/finance';
 import { formatCurrency, translations } from '@/lib/i18n';
 import {
@@ -15,6 +16,7 @@ import {
   INCOME_CATEGORY_ICONS,
   FUNDING_SOURCE_ICONS,
   getCategoryBadgeStyle,
+  getCategoryIconComponent,
   getFundingSourceBadgeStyle,
 } from '@/lib/constants';
 import { convertCurrency, DEFAULT_RATES, ExchangeRates } from '@/lib/currency';
@@ -43,6 +45,7 @@ interface TransactionDetailModalProps {
   onClose: () => void;
   onEdit?: (tx: Transaction) => void;
   onDelete?: (id: string) => void;
+  customCategories?: CustomCategory[];
 }
 
 export function TransactionDetailModal({
@@ -54,6 +57,7 @@ export function TransactionDetailModal({
   onClose,
   onEdit,
   onDelete,
+  customCategories,
 }: TransactionDetailModalProps) {
   useBodyScrollLock(isOpen && !!transaction);
   const [isConfirmDeleteOpen, setIsConfirmDeleteOpen] = React.useState(false);
@@ -67,8 +71,11 @@ export function TransactionDetailModal({
   const isIncome = transaction.type === 'income';
   const isTransfer = transaction.type === 'transfer';
 
+  const customCat = customCategories?.find((c) => c.id === transaction.category);
   const catLabel = isTransfer
     ? `${t.sources[transaction.source] || transaction.source} → ${t.sources[transaction.destinationSource || 'ewallet'] || transaction.destinationSource || 'E-Wallet'}`
+    : customCat
+    ? customCat.name
     : isExpense
     ? t.expenseCategories[transaction.category as ExpenseCategory] || transaction.category
     : isIncome
@@ -78,7 +85,7 @@ export function TransactionDetailModal({
   const Icon = isTransfer
     ? ArrowRightLeft
     : isExpense
-    ? EXPENSE_CATEGORY_ICONS[transaction.category as ExpenseCategory] || Tag
+    ? getCategoryIconComponent(transaction.category, customCategories)
     : isIncome
     ? INCOME_CATEGORY_ICONS[transaction.category as IncomeCategory] || TrendingUp
     : Wallet;
@@ -93,7 +100,7 @@ export function TransactionDetailModal({
   );
 
   const isDifferentCurrency = transaction.currency && transaction.currency !== currency;
-  const catStyle = getCategoryBadgeStyle(transaction.type, transaction.category);
+  const catStyle = getCategoryBadgeStyle(transaction.type, transaction.category, customCategories);
   const sourceStyle = getFundingSourceBadgeStyle(transaction.source);
 
   return (

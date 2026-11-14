@@ -1,4 +1,4 @@
-import { ExpenseCategory, FundingSource, IncomeCategory, RecurringBill, Transaction, InvestmentAsset, TransactionType } from '@/types/finance';
+import { ExpenseCategory, FundingSource, IncomeCategory, RecurringBill, Transaction, InvestmentAsset, TransactionType, CustomCategory } from '@/types/finance';
 import {
   UtensilsCrossed,
   ShoppingBag,
@@ -21,6 +21,20 @@ import {
   Award,
   TrendingUp,
   History,
+  Dog,
+  Cat,
+  Sparkles,
+  Gamepad2,
+  Heart,
+  Coffee,
+  Dumbbell,
+  BookOpen,
+  Music,
+  Palette,
+  Baby,
+  Camera,
+  Film,
+  Plane,
   LucideIcon,
 } from 'lucide-react';
 
@@ -54,6 +68,63 @@ export const FUNDING_SOURCE_ICONS: Record<FundingSource, LucideIcon> = {
   ewallet: Wallet,
   credit_card: CreditCard,
 };
+
+
+export const CUSTOM_CATEGORY_ICONS: Record<string, LucideIcon> = {
+  Dog,
+  Cat,
+  Sparkles,
+  Gamepad2,
+  Heart,
+  Coffee,
+  Dumbbell,
+  BookOpen,
+  Music,
+  Palette,
+  Baby,
+  Camera,
+  Film,
+  Plane,
+};
+
+export function getCustomCategoryBadgeStyle(color?: string): CategoryStyle {
+  switch (color) {
+    case 'emerald':
+      return { bg: 'bg-emerald-500/15', text: 'text-emerald-400', border: 'border-emerald-500/30' };
+    case 'amber':
+      return { bg: 'bg-amber-500/15', text: 'text-amber-400', border: 'border-amber-500/30' };
+    case 'violet':
+      return { bg: 'bg-violet-500/15', text: 'text-violet-400', border: 'border-violet-500/30' };
+    case 'pink':
+      return { bg: 'bg-pink-500/15', text: 'text-pink-400', border: 'border-pink-500/30' };
+    case 'cyan':
+      return { bg: 'bg-cyan-500/15', text: 'text-cyan-400', border: 'border-cyan-500/30' };
+    case 'rose':
+      return { bg: 'bg-rose-500/15', text: 'text-rose-400', border: 'border-rose-500/30' };
+    case 'blue':
+      return { bg: 'bg-blue-500/15', text: 'text-blue-400', border: 'border-blue-500/30' };
+    case 'indigo':
+    default:
+      return { bg: 'bg-indigo-500/15', text: 'text-indigo-400', border: 'border-indigo-500/30' };
+  }
+}
+
+export function getCategoryIconComponent(
+  categoryKey: string,
+  customCategories?: CustomCategory[]
+): LucideIcon {
+  if (categoryKey in EXPENSE_CATEGORY_ICONS) {
+    return EXPENSE_CATEGORY_ICONS[categoryKey as ExpenseCategory];
+  }
+  if (categoryKey in INCOME_CATEGORY_ICONS) {
+    return INCOME_CATEGORY_ICONS[categoryKey as IncomeCategory];
+  }
+  const custom = customCategories?.find((c) => c.id === categoryKey);
+  if (custom && custom.icon && custom.icon in CUSTOM_CATEGORY_ICONS) {
+    return CUSTOM_CATEGORY_ICONS[custom.icon];
+  }
+  return MoreHorizontal;
+}
 
 export interface CategoryStyle {
   bg: string;
@@ -93,7 +164,13 @@ export function getFundingSourceBadgeStyle(source: FundingSource | string): Cate
   }
 }
 
-export function getCategoryBadgeStyle(type: TransactionType | string, category?: string): CategoryStyle {
+export function getCategoryBadgeStyle(type: TransactionType | string, category?: string, customCategories?: CustomCategory[]): CategoryStyle {
+  if (category) {
+    const custom = customCategories?.find((c) => c.id === category);
+    if (custom) {
+      return getCustomCategoryBadgeStyle(custom.color);
+    }
+  }
   if (type === 'transfer') {
     return {
       bg: 'bg-indigo-500/15',

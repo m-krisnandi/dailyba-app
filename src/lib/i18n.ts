@@ -71,6 +71,14 @@ export interface Translations {
     today: string;
     manageCategories: string;
     categoriesSettingsTitle: string;
+    customCategoriesTab: string;
+    categoryVisibilityTab: string;
+    addCustomCategory: string;
+    customCategoryNamePlaceholder: string;
+    selectIcon: string;
+    selectColor: string;
+    noCustomCategories: string;
+    yourCustomCategories: string;
     categoriesSettingsDesc: string;
     hiddenCategoriesNotice: string;
     visible: string;
@@ -451,6 +459,14 @@ export const translations: Record<Language, Translations> = {
       today: 'Today',
       manageCategories: 'Manage Categories',
       categoriesSettingsTitle: 'Category Visibility',
+      customCategoriesTab: 'Custom Categories',
+      categoryVisibilityTab: 'Visibility',
+      addCustomCategory: 'Add Category',
+      customCategoryNamePlaceholder: 'e.g. Pet Care, Skincare, Hobby...',
+      selectIcon: 'Select Icon',
+      selectColor: 'Color Theme',
+      noCustomCategories: 'No custom categories created yet. Create one above to personalize your expense tracking.',
+      yourCustomCategories: 'Your Custom Categories',
       categoriesSettingsDesc: 'Choose which categories to display or hide across the entire app.',
       hiddenCategoriesNotice: 'Hidden categories are completely omitted from quick forms, monthly breakdowns, and annual charts.',
       visible: 'Visible',
@@ -854,6 +870,14 @@ export const translations: Record<Language, Translations> = {
       today: '今日',
       manageCategories: 'カテゴリ管理',
       categoriesSettingsTitle: 'カテゴリ表示設定',
+      customCategoriesTab: 'カスタムカテゴリ',
+      categoryVisibilityTab: '表示・非表示',
+      addCustomCategory: 'カテゴリを追加',
+      customCategoryNamePlaceholder: '例: ペット、スキンケア、趣味...',
+      selectIcon: 'アイコンを選択',
+      selectColor: 'カラーテーマ',
+      noCustomCategories: 'カスタムカテゴリはまだありません。上記フォームから追加してください。',
+      yourCustomCategories: '登録済みカスタムカテゴリ',
       categoriesSettingsDesc: 'アプリ全体で表示または非表示にするカテゴリを選択します。',
       hiddenCategoriesNotice: '非表示のカテゴリは入力フォーム、月次サマリー、年次推移グラフ等から完全に除外されます。',
       visible: '表示中',

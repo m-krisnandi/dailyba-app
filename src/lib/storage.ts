@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useState, useCallback, useRef } from 'react';
-import { Currency, ExpenseCategory, FinanceState, InvestmentAsset, Language, MonthlyBudgetPlan, RecurringBill, Transaction } from '@/types/finance';
+import { Currency, ExpenseCategory, FinanceState, InvestmentAsset, Language, MonthlyBudgetPlan, RecurringBill, Transaction, CustomCategory } from '@/types/finance';
 
 const STORAGE_KEY = 'dailyba_finance_v1';
 
@@ -22,6 +22,7 @@ export const DEFAULT_STATE: FinanceState = {
   dailyReminderTime: '20:00',
   autoBackupFrequency: 'daily',
   lastAutoBackupAt: undefined,
+  customCategories: [],
 };
 
 // Known mock identifiers to purge permanently
@@ -74,6 +75,7 @@ export function getStoredState(): FinanceState {
         dailyReminderTime: typeof parsed.dailyReminderTime === 'string' ? parsed.dailyReminderTime : '20:00',
         autoBackupFrequency: parsed.autoBackupFrequency || 'daily',
         lastAutoBackupAt: parsed.lastAutoBackupAt,
+        customCategories: Array.isArray(parsed.customCategories) ? parsed.customCategories : [],
         deletedTxIds: Array.isArray(parsed.deletedTxIds) ? parsed.deletedTxIds.slice(0, 500) : [],
       };
     }
@@ -234,6 +236,29 @@ export function useFinanceStore() {
     }));
   }, [updateState]);
 
+  const addCustomCategory = useCallback((category: Omit<CustomCategory, 'id'>) => {
+    updateState((prev) => {
+      const newCat: CustomCategory = {
+        ...category,
+        id: `custom_${Date.now()}_${Math.random().toString(36).substring(2, 6)}`,
+        createdAt: new Date().toISOString(),
+      };
+      const existing = prev.customCategories || [];
+      return {
+        ...prev,
+        customCategories: [...existing, newCat],
+      };
+    });
+  }, [updateState]);
+
+  const deleteCustomCategory = useCallback((id: string) => {
+    updateState((prev) => ({
+      ...prev,
+      customCategories: (prev.customCategories || []).filter((c) => c.id !== id),
+      hiddenCategories: prev.hiddenCategories.filter((c) => c !== id),
+    }));
+  }, [updateState]);
+
   const addRecurringBill = useCallback((bill: Omit<RecurringBill, 'id'>) => {
     updateState((prev) => {
       const newBill: RecurringBill = {
@@ -383,6 +408,7 @@ export function useFinanceStore() {
       monthStartDay: typeof importedState.monthStartDay === 'number' ? importedState.monthStartDay : (prev.monthStartDay || 1),
       autoBackupFrequency: importedState.autoBackupFrequency || prev.autoBackupFrequency || 'daily',
       lastAutoBackupAt: importedState.lastAutoBackupAt || prev.lastAutoBackupAt,
+      customCategories: Array.isArray(importedState.customCategories) ? importedState.customCategories : (prev.customCategories || []),
       deletedTxIds: Array.isArray(importedState.deletedTxIds)
         ? Array.from(new Set([...(importedState.deletedTxIds || []), ...(prev.deletedTxIds || [])])).slice(0, 500)
         : (prev.deletedTxIds || []),
@@ -400,6 +426,8 @@ export function useFinanceStore() {
     deleteInvestment,
     toggleHideCategory,
     setHiddenCategories,
+    addCustomCategory,
+    deleteCustomCategory,
     addRecurringBill,
     updateRecurringBill,
     deleteRecurringBill,
