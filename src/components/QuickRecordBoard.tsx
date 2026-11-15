@@ -26,7 +26,8 @@ import { FormattedAmountInput } from '@/components/FormattedAmountInput';
 import { evaluateInlineMath, formatMathExpression } from '@/lib/mathParser';
 import { parseSmartText } from '@/lib/parser';
 import { useBodyScrollLock } from '@/lib/useBodyScrollLock';
-import { getTodayLocalDate } from '@/lib/dateUtils';
+import { getTodayLocalDate, formatFriendlyDate } from '@/lib/dateUtils';
+import { cleanTransactionNote } from '@/lib/transactionUtils';
 import { SubscriptionPresetsModal } from '@/components/SubscriptionPresetsModal';
 import { CsvImportModal } from '@/components/CsvImportModal';
 import { checkAndTriggerBudgetAlert } from '@/lib/localNotifications';
@@ -890,6 +891,32 @@ export function QuickRecordBoard({
     return filteredTransactions.slice(startIndex, startIndex + TX_PAGE_SIZE);
   }, [filteredTransactions, currentPage]);
 
+  const groupedTransactions = useMemo(() => {
+    const groups: { date: string; friendlyDate: string; items: Transaction[]; dayExpenseTotal: number }[] = [];
+    const map = new Map<string, Transaction[]>();
+
+    for (const tx of paginatedTransactions) {
+      if (!map.has(tx.date)) {
+        map.set(tx.date, []);
+      }
+      map.get(tx.date)!.push(tx);
+    }
+
+    map.forEach((items, dateStr) => {
+      const dayExpenseTotal = items
+        .filter((t) => t.type === "expense")
+        .reduce((sum, t) => sum + convertCurrency(t.amount, t.currency || "JPY", currency, rates), 0);
+      groups.push({
+        date: dateStr,
+        friendlyDate: formatFriendlyDate(dateStr, language),
+        items,
+        dayExpenseTotal,
+      });
+    });
+
+    return groups;
+  }, [paginatedTransactions, language, currency, rates]);
+
   return (
     <div className="space-y-6">
       {/* First-Time User Quick Start Guide */}
@@ -1092,7 +1119,7 @@ export function QuickRecordBoard({
                 });
               }}
               placeholder="0"
-              className="w-full bg-[var(--bg-subtle)] border border-[var(--border-subtle)] focus:border-[var(--border-strong)] rounded-2xl pl-4 sm:pl-5 pr-36 sm:pr-48 py-3.5 sm:py-4 text-2xl sm:text-4xl font-extrabold tracking-tight text-[var(--text-main)] placeholder-[var(--text-faint)] outline-none tabular-numbers transition-all font-mono"
+              className="w-full bg-[var(--bg-subtle)] border border-[var(--border-subtle)] focus:border-[var(--border-strong)] rounded-2xl pl-4 sm:pl-5 pr-36 sm:pr-48 py-3.5 sm:py-4 text-2xl sm:text-4xl font-extrabold tracking-tight text-[var(--text-main)] placeholder-[var(--text-faint)] outline-none tabular-nums transition-all font-semibold"
             />
           </div>
 
@@ -1132,7 +1159,7 @@ export function QuickRecordBoard({
                   onClick={() => handleAddPreset(val)}
                   className="px-2.5 sm:px-3 py-1.5 rounded-xl border border-[var(--border-subtle)] bg-[var(--bg-subtle)] hover:bg-[var(--bg-subtle-hover)] text-xs font-semibold text-[var(--text-main)] tabular-numbers transition-all shadow-xs active:scale-[0.97] cursor-pointer shrink-0"
                 >
-                  +{val.toLocaleString('en-US')}
+                  +{val.toLocaleString(currency === 'IDR' ? 'id-ID' : currency === 'JPY' ? 'ja-JP' : 'en-US')}
                 </button>
               ))}
             </div>
@@ -1144,7 +1171,7 @@ export function QuickRecordBoard({
                   key={op}
                   type="button"
                   onClick={() => handleAppendOperator(op)}
-                  className="w-7 h-7 flex items-center justify-center rounded-lg hover:bg-[var(--bg-subtle-hover)] text-xs font-bold text-[var(--text-main)] transition-all font-mono active:scale-95 cursor-pointer"
+                  className="w-10 h-10 min-w-[40px] min-h-[40px] flex items-center justify-center rounded-xl hover:bg-[var(--bg-subtle-hover)] text-sm font-bold text-[var(--text-main)] transition-all active:scale-95 cursor-pointer"
                   title={`Insert ${op === '*' ? '×' : op === '/' ? '÷' : op}`}
                 >
                   {op === '*' ? '×' : op === '/' ? '÷' : op}
@@ -1340,7 +1367,7 @@ export function QuickRecordBoard({
           <div>
             <h3 className="text-sm font-bold text-[var(--text-main)] flex items-center space-x-2">
               <span>{t.record.recurringBillsTitle}</span>
-              <span className="w-1.5 h-1.5 rounded-full bg-[var(--accent-emerald)]" />
+              
             </h3>
             <p className="text-xs text-[var(--text-muted)]">
               {t.record.recurringBillsDesc}
@@ -1375,7 +1402,7 @@ export function QuickRecordBoard({
                   {language === 'ja' ? '今月の固定費・サブスク負担' : 'Monthly Fixed Commitments'}
                 </span>
                 <div className="flex items-baseline space-x-2 mt-0.5">
-                  <span className="text-xl sm:text-2xl font-extrabold text-[var(--text-main)] font-mono tabular-numbers">
+                  <span className="text-xl sm:text-2xl font-bold text-[var(--text-main)] tabular-nums">
                     {formatCurrency(recurringMetrics.remainingCommitment, currency)}
                   </span>
                   <span className="text-xs text-[var(--text-muted)] font-medium">
@@ -1405,7 +1432,7 @@ export function QuickRecordBoard({
                 <span className="text-[10px] text-[var(--text-muted)] block">
                   {language === 'ja' ? '月間コミット総額' : 'Total Commitment'}
                 </span>
-                <span className="font-bold text-[var(--text-main)] font-mono">
+                <span className="font-semibold text-[var(--text-main)] tabular-nums">
                   {formatCurrency(recurringMetrics.totalCommitment, currency)}
                 </span>
               </div>
@@ -1413,7 +1440,7 @@ export function QuickRecordBoard({
                 <span className="text-[10px] text-[var(--text-muted)] block">
                   {language === 'ja' ? '今月支払済' : 'Paid So Far'}
                 </span>
-                <span className="font-bold text-emerald-500 font-mono">
+                <span className="font-semibold text-emerald-600 dark:text-emerald-400 tabular-nums">
                   {formatCurrency(recurringMetrics.paidCommitment, currency)}
                 </span>
               </div>
@@ -1421,7 +1448,7 @@ export function QuickRecordBoard({
                 <span className="text-[10px] text-[var(--text-muted)] block">
                   {language === 'ja' ? '未払い残金' : 'Outstanding Remaining'}
                 </span>
-                <span className="font-bold text-amber-500 font-mono">
+                <span className="font-semibold text-[var(--text-main)] tabular-nums">
                   {formatCurrency(recurringMetrics.remainingCommitment, currency)}
                 </span>
               </div>
@@ -1470,7 +1497,7 @@ export function QuickRecordBoard({
                         <h4 className="text-xs font-bold text-[var(--text-main)] truncate">
                           {billLabel}
                         </h4>
-                        <p className="text-xs font-bold text-[var(--accent-emerald)] tabular-numbers font-mono mt-0.5 whitespace-nowrap">
+                        <p className="text-xs font-semibold text-[var(--text-main)] tabular-nums mt-0.5 whitespace-nowrap">
                           {formatCurrency(convertedBillAmount, currency)} <span className="text-[10px] text-[var(--text-muted)] font-normal">{language === 'ja' ? '/月' : '/ mo'}</span>
                         </p>
                         <p className="text-[10px] text-[var(--text-muted)] truncate mt-0.5 flex items-center space-x-1">
@@ -1900,111 +1927,127 @@ export function QuickRecordBoard({
             </button>
           </div>
         ) : (
-          <div className="space-y-2">
-            {paginatedTransactions.map((tx) => {
-              const isExpense = tx.type === 'expense';
-              const isIncome = tx.type === 'income';
-              const isTransfer = tx.type === 'transfer';
-
-              const customCat = customCategories?.find((c) => c.id === tx.category);
-              const catLabel = isTransfer
-                ? t.record.typeTransfer
-                : customCat
-                ? customCat.name
-                : isExpense
-                ? t.expenseCategories[tx.category as ExpenseCategory] || tx.category
-                : isIncome
-                ? t.incomeCategories[tx.category as IncomeCategory] || tx.category
-                : t.record.typeSavings;
-
-              const Icon = isTransfer
-                ? ArrowRightLeft
-                : isExpense
-                ? getCategoryIconComponent(tx.category, customCategories)
-                : isIncome
-                ? INCOME_CATEGORY_ICONS[tx.category as IncomeCategory] || ArrowUpRight
-                : Wallet;
-
-              const convertedAmount = convertCurrency(
-                tx.amount,
-                tx.currency || 'JPY',
-                currency,
-                rates
-              );
-              const catStyle = isTransfer
-                ? { bg: 'bg-indigo-500/15', text: 'text-indigo-400', border: 'border-indigo-500/30' }
-                : getCategoryBadgeStyle(tx.type, tx.category, customCategories);
-
-              const subLabel = isTransfer
-                ? `${tx.date} • ${t.sources[tx.source]} → ${tx.destinationSource ? t.sources[tx.destinationSource] : '?'}${tx.note ? ` • ${tx.note}` : ''}`
-                : `${tx.date} • ${t.sources[tx.source]}${tx.note ? ` • ${tx.note}` : ''}`;
-
-              return (
-                <div
-                  key={tx.id}
-                  onClick={() => setSelectedDetailTx(tx)}
-                  className="p-3 sm:p-3.5 rounded-2xl bg-[var(--bg-subtle)] border border-[var(--border-subtle)] hover:border-[var(--border-strong)] flex items-center justify-between space-x-2.5 sm:space-x-3 group transition-all min-w-0 cursor-pointer hover:bg-[var(--bg-surface-solid)] active:scale-[0.99]"
-                  title={language === "ja" ? "クリックして取引明細を表示" : "Click to view full transaction details"}
-                >
-                  <div className="flex items-center space-x-2.5 sm:space-x-3 min-w-0">
-                    <div
-                      className={`w-9 h-9 rounded-xl flex items-center justify-center shrink-0 border ${catStyle.border} ${catStyle.bg} ${catStyle.text}`}
-                    >
-                      <Icon className="w-4 h-4" />
-                    </div>
-                    <div className="min-w-0">
-                      <p className="text-xs font-semibold text-[var(--text-main)] truncate">
-                        {catLabel}
-                      </p>
-                      <p className="text-[11px] text-[var(--text-muted)] truncate">
-                        {subLabel}
-                      </p>
-                    </div>
-                  </div>
-
-                  <div className="flex items-center space-x-1.5 sm:space-x-3 shrink-0 ml-2">
-                    <span
-                      className={`text-xs sm:text-sm font-bold tabular-numbers font-mono whitespace-nowrap ${
-                        isTransfer
-                          ? 'text-indigo-600 dark:text-indigo-400'
-                          : isExpense
-                          ? 'text-rose-600 dark:text-rose-400'
-                          : isIncome
-                          ? 'text-emerald-600 dark:text-emerald-400'
-                          : 'text-amber-600 dark:text-amber-400'
-                      }`}
-                    >
-                      {isTransfer ? '' : isExpense ? '-' : '+'}
-                      {formatCurrency(convertedAmount, currency)}
+          <div className="space-y-4">
+            {groupedTransactions.map((group) => (
+              <div key={group.date} className="space-y-1.5">
+                <div className="flex items-center justify-between px-1 pt-1.5 pb-1 text-xs font-semibold text-[var(--text-muted)] border-b border-[var(--border-subtle)]">
+                  <span className="text-[var(--text-main)] font-bold">{group.friendlyDate}</span>
+                  {group.dayExpenseTotal > 0 && (
+                    <span className="tabular-nums text-[11px] text-[var(--text-muted)] font-medium">
+                      -{formatCurrency(group.dayExpenseTotal, currency)}
                     </span>
-                    {onUpdateTransaction && (
-                      <button
-                        type="button"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          setEditingTx(tx);
-                        }}
-                        className="opacity-70 sm:opacity-0 sm:group-hover:opacity-100 p-1 text-[var(--text-faint)] hover:text-[var(--text-main)] transition-all cursor-pointer shrink-0"
-                        title={t.actions.edit}
-                      >
-                        <Edit3 className="w-3.5 h-3.5" />
-                      </button>
-                    )}
-                    <button
-                      type="button"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        setDeletingTx(tx);
-                      }}
-                      className="opacity-70 sm:opacity-0 sm:group-hover:opacity-100 p-1 text-[var(--text-faint)] hover:text-rose-500 transition-all cursor-pointer shrink-0"
-                      title={t.actions.delete}
-                    >
-                      <Trash2 className="w-3.5 h-3.5" />
-                    </button>
-                  </div>
+                  )}
                 </div>
-              );
-            })}
+
+                <div className="space-y-1.5">
+                  {group.items.map((tx) => {
+                    const isExpense = tx.type === 'expense';
+                    const isIncome = tx.type === 'income';
+                    const isTransfer = tx.type === 'transfer';
+
+                    const customCat = customCategories?.find((c) => c.id === tx.category);
+                    const catLabel = isTransfer
+                      ? t.record.typeTransfer
+                      : customCat
+                      ? customCat.name
+                      : isExpense
+                      ? t.expenseCategories[tx.category as ExpenseCategory] || tx.category
+                      : isIncome
+                      ? t.incomeCategories[tx.category as IncomeCategory] || tx.category
+                      : t.record.typeSavings;
+
+                    const Icon = isTransfer
+                      ? ArrowRightLeft
+                      : isExpense
+                      ? getCategoryIconComponent(tx.category, customCategories)
+                      : isIncome
+                      ? INCOME_CATEGORY_ICONS[tx.category as IncomeCategory] || ArrowUpRight
+                      : Wallet;
+
+                    const convertedAmount = convertCurrency(
+                      tx.amount,
+                      tx.currency || 'JPY',
+                      currency,
+                      rates
+                    );
+                    const catStyle = isTransfer
+                      ? { bg: 'bg-indigo-500/15', text: 'text-indigo-400', border: 'border-indigo-500/30' }
+                      : getCategoryBadgeStyle(tx.type, tx.category, customCategories);
+
+                    const cleanedNote = cleanTransactionNote(tx.note);
+                    const primaryTitle = cleanedNote || catLabel;
+                    const subLabel = isTransfer
+                      ? `${t.sources[tx.source]} → ${tx.destinationSource ? t.sources[tx.destinationSource] : '?'}`
+                      : cleanedNote
+                      ? `${catLabel} • ${t.sources[tx.source]}`
+                      : t.sources[tx.source];
+
+                    return (
+                      <div
+                        key={tx.id}
+                        onClick={() => setSelectedDetailTx(tx)}
+                        className="p-3 sm:p-3.5 rounded-2xl bg-[var(--bg-subtle)] border border-[var(--border-subtle)] hover:border-[var(--border-strong)] flex items-center justify-between space-x-2.5 sm:space-x-3 group transition-all min-w-0 cursor-pointer hover:bg-[var(--bg-surface-solid)] active:scale-[0.99]"
+                      >
+                        <div className="flex items-center space-x-2.5 sm:space-x-3 min-w-0">
+                          <div
+                            className={`w-9 h-9 rounded-xl flex items-center justify-center shrink-0 border ${catStyle.border} ${catStyle.bg} ${catStyle.text}`}
+                          >
+                            <Icon className="w-4 h-4" />
+                          </div>
+                          <div className="min-w-0">
+                            <p className="text-xs font-semibold text-[var(--text-main)] truncate">
+                              {primaryTitle}
+                            </p>
+                            <p className="text-[11px] text-[var(--text-muted)] truncate">
+                              {subLabel}
+                            </p>
+                          </div>
+                        </div>
+
+                        <div className="flex items-center space-x-1.5 sm:space-x-3 shrink-0 ml-2">
+                          <span
+                            className={`text-xs sm:text-sm font-semibold tabular-nums whitespace-nowrap ${
+                              isTransfer
+                                ? 'text-indigo-600 dark:text-indigo-400'
+                                : isIncome
+                                ? 'text-emerald-600 dark:text-emerald-400'
+                                : 'text-[var(--text-main)]'
+                            }`}
+                          >
+                            {isTransfer ? '' : isIncome ? '+' : ''}
+                            {formatCurrency(convertedAmount, currency)}
+                          </span>
+                          {onUpdateTransaction && (
+                            <button
+                              type="button"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                setEditingTx(tx);
+                              }}
+                              className="opacity-70 sm:opacity-0 sm:group-hover:opacity-100 p-1 text-[var(--text-faint)] hover:text-[var(--text-main)] transition-all cursor-pointer shrink-0"
+                              title={t.actions.edit}
+                            >
+                              <Edit3 className="w-3.5 h-3.5" />
+                            </button>
+                          )}
+                          <button
+                            type="button"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setDeletingTx(tx);
+                            }}
+                            className="opacity-70 sm:opacity-0 sm:group-hover:opacity-100 p-1 text-[var(--text-faint)] hover:text-rose-500 transition-all cursor-pointer shrink-0"
+                            title={t.actions.delete}
+                          >
+                            <Trash2 className="w-3.5 h-3.5" />
+                          </button>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            ))}
           </div>
         )}
 

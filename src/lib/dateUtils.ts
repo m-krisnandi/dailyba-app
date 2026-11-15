@@ -86,3 +86,25 @@ export function isDateInMonthCycle(dateStr: string, monthKey: string, startDay =
   const range = getMonthDateRange(monthKey, startDay);
   return dateStr >= range.startDate && dateStr <= range.endDate;
 }
+
+export function formatFriendlyDate(dateStr: string, language: "en" | "ja" = "en"): string {
+  if (!dateStr) return "";
+  const today = getTodayLocalDate();
+  const yesterday = getYesterdayLocalDate();
+  if (dateStr === today) {
+    return language === "ja" ? "今日" : "Today";
+  }
+  if (dateStr === yesterday) {
+    return language === "ja" ? "昨日" : "Yesterday";
+  }
+  const parts = dateStr.split("-").map(Number);
+  if (parts.length === 3) {
+    const d = new Date(parts[0], parts[1] - 1, parts[2]);
+    if (language === "ja") {
+      const weekdays = ["日", "月", "火", "水", "木", "金", "土"];
+      return `${parts[1]}月${parts[2]}日(${weekdays[d.getDay()]})`;
+    }
+    return d.toLocaleDateString("en-US", { weekday: "short", month: "short", day: "numeric" });
+  }
+  return dateStr;
+}

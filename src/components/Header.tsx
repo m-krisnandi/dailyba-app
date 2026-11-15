@@ -161,7 +161,7 @@ export function Header({
     : 'User';
 
   return (
-    <header className="sticky top-0 z-40 w-full border-b border-[var(--border-subtle)] bg-[var(--bg-glass-strong)] backdrop-blur-xl transition-colors">
+    <header className="sticky top-0 z-40 w-full ui-header-solid transition-colors">
       <div className="max-w-7xl mx-auto px-3 sm:px-6 h-14 sm:h-16 flex items-center justify-between">
         {/* Brand Logo & Name */}
         <div className="flex items-center space-x-2 sm:space-x-3 min-w-0">

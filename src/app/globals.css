@@ -3,84 +3,87 @@
 @variant dark (&:where(.dark, .dark *));
 
 :root {
-  --font-sans: -apple-system, BlinkMacSystemFont, "SF Pro Display", "SF Pro Text", "Segoe UI", Roboto, sans-serif;
-  --font-mono: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", monospace;
+  --font-sans: -apple-system, BlinkMacSystemFont, "SF Pro Display", "SF Pro Text", "Segoe UI", Roboto, "Helvetica Neue", sans-serif;
+  --font-mono: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
 
-  /* Liquid Glass LIGHT Theme — Soft Frosted Pearlescent Glass */
-  --bg-primary: #edf2f7;
-  --bg-main: #edf2f7;
-  --bg-surface: rgba(255, 255, 255, 0.68);
-  --bg-surface-solid: rgba(255, 255, 255, 0.88);
-  --bg-subtle: rgba(15, 23, 42, 0.035);
-  --bg-subtle-hover: rgba(15, 23, 42, 0.065);
+  /* Refined Light Theme Tokens — Clean Fintech Surface Structure */
+  --bg-primary: #f7f8fa;
+  --bg-main: #f7f8fa;
+  --bg-surface: #ffffff;
+  --bg-surface-solid: #ffffff;
+  --bg-subtle: #f3f4f6;
+  --bg-subtle-hover: #e5e7eb;
 
-  /* Specular Rim Lighting & Borders */
-  --border-subtle: rgba(255, 255, 255, 0.8);
-  --border-strong: rgba(15, 23, 42, 0.12);
-  --border-specular: rgba(255, 255, 255, 0.95);
+  /* Solid Borders for clear structural hierarchy (No floating cards) */
+  --border-subtle: #e5e7eb;
+  --border-strong: #d1d5db;
+  --border-specular: #e2e8f0;
 
-  /* Muted Grayscale Palette */
-  --text-main: #0f172a;
-  --text-muted: #64748b;
-  --text-faint: #94a3b8;
+  /* WCAG AA Compliant High-Contrast Text */
+  --text-main: #111827;      /* Primary text (14.5:1 contrast) */
+  --text-muted: #4b5563;     /* Secondary text (7.0:1 contrast) */
+  --text-faint: #6b7280;     /* Tertiary text (4.6:1 contrast >= 4.5:1 WCAG AA) */
 
-  /* Executive Soft Glossy Buttons */
-  --btn-primary-bg: #0f172a;
+  /* Executive Solid Buttons */
+  --btn-primary-bg: #111827;
   --btn-primary-text: #ffffff;
-  --btn-primary-border: rgba(15, 23, 42, 0.12);
-  --btn-primary-hover: #1e293b;
-  --btn-primary-shadow: 0 4px 16px rgba(15, 23, 42, 0.12), inset 0 1px 0 rgba(255, 255, 255, 0.25);
+  --btn-primary-border: #111827;
+  --btn-primary-hover: #1f2937;
+  --btn-primary-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
 
-  /* Subtle Refined Accents (Non-neon, refined fintech) */
-  --accent-emerald: #059669;
+  /* Semantic Action & Financial Colors */
+  --accent-emerald: #059669; /* Income & success */
   --accent-emerald-soft: rgba(5, 150, 105, 0.08);
 
-  --accent-rose: #e11d48;
-  --accent-rose-soft: rgba(225, 29, 72, 0.08);
+  --accent-rose: #dc2626;    /* Strictly for budget overruns & destructive deletes */
+  --accent-rose-soft: rgba(220, 38, 38, 0.08);
 
-  --accent-indigo: #4f46e5;
+  --accent-indigo: #4f46e5;  /* Brand primary */
   --accent-indigo-soft: rgba(79, 70, 229, 0.08);
 
-  --accent-amber: #d97706;
+  --accent-amber: #d97706;   /* Genuine warnings only */
   --accent-amber-soft: rgba(217, 119, 6, 0.08);
 
   --accent-cyan: #0284c7;
   --accent-cyan-soft: rgba(2, 132, 199, 0.08);
 
-  /* Layered Glass Depth & Specular Glow */
-  --card-shadow: 0 16px 36px -10px rgba(15, 23, 42, 0.07), inset 0 1px 1px 0 rgba(255, 255, 255, 0.95), inset 0 0 0 1px rgba(255, 255, 255, 0.65);
-  --pill-shadow: 0 4px 14px rgba(15, 23, 42, 0.04), inset 0 1px 0 0 rgba(255, 255, 255, 0.9);
-  --modal-shadow: 0 32px 70px -15px rgba(15, 23, 42, 0.2), inset 0 1.5px 1px 0 #ffffff;
+  /* Subtle Crisp Depth */
+  --card-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.04), 0 1px 2px -1px rgba(0, 0, 0, 0.04);
+  --pill-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.03);
+  --modal-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 8px 10px -6px rgba(0, 0, 0, 0.1);
+
+  /* Solid Header (No blur stains) */
+  --header-bg: #ffffff;
+  --header-border: #e5e7eb;
 }
 
 .dark {
-  /* Liquid Glass DARK Theme — Deep Slate Metallic & Refracted Frosted Panels */
-  /* Inspired by liquidglassdesign.com/gallery/liquid-glass-finance-app-ui */
-  --bg-primary: #0a0e13;
-  --bg-main: #0a0e13;
-  --bg-surface: rgba(255, 255, 255, 0.05);
-  --bg-surface-solid: rgba(22, 30, 42, 0.82);
-  --bg-subtle: rgba(255, 255, 255, 0.045);
-  --bg-subtle-hover: rgba(255, 255, 255, 0.08);
+  /* Refined Dark Theme Tokens — Deep Slate Structured Surfaces */
+  --bg-primary: #0b0f17;
+  --bg-main: #0b0f17;
+  --bg-surface: #131926;
+  --bg-surface-solid: #182030;
+  --bg-subtle: #1c2536;
+  --bg-subtle-hover: #263248;
 
-  /* Specular Rim Reflections */
-  --border-subtle: rgba(255, 255, 255, 0.1);
-  --border-strong: rgba(255, 255, 255, 0.18);
-  --border-specular: rgba(255, 255, 255, 0.25);
+  /* Structured dark borders */
+  --border-subtle: #232e42;
+  --border-strong: #334155;
+  --border-specular: #3b4b66;
 
-  /* High-Contrast Muted Grayscale Palette */
+  /* High-Contrast Dark Text */
   --text-main: #f8fafc;
   --text-muted: #94a3b8;
   --text-faint: #64748b;
 
-  /* Executive Soft Glossy Buttons */
+  /* Executive Solid Buttons */
   --btn-primary-bg: #ffffff;
-  --btn-primary-text: #0a0e13;
-  --btn-primary-border: rgba(255, 255, 255, 0.3);
+  --btn-primary-text: #0b0f17;
+  --btn-primary-border: #ffffff;
   --btn-primary-hover: #f1f5f9;
-  --btn-primary-shadow: 0 4px 20px rgba(0, 0, 0, 0.5), inset 0 1px 0 rgba(255, 255, 255, 0.9);
+  --btn-primary-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.3);
 
-  /* Subtle Refined Accents (Muted & Sleek) */
+  /* Semantic Financial Colors */
   --accent-emerald: #10b981;
   --accent-emerald-soft: rgba(16, 185, 129, 0.12);
 
@@ -96,16 +99,20 @@
   --accent-cyan: #38bdf8;
   --accent-cyan-soft: rgba(56, 189, 248, 0.12);
 
-  /* Layered Glass Depth & Specular Inner Glow */
-  --card-shadow: 0 24px 50px -12px rgba(0, 0, 0, 0.7), inset 0 1px 1px 0 rgba(255, 255, 255, 0.22), inset 0 0 0 1px rgba(255, 255, 255, 0.05);
-  --pill-shadow: 0 4px 16px rgba(0, 0, 0, 0.4), inset 0 1px 0 0 rgba(255, 255, 255, 0.18);
-  --modal-shadow: 0 36px 80px -15px rgba(0, 0, 0, 0.8), inset 0 1px 1px 0 rgba(255, 255, 255, 0.28);
+  --card-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.3);
+  --pill-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.2);
+  --modal-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.6);
+
+  /* Solid Dark Header */
+  --header-bg: #0d131d;
+  --header-border: #232e42;
 }
 
 body {
   background-color: var(--bg-primary);
   color: var(--text-main);
   font-family: var(--font-sans);
+  font-variant-numeric: tabular-nums;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
   padding-bottom: env(safe-area-inset-bottom, 24px);
@@ -113,33 +120,47 @@ body {
   min-height: 100vh;
   position: relative;
   overflow-x: hidden;
-  transition: background-color 200ms ease, color 200ms ease;
+  transition: background-color 150ms ease, color 150ms ease;
+}
+
+/* Tabular numbers utility for all numerical displays */
+.tabular-nums {
+  font-variant-numeric: tabular-nums;
 }
 
 /* Instant theme switch override: avoids GPU compositor stuttering on Xiaomi/MIUI */
 .no-theme-transition,
-.no-theme-transition *,
-.no-theme-transition *::before,
-.no-theme-transition *::after {
+.no-theme-transition * {
   transition: none !important;
   animation-duration: 0s !important;
 }
 
-/* Liquid Glass Card & Modal Component Classes */
+/* Card & Surface Classes */
+.ui-card {
+  background-color: var(--bg-surface);
+  border: 1px solid var(--border-subtle);
+  border-radius: 16px;
+  box-shadow: var(--card-shadow);
+}
+
 .liquid-glass-card {
   background: var(--bg-surface);
-  backdrop-filter: blur(36px) saturate(190%);
-  -webkit-backdrop-filter: blur(36px) saturate(190%);
   border: 1px solid var(--border-subtle);
+  border-radius: 16px;
   box-shadow: var(--card-shadow);
 }
 
 .liquid-glass-modal {
   background: var(--bg-surface-solid);
-  backdrop-filter: blur(48px) saturate(200%);
-  -webkit-backdrop-filter: blur(48px) saturate(200%);
   border: 1px solid var(--border-strong);
+  border-radius: 20px;
   box-shadow: var(--modal-shadow);
+}
+
+/* Solid Header Class (No blurry stain bleed-through) */
+.ui-header-solid {
+  background-color: var(--header-bg);
+  border-bottom: 1px solid var(--header-border);
 }
 
 /* Hide HTML5 number input spin buttons / steppers across all browsers */
@@ -157,8 +178,8 @@ input[type="number"] {
 
 /* Custom Scrollbar */
 ::-webkit-scrollbar {
-  width: 6px;
-  height: 6px;
+  width: 5px;
+  height: 5px;
 }
 
 ::-webkit-scrollbar-track {
@@ -183,7 +204,7 @@ input[type="number"] {
   scrollbar-width: none;
 }
 
-/* Remove unwanted browser outline / yellow focus rings on charts & SVGs */
+/* Remove browser yellow focus rings on charts & SVGs */
 .recharts-wrapper,
 .recharts-wrapper *,
 .recharts-surface,
