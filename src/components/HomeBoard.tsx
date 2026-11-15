@@ -4,7 +4,7 @@ import React, { useMemo } from 'react';
 import { FinanceState, Currency, Language, Transaction, FundingSource, ExpenseCategory } from '@/types/finance';
 import { ExchangeRates, DEFAULT_RATES, convertCurrency } from '@/lib/currency';
 import { formatCurrency } from '@/lib/i18n';
-import { formatFriendlyDate, getMonthDateRange, isDateInMonthCycle } from '@/lib/dateUtils';
+import { formatFriendlyDate, getMonthDateRange, isDateInMonthCycle, getTodayLocalDate } from '@/lib/dateUtils';
 import { cleanTransactionNote } from '@/lib/transactionUtils';
 import { TabKey } from '@/components/TabsNav';
 
@@ -69,10 +69,8 @@ export function HomeBoard({
       return plan.totalTarget;
     }
     if (state.savingsGoalMonthly && state.savingsGoalMonthly > 0) {
-      // Use configured savings target as a natural budget baseline
       return state.savingsGoalMonthly * 2;
     }
-    // Baseline sensible defaults per currency
     switch (currency) {
       case 'IDR':
         return 1000000;
@@ -92,35 +90,95 @@ export function HomeBoard({
     ? Math.min(100, Math.round((totalSpentThisMonth / monthlyBudgetTarget) * 100))
     : 0;
 
-  // 2. Spending by Funding Source this month
-  const sourceTotals = useMemo(() => {
-    const totals: Record<FundingSource, number> = {
-      bank: 0,
-      ewallet: 0,
-      cash: 0,
-      credit_card: 0,
-    };
-    monthTransactions.forEach((tx) => {
-      if (tx.type === 'expense' && tx.source) {
-        const converted = convertCurrency(tx.amount, tx.currency || 'JPY', currency, rates);
-        if (totals[tx.source] !== undefined) {
-          totals[tx.source] += converted;
-        }
+  // 2. Today's Spend vs Daily Limit
+  const todaySpent = useMemo(() => {
+    const todayStr = getTodayLocalDate();
+    return transactions
+      .filter((tx) => tx.type === 'expense' && tx.date === todayStr)
+      .reduce((sum, tx) => sum + convertCurrency(tx.amount, tx.currency || 'JPY', currency, rates), 0);
+  }, [transactions, currency, rates]);
+
+  const dailyTarget = useMemo(() => {
+    return convertCurrency(state.dailySpendTarget || 3000, state.dailySpendCurrency || 'JPY', currency, rates);
+  }, [state.dailySpendTarget, state.dailySpendCurrency, currency, rates]);
+
+  // 3. Recurring Bills metrics (Commitments: Rent, VPS, SIM, etc.)
+  const recurringMetrics = useMemo(() => {
+    const activeBills = Array.isArray(state.recurringBills) ? state.recurringBills : [];
+    if (activeBills.length === 0) {
+      return { totalCommitment: 0, paidCommitment: 0, remainingCommitment: 0, paidCount: 0, totalCount: 0, paidPercent: 0 };
+    }
+
+    const [yStr, mStr] = currentMonthKey.split('-');
+    const curY = parseInt(yStr || '2026', 10);
+    const curM = parseInt(mStr || '11', 10);
+    const prevY = curM === 1 ? curY - 1 : curY;
+    const prevM = curM === 1 ? 12 : curM - 1;
+    const prevMonthPrefix = `${prevY}-${String(prevM).padStart(2, '0')}`;
+
+    let totalCommitment = 0;
+    let paidCommitment = 0;
+    let paidCount = 0;
+
+    activeBills.forEach((bill) => {
+      const billAmountInCurr = convertCurrency(bill.defaultAmount, bill.currency || 'JPY', currency, rates);
+      totalCommitment += billAmountInCurr;
+
+      const billLabel = (bill.name || bill.category).toLowerCase();
+      const currentMonthTx = transactions.find(
+        (tx) =>
+          tx.type === 'expense' &&
+          (tx.recurringBillId === bill.id ||
+            tx.category === bill.category ||
+            (tx.note && tx.note.toLowerCase().includes(billLabel))) &&
+          tx.date.startsWith(currentMonthKey)
+      );
+
+      const prevMonthTx = !currentMonthTx && transactions.find(
+        (tx) =>
+          tx.type === 'expense' &&
+          (tx.recurringBillId === bill.id ||
+            tx.category === bill.category ||
+            (tx.note && tx.note.toLowerCase().includes(billLabel))) &&
+          tx.date.startsWith(prevMonthPrefix) &&
+          parseInt(tx.date.slice(8, 10), 10) >= 20
+      );
+
+      if (currentMonthTx || prevMonthTx) {
+        paidCommitment += billAmountInCurr;
+        paidCount++;
       }
     });
-    return totals;
-  }, [monthTransactions, currency, rates]);
 
-  // 3. User Avatar initial
+    const remainingCommitment = Math.max(0, totalCommitment - paidCommitment);
+    const paidPercent = totalCommitment > 0 ? Math.min(100, Math.round((paidCommitment / totalCommitment) * 100)) : 0;
+
+    return {
+      totalCommitment,
+      paidCommitment,
+      remainingCommitment,
+      paidCount,
+      totalCount: activeBills.length,
+      paidPercent,
+    };
+  }, [state.recurringBills, currentMonthKey, transactions, currency, rates]);
+
+  // 4. Total Reserves / Liquid Savings
+  const totalLiquidSavings = useMemo(() => {
+    return transactions
+      .filter((tx) => tx.type === 'savings')
+      .reduce((sum, tx) => sum + convertCurrency(tx.amount, tx.currency || 'JPY', currency, rates), 0);
+  }, [transactions, currency, rates]);
+
+  // 5. User Avatar initial
   const userInitial = useMemo(() => {
     if (user?.name) return user.name.charAt(0).toUpperCase();
     if (user?.email) return user.email.charAt(0).toUpperCase();
-    return 'M';
+    return 'K';
   }, [user]);
 
-  // 4. Recent transactions grouped by day
+  // 6. Recent transactions grouped by day
   const recentGrouped = useMemo(() => {
-    // Sort transactions date descending
     const sorted = [...transactions].sort((a, b) => {
       if (a.date !== b.date) return b.date.localeCompare(a.date);
       return (b.id || '').localeCompare(a.id || '');
@@ -151,16 +209,19 @@ export function HomeBoard({
   const getIconSymbolId = (category: string) => {
     switch (category) {
       case 'food':
+      case 'food_drinks':
         return '#i-food';
       case 'shopping':
         return '#i-bag';
       case 'laundry':
         return '#i-shirt';
       case 'transport':
+      case 'train':
         return '#i-car';
       case 'bills':
       case 'rent':
       case 'vps':
+      case 'mobile':
         return '#i-bank';
       default:
         return '#i-wallet';
@@ -169,7 +230,7 @@ export function HomeBoard({
 
   return (
     <>
-      {/* SVG Icon Symbols matching mock exactly */}
+      {/* SVG Icon Symbols */}
       <svg width="0" height="0" style={{ position: 'absolute' }} aria-hidden="true">
         <symbol id="i-mail" viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="14" rx="3"/><path d="m4 7 8 6 8-6"/></symbol>
         <symbol id="i-chev" viewBox="0 0 24 24"><path d="m9 6 6 6-6 6"/></symbol>
@@ -189,7 +250,7 @@ export function HomeBoard({
         <symbol id="i-car" viewBox="0 0 24 24"><path d="M5 17a2 2 0 1 0 4 0 2 2 0 1 0-4 0M15 17a2 2 0 1 0 4 0 2 2 0 1 0-4 0"/><path d="M5 17H3v-4l2-5h12l2 5v4h-2M5 12h14"/></symbol>
       </svg>
 
-      {/* Ambient background: the glass needs something to blur */}
+      {/* Ambient background */}
       <div className="app-bg" aria-hidden="true">
         <svg viewBox="0 0 400 900" preserveAspectRatio="xMidYMid slice">
           <defs>
@@ -261,34 +322,70 @@ export function HomeBoard({
           {formatCurrency(totalSpentThisMonth, currency)} spent of {formatCurrency(monthlyBudgetTarget, currency)}
         </p>
 
-        {/* Cards: Spending by Funding Source */}
-        <section className="cards" aria-label="Spending by funding source">
-          <article className="src pane s-bank">
-            <svg className="ic"><use href="#i-bank"/></svg>
-            <div>
-              <b className="tabular-nums">{formatCurrency(sourceTotals.bank, currency)}</b>
-              <span>Bank, this month</span>
+        {/* Today's Spend vs Daily Limit Bar */}
+        <div 
+          onClick={() => onNavigateTab('daily')}
+          className="mt-3.5 flex items-center justify-between px-3.5 py-2.5 rounded-xl bg-white/[0.04] border border-white/[0.08] cursor-pointer hover:bg-white/[0.07] transition-colors"
+        >
+          <span className="text-xs text-[var(--text-2)] flex items-center gap-1.5">
+            <span className={`w-2 h-2 rounded-full ${todaySpent <= dailyTarget ? 'bg-emerald-400' : 'bg-rose-400'}`} />
+            Today&apos;s Spend
+          </span>
+          <span className="tabular-nums font-semibold text-xs text-[var(--text-1)]">
+            {formatCurrency(todaySpent, currency)}{' '}
+            <span className="text-[var(--text-2)] font-normal text-[11px]">/ {formatCurrency(dailyTarget, currency)} target</span>
+          </span>
+        </div>
+
+        {/* 2 Essential Cards: Recurring Bills & Reserves */}
+        <section className="grid grid-cols-2 gap-3 mt-4" aria-label="Key commitments and reserves">
+          {/* Card 1: Recurring Bills */}
+          <article 
+            onClick={() => onNavigateTab('record')} 
+            className="pane p-3.5 flex flex-col justify-between min-h-[104px] cursor-pointer active:scale-[0.98] transition-transform"
+          >
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-1.5">
+                <svg className="ic w-4 h-4 text-[var(--brand)]"><use href="#i-bank"/></svg>
+                <span className="text-xs text-[var(--text-2)] font-medium">Bills</span>
+              </div>
+              <span className={`text-[10px] px-2 py-0.5 rounded-full font-semibold ${recurringMetrics.totalCount > 0 && recurringMetrics.remainingCommitment === 0 ? 'bg-emerald-500/20 text-emerald-300' : 'bg-amber-500/20 text-amber-300'}`}>
+                {recurringMetrics.totalCount > 0 
+                  ? (recurringMetrics.remainingCommitment === 0 ? 'Settled' : `${recurringMetrics.paidCount}/${recurringMetrics.totalCount}`)
+                  : '0 Bills'}
+              </span>
+            </div>
+            <div className="mt-2">
+              <b className="text-[15px] font-semibold tabular-nums block text-[var(--text-1)]">
+                {formatCurrency(recurringMetrics.remainingCommitment, currency)}
+              </b>
+              <span className="text-[11px] text-[var(--text-2)] block mt-0.5">
+                {recurringMetrics.remainingCommitment === 0 ? 'All settled this month' : 'Left to pay'}
+              </span>
             </div>
           </article>
-          <article className="src pane s-wallet">
-            <svg className="ic"><use href="#i-wallet"/></svg>
-            <div>
-              <b className="tabular-nums">{formatCurrency(sourceTotals.ewallet, currency)}</b>
-              <span>E-wallet, this month</span>
+
+          {/* Card 2: Total Reserves / Savings */}
+          <article 
+            onClick={() => onNavigateTab('savings')} 
+            className="pane p-3.5 flex flex-col justify-between min-h-[104px] cursor-pointer active:scale-[0.98] transition-transform"
+          >
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-1.5">
+                <svg className="ic w-4 h-4 text-emerald-400"><use href="#i-wallet"/></svg>
+                <span className="text-xs text-[var(--text-2)] font-medium">Reserves</span>
+              </div>
+              <span className="text-[10px] px-2 py-0.5 rounded-full font-semibold bg-emerald-500/20 text-emerald-300">
+                Savings
+              </span>
             </div>
-          </article>
-          <article className="src pane s-cash">
-            <svg className="ic"><use href="#i-cash"/></svg>
-            <div>
-              <b className="tabular-nums">{formatCurrency(sourceTotals.cash, currency)}</b>
-              <span>Cash, this month</span>
-            </div>
-          </article>
-          <article className="src pane s-card">
-            <svg className="ic"><use href="#i-card"/></svg>
-            <div>
-              <b className="tabular-nums">{formatCurrency(sourceTotals.credit_card, currency)}</b>
-              <span>Credit card, this month</span>
+            <div className="mt-2">
+              <b className="text-[15px] font-semibold tabular-nums block text-[var(--text-1)]">
+                {formatCurrency(totalLiquidSavings, currency)}
+              </b>
+              <span className="text-[11px] text-[var(--text-2)] block mt-0.5">
+                Total saved fund
+              </span>
             </div>
           </article>
         </section>
@@ -309,9 +406,9 @@ export function HomeBoard({
           </button>
         </section>
 
-        {/* Review Banner */}
-        {pendingEmailSyncCount > 0 ? (
-          <section className="banner pane">
+        {/* Pending Email Imports Review Banner (Only shown when pending count > 0) */}
+        {pendingEmailSyncCount > 0 && (
+          <section className="banner pane mt-4">
             <div>
               <b>{pendingEmailSyncCount} imports waiting for review</b>
               <p>Found in your bank and e-wallet emails</p>
@@ -320,20 +417,10 @@ export function HomeBoard({
               Review
             </button>
           </section>
-        ) : (
-          <section className="banner pane">
-            <div>
-              <b>Bank &amp; Email Sync</b>
-              <p>Auto-parse expense receipts from your emails</p>
-            </div>
-            <button type="button" className="pill" onClick={onOpenEmailSync}>
-              Sync
-            </button>
-          </section>
         )}
 
         {/* Recent Transactions Panel (Glass) */}
-        <section className="panel glass" aria-labelledby="recent">
+        <section className="panel glass mb-6" aria-labelledby="recent">
           <div className="panel-h">
             <h2 id="recent">Recent transactions</h2>
             <button
@@ -385,6 +472,9 @@ export function HomeBoard({
             ))
           )}
         </section>
+
+        {/* Generous bottom spacing spacer so the last transaction can scroll safely above the floating dock */}
+        <div className="h-16" aria-hidden="true" />
       </main>
 
       {/* Floating Bottom Nav (Glass) */}

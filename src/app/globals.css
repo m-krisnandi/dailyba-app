@@ -299,7 +299,7 @@ svg *,
   max-width: 430px;
   width: 100%;
   margin: 0 auto;
-  padding: max(16px, env(safe-area-inset-top)) 20px 128px;
+  padding: max(16px, env(safe-area-inset-top)) 20px calc(140px + env(safe-area-inset-bottom, 24px));
 }
 
 .top {
@@ -398,58 +398,6 @@ svg *,
   margin-top: 8px;
   font-size: 13px;
   color: var(--text-2);
-}
-
-.cards {
-  display: flex;
-  gap: 12px;
-  margin: 24px -20px 0;
-  padding: 0 20px;
-  overflow-x: auto;
-  scroll-snap-type: x mandatory;
-  scrollbar-width: none;
-}
-.cards::-webkit-scrollbar {
-  display: none;
-}
-.src {
-  flex: none;
-  width: 156px;
-  height: 108px;
-  padding: 14px;
-  display: flex;
-  flex-direction: column;
-  justify-content: space-between;
-  scroll-snap-align: start;
-}
-.src .ic {
-  width: 20px;
-  height: 20px;
-  color: var(--text-1);
-}
-.src b {
-  display: block;
-  font-size: 16px;
-  font-weight: 600;
-  color: var(--text-1);
-}
-.src span {
-  display: block;
-  margin-top: 2px;
-  font-size: 12px;
-  color: var(--text-2);
-}
-.s-bank {
-  background: linear-gradient(145deg, rgba(120, 172, 182, 0.46), rgba(58, 98, 110, 0.34));
-}
-.s-wallet {
-  background: linear-gradient(145deg, rgba(200, 180, 142, 0.42), rgba(118, 102, 78, 0.30));
-}
-.s-cash {
-  background: linear-gradient(145deg, rgba(142, 152, 162, 0.36), rgba(70, 80, 90, 0.30));
-}
-.s-card {
-  background: linear-gradient(145deg, rgba(82, 142, 122, 0.40), rgba(40, 80, 70, 0.30));
 }
 
 .actions {
