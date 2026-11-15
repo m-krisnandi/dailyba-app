@@ -1010,6 +1010,9 @@ export function QuickRecordBoard({
           </div>
           <div className="flex items-center space-x-2">
             <input
+              id="smart-quick-entry"
+              name="smartQuickEntry"
+              aria-label={t.record.smartTextPlaceholder || "Smart quick entry"}
               type="text"
               value={smartText}
               onChange={(e) => setSmartText(e.target.value)}
@@ -1335,6 +1338,9 @@ export function QuickRecordBoard({
           </div>
           <div>
             <input
+              id="transaction-note-input"
+              name="transactionNote"
+              aria-label={t.record.notePlaceholder || "Transaction note"}
               type="text"
               value={note}
               onChange={(e) => setNote(e.target.value)}
@@ -1649,6 +1655,9 @@ export function QuickRecordBoard({
               <div className="relative flex-1 min-w-0">
                 <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-[var(--text-muted)] pointer-events-none" />
                 <input
+                  id="transaction-search-input"
+                  name="transactionSearch"
+                  aria-label={t.record.searchPlaceholder || "Search transactions"}
                   type="text"
                   value={txSearchQuery}
                   onChange={(e) => handleSearchChange(e.target.value)}
@@ -1860,6 +1869,9 @@ export function QuickRecordBoard({
                     </label>
                     <div className="grid grid-cols-2 gap-1.5">
                       <input
+                        id="filter-min-amount"
+                        name="filterMinAmount"
+                        aria-label="Minimum amount"
                         type="number"
                         min="0"
                         placeholder={language === 'ja' ? '最小金額' : 'Min Amount'}
@@ -1871,6 +1883,9 @@ export function QuickRecordBoard({
                         className="w-full px-2 py-1.5 rounded-xl bg-[var(--bg-surface-solid)] border border-[var(--border-subtle)] text-[var(--text-main)] text-[11px] font-mono focus:outline-none focus:border-emerald-500/50"
                       />
                       <input
+                        id="filter-max-amount"
+                        name="filterMaxAmount"
+                        aria-label="Maximum amount"
                         type="number"
                         min="0"
                         placeholder={language === 'ja' ? '最大金額' : 'Max Amount'}
@@ -2305,6 +2320,9 @@ export function QuickRecordBoard({
                         {language === 'ja' ? 'カテゴリ名' : 'Category Name'}
                       </label>
                       <input
+                        id="custom-cat-name-input"
+                        name="customCategoryName"
+                        aria-label="Category name"
                         type="text"
                         value={newCustomCatName}
                         onChange={(e) => setNewCustomCatName(e.target.value)}
@@ -2486,6 +2504,9 @@ export function QuickRecordBoard({
                 {t.record.billName}
               </label>
               <input
+                id="bill-name-input"
+                name="billName"
+                aria-label="Bill name"
                 type="text"
                 required
                 value={billName}
@@ -2560,6 +2581,9 @@ export function QuickRecordBoard({
               <div className="grid grid-cols-2 gap-2">
                 <div>
                   <input
+                    id="bill-day-from-input"
+                    name="billDayFrom"
+                    aria-label="Bill start day"
                     type="number"
                     min="1"
                     max="31"
@@ -2571,6 +2595,9 @@ export function QuickRecordBoard({
                 </div>
                 <div>
                   <input
+                    id="bill-day-end-input"
+                    name="billDayEnd"
+                    aria-label="Bill end day"
                     type="number"
                     min="1"
                     max="31"

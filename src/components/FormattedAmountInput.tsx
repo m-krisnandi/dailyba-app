@@ -210,6 +210,9 @@ export const FormattedAmountInput = forwardRef<HTMLInputElement, FormattedAmount
     return (
       <div className="relative w-full">
         <input
+          id={rest.id || "amount-input"}
+          name={rest.name || "amount"}
+          aria-label={rest["aria-label"] || "Amount"}
           ref={internalRef}
           type="text"
           inputMode="text"
