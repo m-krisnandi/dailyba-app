@@ -288,24 +288,8 @@ export function HomeBoard({
         <symbol id="i-car" viewBox="0 0 24 24"><path d="M5 17a2 2 0 1 0 4 0 2 2 0 1 0-4 0M15 17a2 2 0 1 0 4 0 2 2 0 1 0-4 0"/><path d="M5 17H3v-4l2-5h12l2 5v4h-2M5 12h14"/></symbol>
       </svg>
 
-      {/* Ambient background */}
-      <div className="app-bg" aria-hidden="true">
-        <svg viewBox="0 0 400 900" preserveAspectRatio="xMidYMid slice">
-          <defs>
-            <linearGradient id="r1" x1="0" y1="0" x2="1" y2="1">
-              <stop offset="0" stopColor="#6FA9B4" stopOpacity=".55"/>
-              <stop offset="1" stopColor="#173540" stopOpacity=".08"/>
-            </linearGradient>
-            <linearGradient id="r2" x1="1" y1="0" x2="0" y2="1">
-              <stop offset="0" stopColor="#4C8794" stopOpacity=".45"/>
-              <stop offset="1" stopColor="#10262E" stopOpacity=".05"/>
-            </linearGradient>
-          </defs>
-          <path d="M-40 170C110 40 300 110 335 330S250 620 460 700" fill="none" stroke="url(#r1)" strokeWidth="64" strokeLinecap="round"/>
-          <path d="M-40 170C110 40 300 110 335 330S250 620 460 700" fill="none" stroke="rgba(255,255,255,.16)" strokeWidth="2" transform="translate(-14 -14)"/>
-          <path d="M-60 540C100 440 240 570 205 770S380 900 470 820" fill="none" stroke="url(#r2)" strokeWidth="52" strokeLinecap="round"/>
-        </svg>
-      </div>
+      {/* Ambient subtle background */}
+      <div className="app-bg" aria-hidden="true" />
 
       <main className="screen">
         <h1 className="sr">Home</h1>
