@@ -21,6 +21,8 @@ import { BankEmailSyncModal } from '@/components/BankEmailSyncModal';
 import { AppLockOverlay } from '@/components/AppLockOverlay';
 import { WelcomeOnboardingModal } from '@/components/WelcomeOnboardingModal';
 import { AppReviewPromptModal } from '@/components/AppReviewPromptModal';
+import { AddTransactionModal } from '@/components/AddTransactionModal';
+import { ReceiptScannerModal } from '@/components/ReceiptScannerModal';
 import { Currency, Language } from '@/types/finance';
 import { isAppLockEnabled, isBiometricAuthenticating, isRecentlyUnlocked } from '@/lib/biometricAuth';
 import { scheduleBillDueReminders, scheduleDailyReminder } from '@/lib/localNotifications';
@@ -45,6 +47,7 @@ function getInitialTab(): TabKey {
 }
 
 export default function Home() {
+  const rates = useExchangeRates();
   const {
     state,
     isHydrated,
@@ -91,6 +94,8 @@ export default function Home() {
   const [pendingEmailSyncCount, setPendingEmailSyncCount] = useState(0);
   const [isOnboardingOpen, setIsOnboardingOpen] = useState(false);
   const [isReviewPromptOpen, setIsReviewPromptOpen] = useState(false);
+  const [isAddTxModalOpen, setIsAddTxModalOpen] = useState(false);
+  const [isReceiptScannerOpen, setIsReceiptScannerOpen] = useState(false);
 
   useEffect(() => {
     if (typeof window !== "undefined" && isHydrated) {
@@ -158,12 +163,9 @@ export default function Home() {
             if (syncRes && syncRes.success) {
               if ((syncRes as any).autoRecordedCount > 0) {
                 const cloudState = await pullStateFromCloud();
-                if (cloudState && Array.isArray(cloudState.transactions)) {
+                if (cloudState) {
                   importData(cloudState);
                 }
-              }
-              if (typeof (syncRes as any).pendingCount !== 'undefined') {
-                setPendingEmailSyncCount((syncRes as any).pendingCount);
               }
             }
           }
@@ -172,236 +174,110 @@ export default function Home() {
     }
   }, [isAuthenticated, pullStateFromCloud, importData]);
 
+  // Initial tab hydration & biometric check
   useEffect(() => {
-    // Check initial URL params (e.g. ?action=scan)
-    if (typeof window !== 'undefined') {
-      const params = new URLSearchParams(window.location.search);
-      if (params.get('action') === 'scan' || window.location.hash.includes('scan')) {
-        setAutoOpenScanner(true);
-      }
-    }
-
-    // Capacitor App URL Open listener for deep links & app state change for security lock
-    import('@capacitor/app').then(({ App }) => {
-      let lastBackgroundTime = 0;
-
-      App.addListener('appStateChange', (appState) => {
-        if (!appState.isActive) {
-          lastBackgroundTime = Date.now();
-        } else if (appState.isActive) {
-          const timeInBackground = lastBackgroundTime > 0 ? Date.now() - lastBackgroundTime : 0;
-          lastBackgroundTime = 0;
-
-          // Only lock if app was genuinely sent to background for more than 2 seconds,
-          // and we are NOT currently in a native biometric auth session or within its grace period.
-          if (
-            isAppLockEnabled() &&
-            timeInBackground > 2000 &&
-            !isBiometricAuthenticating() &&
-            !isRecentlyUnlocked(3000)
-          ) {
-            setIsAppLocked(true);
-          }
-        }
-      });
-
-      App.addListener('appUrlOpen', (data) => {
-        if (data.url.includes('action=scan') || data.url.includes('scan')) {
-          setActiveTab('record');
-          setAutoOpenScanner(true);
-        } else if (data.url.includes('emailSync')) {
-          // Close in-app Custom Tab / system browser
-          import('@capacitor/browser').then(({ Browser }) => {
-            Browser.close().catch(() => {});
-          }).catch(() => {});
-          setIsEmailSyncModalOpen(true);
-          refreshEmailSyncCount();
-        }
-      });
-    }).catch(() => {
-      // Ignore if not native or not installed
-    });
-  }, [refreshEmailSyncCount]);
-
-  useEffect(() => {
-    if (!isAuthenticated) {
-      setPendingEmailSyncCount(0);
-      return;
-    }
-    refreshEmailSyncCount();
-  }, [isAuthenticated, refreshEmailSyncCount]);
-
-  useEffect(() => {
-    if (state.recurringBills && state.recurringBills.length > 0) {
-      scheduleBillDueReminders(state.recurringBills, state.language).catch(() => {});
-    }
-  }, [state.recurringBills, state.language]);
-
-  const handleApproveBankTransactions = (txs: Transaction[]) => {
-    for (const t of txs) {
-      addTransactionWithId(t);
-    }
-    setPendingEmailSyncCount(prev => Math.max(0, prev - txs.length));
-  };
-
-  // Cloud Sync Coordination
-  const hasInitialSyncedRef = useRef(false);
-  const prevUserIdRef = useRef<string | null>(null);
-
-  // Sync activeTab with URL hash and localStorage after client hydration
-  useEffect(() => {
-    const current = getInitialTab();
-    if (current) {
-      setActiveTab(current);
-    }
     setIsMounted(true);
-    if (isAppLockEnabled()) {
+    const initial = getInitialTab();
+    setActiveTab(initial);
+
+    // Schedule 1-day advance recurring bill notifications
+    if (state.recurringBills && state.recurringBills.length > 0) {
+      scheduleBillDueReminders(state.recurringBills, state.language);
+    }
+
+    // Check Biometric lock
+    if (isAppLockEnabled() && !isRecentlyUnlocked() && !isBiometricAuthenticating()) {
       setIsAppLocked(true);
     }
-    if (typeof window !== 'undefined' && window.location.hash !== `#${current}`) {
-      window.history.replaceState(null, '', `#${current}`);
-    }
 
+    // Check version changelog
+    try {
+      const lastSeenVer = localStorage.getItem('dailyba_last_seen_version');
+      if (lastSeenVer && lastSeenVer !== APP_VERSION) {
+        setIsChangelogModalOpen(true);
+      }
+      localStorage.setItem('dailyba_last_seen_version', APP_VERSION);
+    } catch {}
+  }, [state.recurringBills, state.language]);
+
+  // Sync email pending count on mount & every 5 minutes if authenticated
+  useEffect(() => {
+    if (!isAuthenticated) return;
+    refreshEmailSyncCount();
+    const interval = setInterval(refreshEmailSyncCount, 5 * 60 * 1000);
+    return () => clearInterval(interval);
+  }, [isAuthenticated, refreshEmailSyncCount]);
+
+  // Handle URL hash changes
+  useEffect(() => {
     const handleHashChange = () => {
       const hash = window.location.hash.replace('#', '') as TabKey;
       if (VALID_TABS.includes(hash)) {
         setActiveTab(hash);
-        try {
-          localStorage.setItem('kakeibo_active_tab', hash);
-        } catch {
-          // ignore
-        }
       }
     };
-
     window.addEventListener('hashchange', handleHashChange);
     return () => window.removeEventListener('hashchange', handleHashChange);
   }, []);
-
-  // When user logs in or mounts with authenticated session:
-  useEffect(() => {
-    if (!isHydrated) return;
-
-    if (isAuthenticated && user?.id) {
-      // Detect fresh login
-      if (prevUserIdRef.current !== user.id) {
-        prevUserIdRef.current = user.id;
-        pullStateFromCloud().then((cloudData) => {
-          if (cloudData && (cloudData.transactions || cloudData.recurringBills || cloudData.investments)) {
-            importData(cloudData);
-          } else {
-            // Brand new account: start fresh with clean empty data
-            clearAllData();
-          }
-          hasInitialSyncedRef.current = true;
-        });
-      }
-    } else {
-      if (prevUserIdRef.current) {
-        // User logged out: clear private data from screen so next person starts clean
-        clearAllData();
-      }
-      prevUserIdRef.current = null;
-      hasInitialSyncedRef.current = false;
-    }
-  }, [isAuthenticated, user?.id, isHydrated, clearAllData, importData, pullStateFromCloud]);
-
-  // Listen for conflict-free cloud merge events (when server merges offline transactions with email imports)
-  useEffect(() => {
-    const handleCloudMerged = (e: any) => {
-      if (e.detail) {
-        importData(e.detail);
-      }
-    };
-    if (typeof window !== "undefined") {
-      window.addEventListener("dailyba_cloud_merged", handleCloudMerged);
-      return () => window.removeEventListener("dailyba_cloud_merged", handleCloudMerged);
-    }
-  }, [importData]);
-
-  // Reactive Auto-Save to Cloud when local state changes
-  useEffect(() => {
-    if (!isHydrated || !isAuthenticated || !hasInitialSyncedRef.current) return;
-    pushStateToCloud(state);
-  }, [state, isHydrated, isAuthenticated, pushStateToCloud]);
-
-  // Scheduled Cloud & Encrypted Snapshot Auto-Backup
-  useEffect(() => {
-    if (!isHydrated) return;
-    const freq = state.autoBackupFrequency || 'daily';
-    if (freq === 'off') return;
-
-    const now = Date.now();
-    const lastBackupTime = state.lastAutoBackupAt ? new Date(state.lastAutoBackupAt).getTime() : 0;
-    const intervalMs = freq === 'weekly' ? 7 * 24 * 60 * 60 * 1000 : 24 * 60 * 60 * 1000;
-
-    if (now - lastBackupTime >= intervalMs) {
-      const nowIso = new Date().toISOString();
-      updateLastAutoBackupAt(nowIso);
-
-      if (isAuthenticated) {
-        pushStateToCloud(state);
-      }
-
-      try {
-        localStorage.setItem(`dailyba_auto_snapshot_${nowIso.slice(0, 10)}`, JSON.stringify(state));
-      } catch {}
-    }
-  }, [isHydrated, state.autoBackupFrequency, state.lastAutoBackupAt, isAuthenticated, pushStateToCloud, updateLastAutoBackupAt, state]);
-
-  const handleManualSync = async () => {
-    if (!isAuthenticated) {
-      setIsAuthModalOpen(true);
-      return;
-    }
-    // Pull latest and push local
-    const remote = await pullStateFromCloud();
-    if (remote) {
-      importData(remote);
-    } else {
-      await pushStateToCloud(state);
-    }
-  };
 
   const handleTabChange = (tab: TabKey) => {
     setActiveTab(tab);
     if (typeof window !== 'undefined') {
       try {
         localStorage.setItem('kakeibo_active_tab', tab);
-        window.history.replaceState(null, '', `#${tab}`);
+        window.location.hash = tab;
       } catch {
-        // ignore
+        // Ignore storage access errors
       }
     }
   };
 
-  // Live Exchange Rates reactive hook
-  const rates = useExchangeRates();
+  // Auto-backup handler (debounced on cloud sync)
+  const handleManualSync = async (): Promise<void> => {
+    if (!isAuthenticated) return;
+    const ok = await pushStateToCloud(state);
+    if (ok) {
+      updateLastAutoBackupAt(new Date().toISOString());
+    }
+  };
 
-  // Total liquid cash savings calculation converted into current active currency
-  const totalLiquidSavings = useMemo(() => {
-    return state.transactions
-      .filter((tx) => tx.type === 'savings')
-      .reduce((sum, tx) => {
-        return sum + convertCurrency(tx.amount, tx.currency || 'JPY', state.currency, rates);
-      }, 0);
-  }, [state.transactions, state.currency, rates]);
-
+  // Add savings directly into transactions
   const handleAddSavings = (amount: number, note?: string) => {
-    addTransaction({
+    handleAddTransactionWithReview({
       type: 'savings',
       amount,
       category: 'savings',
       source: 'bank',
       currency: state.currency,
       date: getTodayLocalDate(),
-      note: note || 'Savings Allocation',
+      note: note || undefined,
     });
   };
 
+  // Handle approved transactions from Email Sync
+  const handleApproveBankTransactions = (approved: Transaction[]) => {
+    approved.forEach((tx) => {
+      handleAddTransactionWithReview({
+        ...tx,
+        type: 'expense',
+        currency: tx.currency || state.currency,
+      });
+    });
+    if (isAuthenticated) {
+      setTimeout(handleManualSync, 1000);
+    }
+  };
+
+  // Calculate liquid savings for investments
+  const totalLiquidSavings = useMemo(() => {
+    return state.transactions
+      .filter((t) => t.type === 'savings')
+      .reduce((sum, t) => sum + convertCurrency(t.amount, t.currency || 'JPY', state.currency, rates), 0);
+  }, [state.transactions, state.currency, rates]);
+
   return (
-    <div className={`min-h-screen flex flex-col ${activeTab === 'home' ? 'bg-[#0B1417]' : 'bg-[var(--bg-primary)]'} text-[var(--text-main)] selection:bg-emerald-500/30 transition-colors duration-200`}>
-      {/* Top Header & TabsNav when not on Home */}
+    <div className="min-h-screen flex flex-col bg-[var(--bg-app)] text-[var(--text-main)] transition-colors duration-200">
+      {/* Top Header & Navigation - Only shown on traditional tabs */}
       {activeTab !== 'home' && (
         <>
           <Header
@@ -434,11 +310,8 @@ export default function Home() {
           pendingEmailSyncCount={pendingEmailSyncCount}
           onNavigateTab={handleTabChange}
           onOpenEmailSync={() => setIsEmailSyncModalOpen(true)}
-          onOpenScanner={() => {
-            setAutoOpenScanner(true);
-            handleTabChange('record');
-          }}
-          onOpenAddTransaction={() => handleTabChange('record')}
+          onOpenScanner={() => setIsReceiptScannerOpen(true)}
+          onOpenAddTransaction={() => setIsAddTxModalOpen(true)}
           onOpenMenu={() => {
             if (isAuthenticated) {
               setIsBackupModalOpen(true);
@@ -446,6 +319,11 @@ export default function Home() {
               setIsAuthModalOpen(true);
             }
           }}
+          onAddTransaction={handleAddTransactionWithReview}
+          onDeleteTransaction={deleteTransaction}
+          onAddRecurringBill={addRecurringBill}
+          onUpdateRecurringBill={updateRecurringBill}
+          onDeleteRecurringBill={deleteRecurringBill}
         />
       ) : (
         <main className="flex-1 max-w-5xl w-full mx-auto px-4 sm:px-6 py-6 sm:py-8 relative">
@@ -560,28 +438,32 @@ export default function Home() {
         )}
           </>
         )}
-        </main>
+      </main>
       )}
 
-      {/* Bottom Footer with Version & Changelog Trigger */}
-      {activeTab !== 'home' && (
-        <footer className="border-t border-[var(--border-subtle)] py-6 text-center text-xs text-[var(--text-muted)] font-mono transition-colors duration-200 space-y-1.5">
-          <p className="font-medium">Dailyba • Daily Balance & Wealth Tracker</p>
-          <div className="flex items-center justify-center space-x-2 text-[11px]">
-            <span className="font-bold text-[var(--text-main)]">v{APP_VERSION}</span>
-            <span>•</span>
-            <button
-              type="button"
-              onClick={() => setIsChangelogModalOpen(true)}
-              className="text-[var(--accent-emerald)] hover:underline underline-offset-2 transition-all cursor-pointer font-bold"
-            >
-              What&apos;s New (Changelog)
-            </button>
-          </div>
-        </footer>
-      )}
+      {/* Full Quick Add Bottom Sheet Modal */}
+      <AddTransactionModal
+        isOpen={isAddTxModalOpen}
+        onClose={() => setIsAddTxModalOpen(false)}
+        onAddTransaction={handleAddTransactionWithReview}
+        language={state.language}
+        currency={state.currency}
+        hiddenCategories={state.hiddenCategories || []}
+        customCategories={state.customCategories || []}
+      />
 
-      {/* Backup, Settings & Daily Reminder Modal */}
+      {/* Direct Receipt Scanner Modal */}
+      <ReceiptScannerModal
+        isOpen={isReceiptScannerOpen}
+        onClose={() => setIsReceiptScannerOpen(false)}
+        onAddTransaction={handleAddTransactionWithReview}
+        language={state.language}
+        currency={state.currency}
+        hiddenCategories={state.hiddenCategories || []}
+        customCategories={state.customCategories || []}
+      />
+
+      {/* Settings / Cloud Backup Modal (Unified Settings via Avatar) */}
       <BackupModal
         isOpen={isBackupModalOpen}
         onClose={() => setIsBackupModalOpen(false)}
