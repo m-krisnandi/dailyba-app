@@ -25,18 +25,22 @@ import {
   authenticateWithBiometrics,
 } from '@/lib/biometricAuth';
 
+export type SecurityModalMode = 'idle' | 'verifying_to_disable' | 'setting_new_pin' | 'changing_pin';
+
 interface SecuritySettingsModalProps {
   isOpen: boolean;
   onClose: () => void;
   language: Language;
+  initialMode?: SecurityModalMode;
+  onSuccess?: () => void;
 }
-
-type ModalMode = 'idle' | 'verifying_to_disable' | 'setting_new_pin' | 'changing_pin';
 
 export function SecuritySettingsModal({
   isOpen,
   onClose,
   language,
+  initialMode = 'idle',
+  onSuccess,
 }: SecuritySettingsModalProps) {
   const t = translations[language];
   const [mounted, setMounted] = useState(false);
@@ -45,8 +49,9 @@ export function SecuritySettingsModal({
   useEffect(() => {
     setMounted(true);
   }, []);
+
   const [enabled, setEnabled] = useState(false);
-  const [mode, setMode] = useState<ModalMode>('idle');
+  const [mode, setMode] = useState<SecurityModalMode>(initialMode);
   const [biometryInfo, setBiometryInfo] = useState({ available: false, biometryType: 'None' });
   const [feedback, setFeedback] = useState<{ type: 'error' | 'success'; message: string } | null>(null);
 
@@ -63,7 +68,7 @@ export function SecuritySettingsModal({
     if (isOpen) {
       const isCurrentlyEnabled = isAppLockEnabled();
       setEnabled(isCurrentlyEnabled);
-      setMode('idle');
+      setMode(initialMode);
       setVerifyPinInput('');
       setNewPin('');
       setConfirmPin('');
@@ -72,7 +77,7 @@ export function SecuritySettingsModal({
 
       isBiometricsAvailable().then(setBiometryInfo);
     }
-  }, [isOpen]);
+  }, [isOpen, initialMode]);
 
   // Auto focus input when entering verification mode
   useEffect(() => {
@@ -111,6 +116,7 @@ export function SecuritySettingsModal({
             ? '生体認証を確認しました。アプリロックを無効化しました。'
             : 'Authentication verified. App Lock has been disabled.',
         });
+        onSuccess?.();
       }
     } catch (err) {
       console.warn('Biometric verify error:', err);
@@ -119,7 +125,7 @@ export function SecuritySettingsModal({
     }
   };
 
-  // Toggle switch clicked by user
+  // Toggle switch clicked by user (when in idle mode)
   const handleToggleClick = async () => {
     setFeedback(null);
 
@@ -127,40 +133,75 @@ export function SecuritySettingsModal({
       // User wants to DISABLE App Lock
       const savedPin = getAppLockPin();
       if (!savedPin && !biometryInfo.available) {
-        // Fallback: no PIN and no biometrics set
         setAppLockEnabled(false);
         setEnabled(false);
         setFeedback({
           type: 'success',
-          message: language === 'ja' ? 'アプリロックを解除しました。' : 'App Lock has been disabled.',
+          message: language === 'ja' ? 'アプリロックを無効化しました。' : 'App Lock has been disabled.',
         });
+        onSuccess?.();
         return;
       }
 
+      // Try quick biometric verification first if available
+      if (biometryInfo.available) {
+        setIsAuthenticatingBiometric(true);
+        try {
+          const ok = await authenticateWithBiometrics(
+            language === 'ja'
+              ? 'Dailybaのアプリロックを無効化するために認証してください'
+              : 'Authenticate to disable Dailyba App Lock'
+          );
+          if (ok) {
+            setAppLockEnabled(false);
+            setAppLockPin(null);
+            setEnabled(false);
+            setFeedback({
+              type: 'success',
+              message: language === 'ja'
+                ? '生体認証を確認しました。アプリロックを無効化しました。'
+                : 'Authentication verified. App Lock has been disabled.',
+            });
+            onSuccess?.();
+            setIsAuthenticatingBiometric(false);
+            return;
+          }
+        } catch {
+          // Fall through to PIN
+        } finally {
+          setIsAuthenticatingBiometric(false);
+        }
+      }
+
+      // Prompt for PIN verification
       setMode('verifying_to_disable');
       setVerifyPinInput('');
-
-      // Auto-prompt biometrics if available
-      if (biometryInfo.available) {
-        triggerBiometricDisable();
-      }
     } else {
       // User wants to ENABLE App Lock
-      setMode('setting_new_pin');
-      setNewPin('');
-      setConfirmPin('');
+      const existingPin = getAppLockPin();
+      if (existingPin) {
+        setAppLockEnabled(true);
+        setEnabled(true);
+        setFeedback({
+          type: 'success',
+          message: language === 'ja' ? 'アプリロックを有効にしました。' : 'App Lock has been enabled.',
+        });
+        onSuccess?.();
+      } else {
+        setMode('setting_new_pin');
+        setNewPin('');
+        setConfirmPin('');
+      }
     }
   };
 
-  // Handle PIN input during verification to disable
+  // Verify entered PIN to disable lock
   const handleVerifyPinInput = (val: string) => {
-    const digits = val.replace(/[^0-9]/g, '').slice(0, 4);
-    setVerifyPinInput(digits);
-    setFeedback(null);
+    const clean = val.replace(/[^0-9]/g, '');
+    setVerifyPinInput(clean);
 
-    if (digits.length === 4) {
-      if (verifyPin(digits)) {
-        // Correct PIN! Turn off App Lock immediately
+    if (clean.length === 4) {
+      if (verifyPin(clean)) {
         setAppLockEnabled(false);
         setAppLockPin(null);
         setEnabled(false);
@@ -168,35 +209,32 @@ export function SecuritySettingsModal({
         setVerifyPinInput('');
         setFeedback({
           type: 'success',
-          message: language === 'ja'
-            ? 'PINを確認しました。アプリロックを解除しました。'
-            : 'PIN verified. App Lock has been disabled.',
+          message: language === 'ja' ? 'PINを確認しました。アプリロックを無効化しました。' : 'PIN verified. App Lock disabled.',
         });
+        onSuccess?.();
       } else {
         setFeedback({
           type: 'error',
-          message: language === 'ja'
-            ? 'PINコードが一致しません。もう一度お試しください。'
-            : 'Incorrect PIN. Please try again.',
+          message: language === 'ja' ? 'PINコードが間違っています。' : 'Incorrect PIN. Please try again.',
         });
-        setTimeout(() => setVerifyPinInput(''), 450);
+        setVerifyPinInput('');
       }
     }
   };
 
-  // Handle activating new PIN
+  // Handle saving new PIN to enable lock
   const handleEnableLock = () => {
     if (newPin.length !== 4) {
       setFeedback({
         type: 'error',
-        message: language === 'ja' ? 'PINは4桁の数字で入力してください。' : 'PIN must be exactly 4 digits.',
+        message: language === 'ja' ? '4桁のPINを入力してください。' : 'Please enter a 4-digit PIN.',
       });
       return;
     }
     if (newPin !== confirmPin) {
       setFeedback({
         type: 'error',
-        message: language === 'ja' ? '確認用PINが一致しません。' : 'PIN confirmation does not match.',
+        message: language === 'ja' ? 'PINが一致しません。もう一度お確かめください。' : 'PIN confirmation does not match.',
       });
       return;
     }
@@ -204,13 +242,14 @@ export function SecuritySettingsModal({
     setAppLockPin(newPin);
     setAppLockEnabled(true);
     setEnabled(true);
-    setMode('idle');
-    setNewPin('');
-    setConfirmPin('');
     setFeedback({
       type: 'success',
-      message: language === 'ja' ? 'アプリロックを有効にしました。' : 'App Lock has been enabled successfully.',
+      message: language === 'ja' ? 'アプリロックを有効にしました。' : 'App Lock enabled successfully.',
     });
+    onSuccess?.();
+    setTimeout(() => {
+      onClose();
+    }, 600);
   };
 
   // Handle changing existing PIN
@@ -238,14 +277,14 @@ export function SecuritySettingsModal({
     }
 
     setAppLockPin(newPin);
-    setMode('idle');
-    setVerifyPinInput('');
-    setNewPin('');
-    setConfirmPin('');
     setFeedback({
       type: 'success',
       message: language === 'ja' ? '新しいPINを保存しました。' : 'PIN updated successfully.',
     });
+    onSuccess?.();
+    setTimeout(() => {
+      onClose();
+    }, 600);
   };
 
   return createPortal(
@@ -260,18 +299,32 @@ export function SecuritySettingsModal({
         {/* Subtle Ambient Liquid Glow */}
         <div className="absolute -top-20 left-1/2 -translate-x-1/2 w-64 h-32 bg-indigo-500/15 blur-3xl pointer-events-none rounded-full" />
 
-        {/* Header */}
+        {/* Dynamic Header */}
         <div className="flex items-center justify-between pb-3.5 border-b border-[var(--border-subtle)] relative z-10">
           <div className="flex items-center space-x-3">
             <div className="w-10 h-10 rounded-2xl bg-indigo-500/15 border border-indigo-500/30 flex items-center justify-center text-indigo-400 shadow-sm">
-              <Shield className="w-5 h-5" />
+              {mode === 'setting_new_pin' ? (
+                <KeyRound className="w-5 h-5 text-emerald-400" />
+              ) : mode === 'changing_pin' ? (
+                <Lock className="w-5 h-5 text-indigo-400" />
+              ) : (
+                <Shield className="w-5 h-5" />
+              )}
             </div>
             <div>
               <h3 className="text-base font-bold text-[var(--text-main)]">
-                {t.security.securitySettings}
+                {mode === 'setting_new_pin'
+                  ? (language === 'ja' ? 'PINコードの設定' : 'Create 4-Digit PIN')
+                  : mode === 'changing_pin'
+                  ? (language === 'ja' ? 'PINコードの変更' : 'Change 4-Digit PIN')
+                  : t.security.securitySettings}
               </h3>
               <p className="text-xs text-[var(--text-muted)]">
-                {t.security.biometricLockDesc}
+                {mode === 'setting_new_pin'
+                  ? (language === 'ja' ? 'Dailybaを保護するための4桁のPINを入力してください' : 'Set a 4-digit PIN to secure Dailyba')
+                  : mode === 'changing_pin'
+                  ? (language === 'ja' ? '現在のPINと新しいPINを入力してください' : 'Enter current PIN and choose a new PIN')
+                  : t.security.biometricLockDesc}
               </p>
             </div>
           </div>
@@ -284,41 +337,43 @@ export function SecuritySettingsModal({
           </button>
         </div>
 
-        {/* Toggle Lock Item */}
-        <div className="flex items-center justify-between p-4 rounded-2xl bg-[var(--bg-subtle)] border border-[var(--border-subtle)] relative z-10">
-          <div className="flex items-center space-x-3">
-            <Fingerprint className="w-5 h-5 text-indigo-400" />
-            <div>
-              <p className="text-xs font-bold text-[var(--text-main)]">
-                {t.security.biometricLock}
-              </p>
-              <p className="text-[11px] text-[var(--text-muted)]">
-                {biometryInfo.available
-                  ? (language === 'ja' ? `${biometryInfo.biometryType}対応` : `Supported: ${biometryInfo.biometryType}`)
-                  : (language === 'ja' ? '4桁のPINによる保護' : '4-Digit PIN Security')}
-              </p>
+        {/* Toggle Lock Item: Only shown when mode is 'idle' */}
+        {mode === 'idle' && (
+          <div className="flex items-center justify-between p-4 rounded-2xl bg-[var(--bg-subtle)] border border-[var(--border-subtle)] relative z-10">
+            <div className="flex items-center space-x-3">
+              <Fingerprint className="w-5 h-5 text-indigo-400" />
+              <div>
+                <p className="text-xs font-bold text-[var(--text-main)]">
+                  {t.security.biometricLock}
+                </p>
+                <p className="text-[11px] text-[var(--text-muted)]">
+                  {biometryInfo.available
+                    ? (language === 'ja' ? `${biometryInfo.biometryType}対応` : `Supported: ${biometryInfo.biometryType}`)
+                    : (language === 'ja' ? '4桁のPINによる保護' : '4-Digit PIN Security')}
+                </p>
+              </div>
             </div>
-          </div>
 
-          {/* Smooth Banking-Style Switch Toggle */}
-          <button
-            type="button"
-            onClick={handleToggleClick}
-            disabled={isAuthenticatingBiometric}
-            className={`relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none ${
-              enabled ? 'bg-indigo-600' : 'bg-[var(--border-strong)]'
-            }`}
-            aria-checked={enabled}
-            role="switch"
-          >
-            <span
-              aria-hidden="true"
-              className={`pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow-md ring-0 transition duration-200 ease-in-out ${
-                enabled ? 'translate-x-5' : 'translate-x-0'
+            {/* Switch Toggle */}
+            <button
+              type="button"
+              onClick={handleToggleClick}
+              disabled={isAuthenticatingBiometric}
+              className={`relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none ${
+                enabled ? 'bg-indigo-600' : 'bg-[var(--border-strong)]'
               }`}
-            />
-          </button>
-        </div>
+              aria-checked={enabled}
+              role="switch"
+            >
+              <span
+                aria-hidden="true"
+                className={`pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow-md ring-0 transition duration-200 ease-in-out ${
+                  enabled ? 'translate-x-5' : 'translate-x-0'
+                }`}
+              />
+            </button>
+          </div>
+        )}
 
         {/* VERIFICATION CARD (To Disable App Lock) */}
         {mode === 'verifying_to_disable' && (
@@ -427,20 +482,17 @@ export function SecuritySettingsModal({
           </div>
         )}
 
-        {/* SETUP NEW PIN FORM (When Enabling for First Time) */}
+        {/* SETUP NEW PIN FORM (Direct Setup when toggle is clicked) */}
         {mode === 'setting_new_pin' && (
-          <div className="space-y-3.5 p-4 rounded-2xl bg-[var(--bg-subtle)] border border-[var(--border-subtle)] animate-fade-in relative z-10">
+          <div className="space-y-4 p-4 rounded-2xl bg-[var(--bg-subtle)] border border-[var(--border-subtle)] animate-fade-in relative z-10">
             <div className="flex items-center justify-between">
-              <div className="flex items-center space-x-2 text-xs font-semibold text-[var(--text-main)]">
+              <div className="flex items-center space-x-2 text-xs font-bold text-[var(--text-main)]">
                 <KeyRound className="w-4 h-4 text-emerald-400" />
-                <span>{language === 'ja' ? 'PINの設定' : 'Create 4-Digit PIN'}</span>
+                <span>{language === 'ja' ? '4桁のPINを設定' : 'Create 4-Digit PIN'}</span>
               </div>
               <button
                 type="button"
-                onClick={() => {
-                  setMode('idle');
-                  setFeedback(null);
-                }}
+                onClick={onClose}
                 className="text-[11px] text-[var(--text-muted)] hover:text-[var(--text-main)] cursor-pointer"
               >
                 {t.actions.cancel}
@@ -449,7 +501,7 @@ export function SecuritySettingsModal({
 
             <div className="grid grid-cols-2 gap-3">
               <div>
-                <label className="text-[11px] text-[var(--text-muted)] block mb-1">
+                <label className="text-[11px] text-[var(--text-muted)] block mb-1 font-medium">
                   {language === 'ja' ? 'PIN (4桁)' : 'PIN (4 digits)'}
                 </label>
                 <input
@@ -459,11 +511,12 @@ export function SecuritySettingsModal({
                   value={newPin}
                   onChange={(e) => setNewPin(e.target.value.replace(/[^0-9]/g, ''))}
                   placeholder="••••"
-                  className="w-full bg-[var(--bg-subtle)] border border-[var(--border-strong)] focus:border-indigo-500 rounded-xl px-3 py-2 text-center text-sm font-mono tracking-widest text-[var(--text-main)] outline-none font-bold placeholder:text-[var(--text-faint)] transition-all"
+                  autoFocus
+                  className="w-full bg-[var(--bg-surface-solid)] border border-[var(--border-strong)] focus:border-indigo-500 rounded-xl px-3 py-2.5 text-center text-sm font-mono tracking-widest text-[var(--text-main)] outline-none font-bold placeholder:text-[var(--text-faint)] transition-all"
                 />
               </div>
               <div>
-                <label className="text-[11px] text-[var(--text-muted)] block mb-1">
+                <label className="text-[11px] text-[var(--text-muted)] block mb-1 font-medium">
                   {language === 'ja' ? 'PINの確認' : 'Confirm PIN'}
                 </label>
                 <input
@@ -473,7 +526,7 @@ export function SecuritySettingsModal({
                   value={confirmPin}
                   onChange={(e) => setConfirmPin(e.target.value.replace(/[^0-9]/g, ''))}
                   placeholder="••••"
-                  className="w-full bg-[var(--bg-subtle)] border border-[var(--border-strong)] focus:border-indigo-500 rounded-xl px-3 py-2 text-center text-sm font-mono tracking-widest text-[var(--text-main)] outline-none font-bold placeholder:text-[var(--text-faint)] transition-all"
+                  className="w-full bg-[var(--bg-surface-solid)] border border-[var(--border-strong)] focus:border-indigo-500 rounded-xl px-3 py-2.5 text-center text-sm font-mono tracking-widest text-[var(--text-main)] outline-none font-bold placeholder:text-[var(--text-faint)] transition-all"
                 />
               </div>
             </div>
@@ -484,7 +537,7 @@ export function SecuritySettingsModal({
               className="w-full flex items-center justify-center space-x-1.5 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-bold transition-all shadow-sm active:scale-95 cursor-pointer mt-1"
             >
               <Check className="w-3.5 h-3.5" />
-              <span>{language === 'ja' ? 'アプリロックを有効化' : 'Enable App Lock'}</span>
+              <span>{language === 'ja' ? 'PINを設定してロックを有効化' : 'Save PIN & Enable App Lock'}</span>
             </button>
           </div>
         )}
@@ -493,16 +546,13 @@ export function SecuritySettingsModal({
         {mode === 'changing_pin' && (
           <div className="space-y-3.5 p-4 rounded-2xl bg-[var(--bg-subtle)] border border-[var(--border-subtle)] animate-fade-in relative z-10">
             <div className="flex items-center justify-between">
-              <div className="flex items-center space-x-2 text-xs font-semibold text-[var(--text-main)]">
+              <div className="flex items-center space-x-2 text-xs font-bold text-[var(--text-main)]">
                 <Lock className="w-4 h-4 text-indigo-400" />
-                <span>{language === 'ja' ? 'PINの変更' : 'Change PIN'}</span>
+                <span>{language === 'ja' ? 'PINの変更' : 'Change 4-Digit PIN'}</span>
               </div>
               <button
                 type="button"
-                onClick={() => {
-                  setMode('idle');
-                  setFeedback(null);
-                }}
+                onClick={onClose}
                 className="text-[11px] text-[var(--text-muted)] hover:text-[var(--text-main)] cursor-pointer"
               >
                 {t.actions.cancel}
@@ -510,7 +560,7 @@ export function SecuritySettingsModal({
             </div>
 
             <div>
-              <label className="text-[11px] text-[var(--text-muted)] block mb-1">
+              <label className="text-[11px] text-[var(--text-muted)] block mb-1 font-medium">
                 {language === 'ja' ? '現在のPIN' : 'Current PIN'}
               </label>
               <input
@@ -520,13 +570,14 @@ export function SecuritySettingsModal({
                 value={verifyPinInput}
                 onChange={(e) => setVerifyPinInput(e.target.value.replace(/[^0-9]/g, ''))}
                 placeholder="••••"
-                className="w-full bg-[var(--bg-subtle)] border border-[var(--border-strong)] focus:border-indigo-500 rounded-xl px-3 py-2 text-center text-sm font-mono tracking-widest text-[var(--text-main)] outline-none font-bold placeholder:text-[var(--text-faint)] transition-all"
+                autoFocus
+                className="w-full bg-[var(--bg-surface-solid)] border border-[var(--border-strong)] focus:border-indigo-500 rounded-xl px-3 py-2 text-center text-sm font-mono tracking-widest text-[var(--text-main)] outline-none font-bold placeholder:text-[var(--text-faint)] transition-all"
               />
             </div>
 
             <div className="grid grid-cols-2 gap-3">
               <div>
-                <label className="text-[11px] text-[var(--text-muted)] block mb-1">
+                <label className="text-[11px] text-[var(--text-muted)] block mb-1 font-medium">
                   {language === 'ja' ? '新しいPIN' : 'New PIN'}
                 </label>
                 <input
@@ -536,11 +587,11 @@ export function SecuritySettingsModal({
                   value={newPin}
                   onChange={(e) => setNewPin(e.target.value.replace(/[^0-9]/g, ''))}
                   placeholder="••••"
-                  className="w-full bg-[var(--bg-subtle)] border border-[var(--border-strong)] focus:border-indigo-500 rounded-xl px-3 py-2 text-center text-sm font-mono tracking-widest text-[var(--text-main)] outline-none font-bold placeholder:text-[var(--text-faint)] transition-all"
+                  className="w-full bg-[var(--bg-surface-solid)] border border-[var(--border-strong)] focus:border-indigo-500 rounded-xl px-3 py-2 text-center text-sm font-mono tracking-widest text-[var(--text-main)] outline-none font-bold placeholder:text-[var(--text-faint)] transition-all"
                 />
               </div>
               <div>
-                <label className="text-[11px] text-[var(--text-muted)] block mb-1">
+                <label className="text-[11px] text-[var(--text-muted)] block mb-1 font-medium">
                   {language === 'ja' ? '新しいPIN確認' : 'Confirm New PIN'}
                 </label>
                 <input
@@ -550,7 +601,7 @@ export function SecuritySettingsModal({
                   value={confirmPin}
                   onChange={(e) => setConfirmPin(e.target.value.replace(/[^0-9]/g, ''))}
                   placeholder="••••"
-                  className="w-full bg-[var(--bg-subtle)] border border-[var(--border-strong)] focus:border-indigo-500 rounded-xl px-3 py-2 text-center text-sm font-mono tracking-widest text-[var(--text-main)] outline-none font-bold placeholder:text-[var(--text-faint)] transition-all"
+                  className="w-full bg-[var(--bg-surface-solid)] border border-[var(--border-strong)] focus:border-indigo-500 rounded-xl px-3 py-2 text-center text-sm font-mono tracking-widest text-[var(--text-main)] outline-none font-bold placeholder:text-[var(--text-faint)] transition-all"
                 />
               </div>
             </div>

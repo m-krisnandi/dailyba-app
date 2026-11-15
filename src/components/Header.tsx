@@ -12,20 +12,15 @@ import {
   Globe,
   Sun,
   Moon,
-  Database,
-  ArrowRightLeft,
   ChevronDown,
   Check,
   Bell,
   LogIn,
-  RefreshCw,
   LogOut,
-  Trash2,
-  User as UserIcon,
   Smartphone,
-  Shield,
   Download,
   Mail,
+  Sliders,
 } from 'lucide-react';
 
 interface HeaderProps {
@@ -58,7 +53,6 @@ export function Header({
   onOpenAuth,
   onOpenEmailSync,
   pendingEmailSyncCount = 0,
-  onManualSync,
 }: HeaderProps) {
   const [isDark, setIsDark] = useState(true);
   const [isCurrencyDropdownOpen, setIsCurrencyDropdownOpen] = useState(false);
@@ -152,51 +146,43 @@ export function Header({
     });
   };
 
-  const idrRate = rates.IDR ? Math.round(rates.IDR * 10) / 10 : 114.2;
-  const usdRate = rates.USD ? Math.round((1 / rates.USD) * 10) / 10 : 158.4;
-  const mmkRate = rates.MMK ? Math.round(rates.MMK * 10) / 10 : 28.0;
-
-  const rateText =
-    currency === 'IDR'
-      ? `1 JPY ≈ Rp ${idrRate.toLocaleString()}`
-      : currency === 'USD'
-      ? `1 USD ≈ ¥${usdRate}`
-      : currency === 'MMK'
-      ? `1 JPY ≈ K ${mmkRate.toLocaleString()}`
-      : `1 JPY ≈ Rp ${idrRate.toLocaleString()}`;
-
   const currentCurrencyItem = CURRENCIES.find((c) => c.code === currency) || CURRENCIES[0];
 
-  const displayName = user?.name || user?.email?.split('@')[0] || 'User';
-  const userInitial = displayName.charAt(0).toUpperCase();
+  const userInitial = user?.name
+    ? user.name.charAt(0).toUpperCase()
+    : user?.email
+    ? user.email.charAt(0).toUpperCase()
+    : 'U';
+
+  const displayName = user?.name
+    ? user.name.split(' ')[0]
+    : user?.email
+    ? user.email.split('@')[0]
+    : 'User';
 
   return (
-    <header className="sticky top-0 z-30 border-b border-[var(--border-subtle)] bg-[var(--bg-surface)] backdrop-blur-2xl transition-colors duration-200 shadow-sm">
-      <div className="max-w-5xl mx-auto px-2.5 sm:px-6 h-14 sm:h-16 flex items-center justify-between gap-1.5 sm:gap-2">
-        {/* Brand & Minimalist Logo */}
-        <div className="flex items-center space-x-2 sm:space-x-3 shrink-0">
-          <KakeiboLogo size={28} />
-          <div>
-            <h1 className="text-sm sm:text-base font-bold tracking-tight text-[var(--text-main)] leading-none flex items-center space-x-1.5 whitespace-nowrap">
-              <span>{t.appTitle}</span>
-              <span className="w-1.5 h-1.5 rounded-full bg-[var(--accent-emerald)] animate-pulse" />
-            </h1>
-            <p className="text-[11px] text-[var(--text-muted)] mt-1 hidden sm:block font-medium">
-              {t.appSubtitle}
-            </p>
+    <header className="sticky top-0 z-40 w-full border-b border-[var(--border-subtle)] bg-[var(--bg-glass-strong)] backdrop-blur-xl transition-colors">
+      <div className="max-w-7xl mx-auto px-3 sm:px-6 h-14 sm:h-16 flex items-center justify-between">
+        {/* Brand Logo & Name */}
+        <div className="flex items-center space-x-2 sm:space-x-3 min-w-0">
+          <KakeiboLogo size={28} className="shrink-0 sm:w-8 sm:h-8" />
+          <div className="flex flex-col min-w-0">
+            <span className="font-bold text-sm sm:text-lg tracking-tight text-[var(--text-main)] truncate">
+              Dailyba
+            </span>
+            <span className="text-[9px] sm:text-[10px] text-[var(--text-muted)] tracking-wider font-medium truncate hidden min-[360px]:inline">
+              Smart Kakeibo
+            </span>
           </div>
         </div>
 
-        {/* Controls */}
-        <div className="flex items-center space-x-1 sm:space-x-1.5 md:space-x-2 shrink-0">
-          {/* Live Rate Pill (Desktop Only) */}
-          <div
-            className="hidden lg:flex items-center space-x-1.5 px-3 py-1.5 rounded-xl border border-[var(--border-subtle)] bg-[var(--bg-subtle)] text-[11px] text-[var(--text-muted)] tabular-numbers font-mono shadow-[inset_0_1px_0_0_rgba(255,255,255,0.1)] shrink-0"
-            title={language === 'ja' ? 'リアルタイム為替レート' : 'Live Exchange Rate'}
-          >
-            <span className="w-1.5 h-1.5 rounded-full bg-[var(--accent-emerald)] shadow-[0_0_8px_var(--accent-emerald)]" />
-            <ArrowRightLeft className="w-3 h-3 text-[var(--text-faint)]" />
-            <span>{rateText}</span>
+        {/* Right Action Icons & Settings Hub */}
+        <div className="flex items-center space-x-1 sm:space-x-2 shrink-0">
+          {/* Exchange Rate Badge */}
+          <div className="hidden lg:flex items-center space-x-1.5 px-2 py-1 rounded-xl bg-[var(--bg-subtle)] border border-[var(--border-subtle)] text-[10px] text-[var(--text-muted)] font-mono">
+            <span className="text-[var(--text-main)] font-semibold">1 JPY</span>
+            <span>≈</span>
+            <span>{Math.round(rates.IDR)} IDR</span>
           </div>
 
           {/* Download Android APK (Desktop Web Browser Only - on Mobile available inside User Menu) */}
@@ -427,20 +413,6 @@ export function Header({
                 )}
 
                 <div className="space-y-1">
-                  {isAuthenticated && onManualSync && (
-                    <button
-                      type="button"
-                      onClick={() => {
-                        onManualSync();
-                        setIsUserMenuOpen(false);
-                      }}
-                      className="w-full flex items-center space-x-2 px-2.5 py-2 rounded-xl text-xs text-[var(--text-muted)] hover:text-[var(--text-main)] hover:bg-[var(--bg-subtle)] transition-all cursor-pointer"
-                    >
-                      <RefreshCw className="w-3.5 h-3.5 text-emerald-400" />
-                      <span>{t.nav.syncVault}</span>
-                    </button>
-                  )}
-
                   {onOpenEmailSync && (
                     <button
                       type="button"
@@ -470,48 +442,22 @@ export function Header({
                     }}
                     className="w-full flex items-center space-x-2 px-2.5 py-2 rounded-xl text-xs text-[var(--text-muted)] hover:text-[var(--text-main)] hover:bg-[var(--bg-subtle)] transition-all cursor-pointer"
                   >
-                    <Database className="w-3.5 h-3.5 text-emerald-400" />
+                    <Sliders className="w-3.5 h-3.5 text-emerald-400" />
                     <span>{t.nav.backupRestore}</span>
                   </button>
 
-                  <button
-                    type="button"
-                    onClick={() => {
-                      onOpenAuth();
-                      setIsUserMenuOpen(false);
-                    }}
-                    className="w-full flex items-center space-x-2 px-2.5 py-2 rounded-xl text-xs text-[var(--text-muted)] hover:text-[var(--text-main)] hover:bg-[var(--bg-subtle)] transition-all cursor-pointer"
-                  >
-                    <UserIcon className="w-3.5 h-3.5" />
-                    <span>{t.nav.accountSettings}</span>
-                  </button>
-
                   {isAuthenticated && (
-                    <>
-                      <button
-                        type="button"
-                        onClick={() => {
-                          logout();
-                          setIsUserMenuOpen(false);
-                        }}
-                        className="w-full flex items-center space-x-2 px-2.5 py-2 rounded-xl text-xs text-[var(--text-muted)] hover:text-[var(--text-main)] hover:bg-[var(--bg-subtle)] transition-all cursor-pointer"
-                      >
-                        <LogOut className="w-3.5 h-3.5" />
-                        <span>{t.nav.logOut}</span>
-                      </button>
-
-                      <button
-                        type="button"
-                        onClick={() => {
-                          onOpenAuth();
-                          setIsUserMenuOpen(false);
-                        }}
-                        className="w-full flex items-center space-x-2 px-2.5 py-2 rounded-xl text-xs text-rose-500 hover:text-rose-400 hover:bg-rose-500/10 transition-all cursor-pointer"
-                      >
-                        <Trash2 className="w-3.5 h-3.5" />
-                        <span>{t.nav.deleteAccount}</span>
-                      </button>
-                    </>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        logout();
+                        setIsUserMenuOpen(false);
+                      }}
+                      className="w-full flex items-center space-x-2 px-2.5 py-2 rounded-xl text-xs text-[var(--text-muted)] hover:text-rose-400 hover:bg-rose-500/10 transition-all cursor-pointer"
+                    >
+                      <LogOut className="w-3.5 h-3.5" />
+                      <span>{t.nav.logOut}</span>
+                    </button>
                   )}
 
                   <div className="pt-2 border-t border-[var(--border-subtle)] px-2.5 flex items-center justify-between text-[10px] font-mono text-[var(--text-faint)]">
@@ -548,6 +494,6 @@ export function Header({
           </button>
         </div>
       </div>
-        </header>
+    </header>
   );
 }

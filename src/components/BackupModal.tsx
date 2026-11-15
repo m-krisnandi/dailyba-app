@@ -8,6 +8,7 @@ import { useBodyScrollLock } from '@/lib/useBodyScrollLock';
 import { ConfirmDeleteModal } from './ConfirmDeleteModal';
 import { LegalModal } from './LegalModal';
 import { CustomTimePicker } from './CustomTimePicker';
+import { useAuth } from '@/lib/authContext';
 import {
   Upload,
   Trash2,
@@ -20,12 +21,14 @@ import {
   RefreshCw,
   HardDrive,
   Fingerprint,
-  KeyRound,
+  Sliders,
+  User as UserIcon,
+  LogOut,
 } from 'lucide-react';
 import { scheduleDailyReminder } from '@/lib/localNotifications';
 import { backupToGoogleDrive, getLastGoogleDriveBackupTime } from '@/lib/googleDriveBackup';
 import { isAppLockEnabled, setAppLockEnabled, getAppLockPin } from '@/lib/biometricAuth';
-import { SecuritySettingsModal } from './SecuritySettingsModal';
+import { SecuritySettingsModal, SecurityModalMode } from './SecuritySettingsModal';
 
 interface BackupModalProps {
   isOpen: boolean;
@@ -38,6 +41,7 @@ interface BackupModalProps {
   onToggleReminder?: (enabled: boolean, time?: string) => void;
   onSetAutoBackupFrequency?: (freq: 'off' | 'daily' | 'weekly') => void;
   onManualSync?: () => Promise<void>;
+  onOpenAuth?: () => void;
 }
 
 export function BackupModal({
@@ -50,14 +54,17 @@ export function BackupModal({
   onToggleReminder,
   onSetAutoBackupFrequency,
   onManualSync,
+  onOpenAuth,
 }: BackupModalProps) {
   useBodyScrollLock(isOpen);
 
   const t = translations[language];
+  const { user, isAuthenticated, syncStatus, logout, deleteAccount } = useAuth();
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [feedback, setFeedback] = useState<string | null>(null);
   const [isSyncing, setIsSyncing] = useState(false);
   const [isConfirmClearOpen, setIsConfirmClearOpen] = useState(false);
+  const [isConfirmDeleteAccountOpen, setIsConfirmDeleteAccountOpen] = useState(false);
   const [isLegalModalOpen, setIsLegalModalOpen] = useState(false);
   const [reminderEnabled, setReminderEnabled] = useState(Boolean(state.dailyReminderEnabled));
   const [reminderTime, setReminderTime] = useState(state.dailyReminderTime || '20:00');
@@ -66,11 +73,13 @@ export function BackupModal({
   const [lastGDriveBackup, setLastGDriveBackup] = useState<string | null>(getLastGoogleDriveBackupTime());
   const [isAppLockOn, setIsAppLockOn] = useState(() => isAppLockEnabled());
   const [isSecurityModalOpen, setIsSecurityModalOpen] = useState(false);
+  const [securityModalMode, setSecurityModalMode] = useState<SecurityModalMode>('setting_new_pin');
 
   const handleToggleAppLock = (enable: boolean) => {
     if (enable) {
       const hasPin = Boolean(getAppLockPin());
       if (!hasPin) {
+        setSecurityModalMode('setting_new_pin');
         setIsSecurityModalOpen(true);
         return;
       }
@@ -178,7 +187,7 @@ export function BackupModal({
         } else {
           setFeedback(language === "ja" ? "無効なバックアップファイルです" : "Invalid backup file structure");
         }
-      } catch (err) {
+      } catch {
         setFeedback(language === "ja" ? "JSONの解析に失敗しました" : "Failed to parse JSON file");
       }
       setTimeout(() => setFeedback(null), 2500);
@@ -200,14 +209,14 @@ export function BackupModal({
         <div className="flex items-center justify-between border-b border-[var(--border-subtle)] pb-3">
           <div className="flex items-center space-x-2">
             <div className="w-8 h-8 rounded-xl bg-emerald-500/10 border border-emerald-500/20 text-emerald-500 flex items-center justify-center">
-              <Cloud className="w-4 h-4" />
+              <Sliders className="w-4 h-4" />
             </div>
             <div>
               <h3 className="text-base font-bold text-[var(--text-main)]">
-                {t.actions.export}
+                {language === "ja" ? "設定 & バックアップ管理" : "Settings & Data Backup"}
               </h3>
               <p className="text-[10px] text-[var(--text-muted)]">
-                {language === "ja" ? "バックアップ・Google Drive同期・管理" : "Backups, Google Drive sync & settings"}
+                {language === "ja" ? "アカウント・同期・バックアップ・セキュリティ" : "Account, sync, backups & security"}
               </p>
             </div>
           </div>
@@ -222,15 +231,81 @@ export function BackupModal({
 
         {/* Feedback Alert */}
         {feedback && (
-          <div className="p-3 rounded-2xl bg-emerald-500/10 border border-emerald-500/30 text-emerald-400 text-xs flex items-center space-x-2 animate-fade-in font-medium">
-            <Check className="w-4 h-4 shrink-0" />
+          <div className="flex items-center space-x-2 text-xs font-semibold text-emerald-400 bg-emerald-500/10 border border-emerald-500/20 px-3 py-2.5 rounded-xl animate-fade-in">
+            <Check className="w-4 h-4 shrink-0 text-emerald-400" />
             <span>{feedback}</span>
           </div>
         )}
 
-        {/* Body content */}
         <div className="space-y-4">
-          {/* Quick Manual Export */}
+          {/* Account & Server Setting Section */}
+          {isAuthenticated && user ? (
+            <div className="p-3.5 rounded-2xl border border-emerald-500/30 bg-emerald-500/5 space-y-2.5">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center space-x-2.5 min-w-0 pr-2">
+                  <div className="w-8 h-8 rounded-xl bg-emerald-500/15 border border-emerald-500/30 text-emerald-400 flex items-center justify-center font-bold text-xs shrink-0 uppercase font-mono">
+                    {user.name ? user.name[0] : (user.email ? user.email[0] : 'U')}
+                  </div>
+                  <div className="min-w-0">
+                    <p className="text-xs font-bold text-[var(--text-main)] truncate">
+                      {user.name || (language === 'ja' ? 'クラウド同期アカウント' : 'Cloud Account')}
+                    </p>
+                    <p className="text-[10px] text-[var(--text-muted)] font-mono truncate">
+                      {user.email}
+                    </p>
+                  </div>
+                </div>
+
+                <div className="flex items-center space-x-1.5 shrink-0">
+                  <span className="px-2 py-0.5 rounded-full text-[10px] font-mono font-bold bg-emerald-500/15 text-emerald-400 border border-emerald-500/30">
+                    {syncStatus === 'synced' ? (language === 'ja' ? '同期完了' : 'Synced') : syncStatus}
+                  </span>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      logout();
+                      setFeedback(language === 'ja' ? 'ログアウトしました' : 'Signed out');
+                      setTimeout(() => setFeedback(null), 2000);
+                    }}
+                    className="p-1.5 rounded-xl bg-[var(--bg-surface-solid)] border border-[var(--border-subtle)] hover:text-rose-400 text-[var(--text-muted)] transition-all cursor-pointer shadow-xs active:scale-95"
+                    title={language === 'ja' ? 'ログアウト' : 'Sign Out'}
+                  >
+                    <LogOut className="w-3.5 h-3.5" />
+                  </button>
+                </div>
+              </div>
+            </div>
+          ) : (
+            <div className="p-3.5 rounded-2xl border border-indigo-500/25 bg-indigo-500/5 space-y-2.5">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center space-x-2.5 min-w-0 pr-2">
+                  <div className="w-8 h-8 rounded-xl bg-indigo-500/15 border border-indigo-500/30 text-indigo-400 flex items-center justify-center shrink-0">
+                    <UserIcon className="w-4 h-4" />
+                  </div>
+                  <div className="min-w-0">
+                    <p className="text-xs font-bold text-[var(--text-main)] truncate">
+                      {language === 'ja' ? 'クラウド同期アカウント' : 'Cloud Account & Sync'}
+                    </p>
+                    <p className="text-[10px] text-[var(--text-muted)] line-clamp-1">
+                      {language === 'ja' ? 'ログインして複数端末で安全に自動同期' : 'Sign in to sync your data securely across devices'}
+                    </p>
+                  </div>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => {
+                    onClose();
+                    onOpenAuth?.();
+                  }}
+                  className="px-3 py-1.5 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-bold transition-all shadow-xs shrink-0 cursor-pointer active:scale-95"
+                >
+                  {language === 'ja' ? 'ログイン' : 'Sign In'}
+                </button>
+              </div>
+            </div>
+          )}
+
+          {/* Export Files Section */}
           <div className="space-y-2">
             <p className="text-xs font-bold text-[var(--text-muted)] uppercase tracking-wider">
               {language === "ja" ? "ファイル出力" : "Export Files"}
@@ -239,19 +314,18 @@ export function BackupModal({
               <button
                 type="button"
                 onClick={handleExportJSON}
-                className="p-3 rounded-2xl border border-[var(--border-subtle)] bg-[var(--bg-subtle)] hover:bg-[var(--bg-subtle-hover)] flex items-center justify-center space-x-2 text-xs font-bold text-[var(--text-main)] transition-all shadow-xs cursor-pointer"
+                className="p-3 rounded-2xl border border-[var(--border-subtle)] bg-[var(--bg-subtle)] hover:border-emerald-500/50 flex items-center justify-center space-x-2 text-xs font-semibold text-[var(--text-main)] transition-all cursor-pointer shadow-xs active:scale-[0.98]"
               >
                 <FileJson className="w-4 h-4 text-amber-500" />
-                <span>{language === "ja" ? "JSONバックアップ" : "Export JSON"}</span>
+                <span>Export JSON</span>
               </button>
-
               <button
                 type="button"
                 onClick={handleExportCSV}
-                className="p-3 rounded-2xl border border-[var(--border-subtle)] bg-[var(--bg-subtle)] hover:bg-[var(--bg-subtle-hover)] flex items-center justify-center space-x-2 text-xs font-bold text-[var(--text-main)] transition-all shadow-xs cursor-pointer"
+                className="p-3 rounded-2xl border border-[var(--border-subtle)] bg-[var(--bg-subtle)] hover:border-emerald-500/50 flex items-center justify-center space-x-2 text-xs font-semibold text-[var(--text-main)] transition-all cursor-pointer shadow-xs active:scale-[0.98]"
               >
                 <FileSpreadsheet className="w-4 h-4 text-emerald-500" />
-                <span>{language === "ja" ? "CSVレポート出力" : "Export CSV"}</span>
+                <span>Export CSV</span>
               </button>
             </div>
           </div>
@@ -445,17 +519,31 @@ export function BackupModal({
             )}
           </div>
 
-          {/* Biometric & App Lock Setting */}
-          <div className="p-3.5 rounded-2xl border border-[var(--border-subtle)] bg-[var(--bg-subtle)] space-y-3">
+          {/* Biometric & App Lock Setting: Streamlined 1-Click Toggle */}
+          <div className="p-3.5 rounded-2xl border border-[var(--border-subtle)] bg-[var(--bg-subtle)] space-y-2">
             <div className="flex items-center justify-between">
               <div className="flex items-center space-x-2.5 min-w-0 pr-2">
                 <div className="w-7 h-7 rounded-lg bg-cyan-500/10 border border-cyan-500/20 text-cyan-400 flex items-center justify-center shrink-0">
                   <Fingerprint className="w-3.5 h-3.5" />
                 </div>
                 <div className="min-w-0">
-                  <p className="text-xs font-bold text-[var(--text-main)] truncate">
-                    {t.security.biometricLock}
-                  </p>
+                  <div className="flex items-center space-x-2">
+                    <p className="text-xs font-bold text-[var(--text-main)] truncate">
+                      {t.security.biometricLock}
+                    </p>
+                    {isAppLockOn && (
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setSecurityModalMode('changing_pin');
+                          setIsSecurityModalOpen(true);
+                        }}
+                        className="text-[10px] font-semibold text-cyan-400 hover:text-cyan-300 underline underline-offset-2 transition-colors cursor-pointer"
+                      >
+                        {language === 'ja' ? 'PIN変更' : 'Change PIN'}
+                      </button>
+                    )}
+                  </div>
                   <p className="text-[10px] text-[var(--text-muted)] line-clamp-1">
                     {t.security.biometricLockDesc}
                   </p>
@@ -471,20 +559,6 @@ export function BackupModal({
                 />
                 <div className="w-9 h-5 bg-[var(--border-strong)] peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-[var(--accent-emerald)]"></div>
               </label>
-            </div>
-
-            <div className="pt-2 border-t border-[var(--border-subtle)] flex items-center justify-between text-xs">
-              <span className="text-[11px] text-[var(--text-muted)] font-medium">
-                {language === 'ja' ? 'PINコード・認証設定' : 'PIN & Security Configuration'}
-              </span>
-              <button
-                type="button"
-                onClick={() => setIsSecurityModalOpen(true)}
-                className="px-2.5 py-1 rounded-xl bg-[var(--bg-surface-solid)] border border-[var(--border-subtle)] hover:border-cyan-500/50 text-[11px] font-bold text-[var(--text-main)] transition-all flex items-center space-x-1 cursor-pointer shrink-0 shadow-xs active:scale-95"
-              >
-                <KeyRound className="w-3 h-3 text-cyan-400" />
-                <span>{language === 'ja' ? '設定を変更' : 'Configure'}</span>
-              </button>
             </div>
           </div>
 
@@ -503,26 +577,38 @@ export function BackupModal({
             <button
               type="button"
               onClick={() => fileInputRef.current?.click()}
-              className="w-full p-3 rounded-2xl border border-[var(--border-subtle)] bg-[var(--bg-subtle)] hover:bg-[var(--bg-subtle-hover)] flex items-center justify-center space-x-2 text-xs font-bold text-[var(--text-main)] transition-all shadow-xs cursor-pointer"
+              className="w-full p-3 rounded-2xl border border-[var(--border-subtle)] bg-[var(--bg-subtle)] hover:border-emerald-500/50 flex items-center justify-center space-x-2 text-xs font-semibold text-[var(--text-main)] transition-all cursor-pointer shadow-xs active:scale-[0.98]"
             >
-              <Upload className="w-4 h-4 text-indigo-400" />
-              <span>{language === "ja" ? "JSONからデータを復元" : "Import JSON Backup"}</span>
+              <Upload className="w-4 h-4 text-emerald-500" />
+              <span>{language === "ja" ? "JSONバックアップを復元" : "Import JSON Backup"}</span>
             </button>
           </div>
 
           {/* Danger Zone */}
           <div className="pt-2 border-t border-[var(--border-subtle)] space-y-2">
             <p className="text-xs font-bold text-[var(--text-muted)] uppercase tracking-wider">
-              {language === "ja" ? "データ初期化・管理" : "Management"}
+              {language === "ja" ? "データ初期化・危険ゾーン" : "Management & Danger Zone"}
             </p>
             <button
               type="button"
               onClick={() => setIsConfirmClearOpen(true)}
-              className="w-full p-2.5 rounded-xl border border-rose-500/20 bg-rose-500/10 hover:bg-rose-500/20 text-rose-500 flex items-center justify-center space-x-1.5 text-xs font-semibold transition-all cursor-pointer"
+              className="w-full p-2.5 rounded-xl border border-rose-500/20 bg-rose-500/10 hover:bg-rose-500/20 text-rose-500 flex items-center justify-center space-x-1.5 text-xs font-semibold transition-all cursor-pointer active:scale-[0.98]"
             >
               <Trash2 className="w-3.5 h-3.5" />
-              <span>{language === "ja" ? "すべてのデータを削除" : "Delete All Data"}</span>
+              <span>{language === "ja" ? "すべてのローカルデータを初期化" : "Reset All Local Data"}</span>
             </button>
+
+            {isAuthenticated && (
+              <button
+                type="button"
+                onClick={() => setIsConfirmDeleteAccountOpen(true)}
+                className="w-full p-2.5 rounded-xl border border-rose-500/30 bg-rose-500/15 hover:bg-rose-500/25 text-rose-400 flex items-center justify-center space-x-1.5 text-xs font-semibold transition-all cursor-pointer active:scale-[0.98]"
+              >
+                <Trash2 className="w-3.5 h-3.5" />
+                <span>{language === "ja" ? "アカウントとクラウドデータを完全削除" : "Delete Account & Cloud Data"}</span>
+              </button>
+            )}
+
             <div className="pt-1 text-center">
               <button
                 type="button"
@@ -551,6 +637,22 @@ export function BackupModal({
         onClose={() => setIsConfirmClearOpen(false)}
       />
 
+      <ConfirmDeleteModal
+        isOpen={isConfirmDeleteAccountOpen}
+        title={language === "ja" ? "アカウントの完全削除" : "Delete Account & Cloud Data"}
+        description={language === "ja" ? "アカウントおよびクラウド上のすべての同期データが永久に削除されます。この操作は取り消せません。" : "Permanently deletes your account credentials and wipes all cloud backups from the server. This cannot be undone."}
+        itemName={language === "ja" ? "アカウント削除" : "Permanent Account Deletion"}
+        confirmLabel={language === "ja" ? "アカウントを完全に削除" : "Delete Account"}
+        language={language}
+        onConfirm={async () => {
+          await deleteAccount();
+          setIsConfirmDeleteAccountOpen(false);
+          setFeedback(language === "ja" ? "アカウントを削除しました。" : "Account deleted successfully.");
+          setTimeout(() => setFeedback(null), 2500);
+        }}
+        onClose={() => setIsConfirmDeleteAccountOpen(false)}
+      />
+
       <LegalModal
         isOpen={isLegalModalOpen}
         onClose={() => setIsLegalModalOpen(false)}
@@ -559,6 +661,10 @@ export function BackupModal({
 
       <SecuritySettingsModal
         isOpen={isSecurityModalOpen}
+        initialMode={securityModalMode}
+        onSuccess={() => {
+          setIsAppLockOn(isAppLockEnabled());
+        }}
         onClose={() => {
           setIsSecurityModalOpen(false);
           setIsAppLockOn(isAppLockEnabled());
