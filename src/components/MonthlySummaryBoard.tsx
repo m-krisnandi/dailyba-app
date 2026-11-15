@@ -469,12 +469,16 @@ export function MonthlySummaryBoard({
 
   const hasBudgetPlan = budgetTotalTarget > 0 || Object.keys(categoryTargets).length > 0;
 
-  // Active categories eligible for budgeting
+  // Active categories eligible for budgeting (includes custom categories, excludes hidden)
   const activeCategories = useMemo(() => {
-    return (Object.keys(EXPENSE_CATEGORY_ICONS) as ExpenseCategory[]).filter(
+    const defaults = (Object.keys(EXPENSE_CATEGORY_ICONS) as ExpenseCategory[]).filter(
       (cat) => !hiddenCategories.includes(cat)
     );
-  }, [hiddenCategories]);
+    const customs = (customCategories || [])
+      .map((c) => c.id)
+      .filter((id) => !hiddenCategories.includes(id));
+    return [...defaults, ...customs];
+  }, [hiddenCategories, customCategories]);
 
   // Target presets according to active currency
   const totalBudgetPresets = useMemo(() => {
@@ -953,14 +957,15 @@ export function MonthlySummaryBoard({
 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                   {Object.entries(categoryTargets).map(([catKey, targetVal]) => {
-                    if (!targetVal || targetVal <= 0) return null;
-                    const Icon = EXPENSE_CATEGORY_ICONS[catKey as ExpenseCategory] || TrendingDown;
-                    const catStyle = getCategoryBadgeStyle("expense", catKey);
+                    if (!targetVal || targetVal <= 0 || hiddenCategories.includes(catKey)) return null;
+                    const customCat = customCategories?.find((c) => c.id === catKey);
+                    const Icon = getCategoryIconComponent(catKey, customCategories);
+                    const catStyle = getCategoryBadgeStyle("expense", catKey, customCategories);
                     const spent = categorySpentMap[catKey] || 0;
                     const percent = Math.round((spent / targetVal) * 100);
                     const isCatOver = spent > targetVal;
                     const diff = Math.abs(targetVal - spent);
-                    const catLabel = t.expenseCategories[catKey as ExpenseCategory] || catKey;
+                    const catLabel = customCat ? customCat.name : (t.expenseCategories[catKey as ExpenseCategory] || catKey);
 
                     return (
                       <div
@@ -1728,9 +1733,10 @@ export function MonthlySummaryBoard({
 
                 <div className="space-y-2 max-h-56 overflow-y-auto pr-1">
                   {activeCategories.map((catKey) => {
-                    const Icon = EXPENSE_CATEGORY_ICONS[catKey] || TrendingDown;
-                    const catLabel = t.expenseCategories[catKey] || catKey;
-                    const catStyle = getCategoryBadgeStyle("expense", catKey);
+                    const customCat = customCategories?.find((c) => c.id === catKey);
+                    const Icon = getCategoryIconComponent(catKey, customCategories);
+                    const catLabel = customCat ? customCat.name : (t.expenseCategories[catKey as ExpenseCategory] || catKey);
+                    const catStyle = getCategoryBadgeStyle("expense", catKey, customCategories);
                     const currentVal = modalCategoryTargets[catKey] || '';
 
                     return (
@@ -1800,6 +1806,8 @@ export function MonthlySummaryBoard({
           initialDate={isDateInMonthCycle(getTodayLocalDate(), selectedMonth, monthStartDay) ? getTodayLocalDate() : activeCycle.startDate}
           currency={currency}
           language={language}
+          hiddenCategories={hiddenCategories}
+          customCategories={customCategories}
           onClose={() => setIsAddTxModalOpen(false)}
           onAddTransaction={onAddTransaction}
           title={

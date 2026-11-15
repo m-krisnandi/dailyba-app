@@ -1,9 +1,9 @@
 'use client';
 
 import React, { useMemo, useState, useEffect } from 'react';
-import { Currency, ExpenseCategory, Language, Transaction } from '@/types/finance';
+import { Currency, ExpenseCategory, CustomCategory, Language, Transaction } from '@/types/finance';
 import { formatCurrency, translations } from '@/lib/i18n';
-import { EXPENSE_CATEGORY_ICONS, getCategoryBadgeStyle } from '@/lib/constants';
+import { EXPENSE_CATEGORY_ICONS, getCategoryIconComponent, getCategoryBadgeStyle } from '@/lib/constants';
 import { convertCurrency, DEFAULT_RATES, ExchangeRates } from '@/lib/currency';
 import {
   ArrowDownRight,
@@ -30,6 +30,7 @@ interface YearlySummaryBoardProps {
   rates?: ExchangeRates;
   transactions: Transaction[];
   hiddenCategories?: string[];
+  customCategories?: CustomCategory[];
 }
 
 const MONTH_NAMES = [
@@ -43,6 +44,7 @@ export function YearlySummaryBoard({
   rates = DEFAULT_RATES,
   transactions,
   hiddenCategories = [],
+  customCategories = [],
 }: YearlySummaryBoardProps) {
   const t = translations[language];
 
@@ -123,14 +125,17 @@ export function YearlySummaryBoard({
       });
 
     return Object.entries(map)
-      .map(([category, amount]) => ({
-        category,
-        amount,
-        percentage: totalAnnualExpense > 0 ? Math.round((amount / totalAnnualExpense) * 100) : 0,
-        label: t.expenseCategories[category as ExpenseCategory] || category,
-      }))
+      .map(([category, amount]) => {
+        const customCat = customCategories?.find((c) => c.id === category);
+        return {
+          category,
+          amount,
+          percentage: totalAnnualExpense > 0 ? Math.round((amount / totalAnnualExpense) * 100) : 0,
+          label: customCat ? customCat.name : (t.expenseCategories[category as ExpenseCategory] || category),
+        };
+      })
       .sort((a, b) => b.amount - a.amount);
-  }, [yearTransactions, totalAnnualExpense, t.expenseCategories, currency, rates, hiddenCategories]);
+  }, [yearTransactions, totalAnnualExpense, t.expenseCategories, currency, rates, hiddenCategories, customCategories]);
 
   return (
     <div className="space-y-6">
@@ -341,8 +346,8 @@ export function YearlySummaryBoard({
         ) : (
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             {topAnnualCategories.map((item) => {
-              const Icon = EXPENSE_CATEGORY_ICONS[item.category as ExpenseCategory] || TrendingUp;
-              const catStyle = getCategoryBadgeStyle("expense", item.category);
+              const Icon = getCategoryIconComponent(item.category, customCategories);
+              const catStyle = getCategoryBadgeStyle("expense", item.category, customCategories);
               return (
                 <div
                   key={item.category}

@@ -2,7 +2,7 @@
 import { FormattedAmountInput } from '@/components/FormattedAmountInput';
 
 import React, { useMemo, useState } from 'react';
-import { Currency, ExpenseCategory, Language, Transaction } from '@/types/finance';
+import { Currency, ExpenseCategory, CustomCategory, Language, Transaction } from '@/types/finance';
 import { formatCurrency, translations } from '@/lib/i18n';
 import { EditTransactionModal } from '@/components/EditTransactionModal';
 import { AddTransactionModal } from '@/components/AddTransactionModal';
@@ -12,7 +12,7 @@ import { ConfirmDeleteModal } from './ConfirmDeleteModal';
 import { CustomDatePicker } from '@/components/CustomDatePicker';
 import { Edit3 } from 'lucide-react';
 import { convertCurrency, DEFAULT_RATES, ExchangeRates, formatNumberWithCommas, parseRawNumber } from '@/lib/currency';
-import { EXPENSE_CATEGORY_ICONS, getCategoryBadgeStyle } from '@/lib/constants';
+import { EXPENSE_CATEGORY_ICONS, getCategoryIconComponent, getCategoryBadgeStyle } from '@/lib/constants';
 import { getTodayLocalDate, formatLocalDate } from '@/lib/dateUtils';
 import {
   Plus,
@@ -50,6 +50,8 @@ interface DailySpendBoardProps {
   onDeleteTransaction?: (id: string) => void;
   onUpdateTransaction?: (tx: Transaction) => void;
   onAddTransaction?: (tx: Omit<Transaction, 'id' | 'createdAt'>) => void;
+  hiddenCategories?: string[];
+  customCategories?: CustomCategory[];
 }
 
 export function DailySpendBoard({
@@ -63,6 +65,8 @@ export function DailySpendBoard({
   onDeleteTransaction,
   onUpdateTransaction,
   onAddTransaction,
+  hiddenCategories = [],
+  customCategories = [],
 }: DailySpendBoardProps) {
   const [editingTx, setEditingTx] = useState<Transaction | null>(null);
   const [deletingTx, setDeletingTx] = useState<Transaction | null>(null);
@@ -100,8 +104,8 @@ export function DailySpendBoard({
 
   // Filter only expense transactions
   const expenseTransactions = useMemo(() => {
-    return transactions.filter((tx) => tx.type === 'expense');
-  }, [transactions]);
+    return transactions.filter((tx) => tx.type === 'expense' && !hiddenCategories.includes(tx.category));
+  }, [transactions, hiddenCategories]);
 
   // Group expenses by date (YYYY-MM-DD)
   const expensesByDate = useMemo(() => {
@@ -814,17 +818,17 @@ export function DailySpendBoard({
                         </div>
                       ) : (
                         dayTxs.map((tx) => {
-                          const Icon =
-                            EXPENSE_CATEGORY_ICONS[tx.category as ExpenseCategory] || AlertCircle;
+                          const customCat = customCategories?.find((c) => c.id === tx.category);
+                          const Icon = getCategoryIconComponent(tx.category, customCategories);
                           const catLabel =
-                            t.expenseCategories[tx.category as ExpenseCategory] || tx.category;
+                            customCat ? customCat.name : (t.expenseCategories[tx.category as ExpenseCategory] || tx.category);
                           const convertedAmount = convertCurrency(
                             tx.amount,
                             tx.currency || 'JPY',
                             currency,
                             rates
                           );
-                          const catStyle = getCategoryBadgeStyle("expense", tx.category);
+                          const catStyle = getCategoryBadgeStyle("expense", tx.category, customCategories);
 
                           return (
                             <div
@@ -890,6 +894,7 @@ export function DailySpendBoard({
         transaction={editingTx}
         language={language}
         currency={currency}
+        customCategories={customCategories}
         onClose={() => setEditingTx(null)}
         onSave={(updated) => {
           if (onUpdateTransaction) onUpdateTransaction(updated);
@@ -902,6 +907,7 @@ export function DailySpendBoard({
         language={language}
         currency={currency}
         rates={rates}
+        customCategories={customCategories}
         onClose={() => setSelectedDetailTx(null)}
         onEdit={(tx) => {
           setSelectedDetailTx(null);
@@ -924,6 +930,8 @@ export function DailySpendBoard({
           initialDate={addExpenseDate || todayStr}
           currency={currency}
           language={language}
+          hiddenCategories={hiddenCategories}
+          customCategories={customCategories}
           onClose={() => setIsAddExpenseModalOpen(false)}
           onAddTransaction={onAddTransaction}
           title={addExpenseDate === todayStr ? (t.record.recordTodayExpense || "Record Today's Spend") : `Record Expense (${addExpenseDate})`}
@@ -952,6 +960,8 @@ export function DailySpendBoard({
           onClose={() => setIsReceiptScannerOpen(false)}
           language={language}
           currency={currency}
+          hiddenCategories={hiddenCategories}
+          customCategories={customCategories}
           onAddTransaction={onAddTransaction}
         />
       )}

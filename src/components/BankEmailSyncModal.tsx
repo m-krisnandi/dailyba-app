@@ -8,6 +8,7 @@ import {
   PendingImportItem,
   EmailSyncStatus,
   Transaction,
+  CustomCategory,
 } from '@/types/finance';
 import { translations, formatCurrency } from '@/lib/i18n';
 import { dailybaApi } from '@/lib/api';
@@ -18,6 +19,7 @@ import {
   EXPENSE_CATEGORY_ICONS,
   FUNDING_SOURCE_ICONS,
   getCategoryBadgeStyle,
+  getCategoryIconComponent,
   getFundingSourceBadgeStyle,
 } from '@/lib/constants';
 import {
@@ -40,6 +42,8 @@ interface BankEmailSyncModalProps {
   onApproveTransactions: (txs: Transaction[]) => void;
   onPendingCountChange?: (count: number) => void;
   existingTransactions?: Transaction[];
+  hiddenCategories?: string[];
+  customCategories?: CustomCategory[];
 }
 
 const SAMPLE_JAGO = `Assalamu'alaikum ALICE NAKAMURA,
@@ -78,6 +82,8 @@ export function BankEmailSyncModal({
   onApproveTransactions,
   onPendingCountChange,
   existingTransactions = [],
+  hiddenCategories = [],
+  customCategories = [],
 }: BankEmailSyncModalProps) {
   useBodyScrollLock(isOpen);
 
@@ -110,15 +116,32 @@ export function BankEmailSyncModal({
 
   // Consistent liquid-glass custom dropdown options
   const categoryOptions = useMemo<CustomSelectOption<string>[]>(() => {
-    const list: CustomSelectOption<string>[] = (Object.keys(EXPENSE_CATEGORY_ICONS) as ExpenseCategory[]).map((cat) => {
-      const style = getCategoryBadgeStyle('expense', cat);
-      return {
-        value: cat,
-        label: t.expenseCategories[cat] || cat,
-        icon: EXPENSE_CATEGORY_ICONS[cat],
-        badgeClass: `${style.border} ${style.bg} ${style.text}`,
-      };
-    });
+    const defaults = (Object.keys(EXPENSE_CATEGORY_ICONS) as ExpenseCategory[])
+      .filter((cat) => !hiddenCategories.includes(cat))
+      .map((cat) => {
+        const style = getCategoryBadgeStyle('expense', cat, customCategories);
+        return {
+          value: cat,
+          label: t.expenseCategories[cat] || cat,
+          icon: EXPENSE_CATEGORY_ICONS[cat],
+          badgeClass: `${style.border} ${style.bg} ${style.text}`,
+        };
+      });
+
+    const customs = (customCategories || [])
+      .filter((c) => !hiddenCategories.includes(c.id))
+      .map((c) => {
+        const style = getCategoryBadgeStyle('expense', c.id, customCategories);
+        const Icon = getCategoryIconComponent(c.id, customCategories);
+        return {
+          value: c.id,
+          label: c.name,
+          icon: Icon,
+          badgeClass: `${style.border} ${style.bg} ${style.text}`,
+        };
+      });
+
+    const list: CustomSelectOption<string>[] = [...defaults, ...customs];
     // Add Internal Transfer category
     list.unshift({
       value: 'transfer',
@@ -127,7 +150,7 @@ export function BankEmailSyncModal({
       badgeClass: 'border-indigo-500/30 bg-indigo-500/15 text-indigo-400',
     });
     return list;
-  }, [t]);
+  }, [t, hiddenCategories, customCategories]);
 
   const sourceOptions = useMemo<CustomSelectOption<FundingSource>[]>(() => {
     const sources: FundingSource[] = ['bank', 'ewallet', 'credit_card', 'cash'];

@@ -1,11 +1,11 @@
 'use client';
 
 import React, { useState, useRef, useMemo, useEffect } from 'react';
-import { Currency, ExpenseCategory, FundingSource, Language, Transaction } from '@/types/finance';
+import { Currency, ExpenseCategory, CustomCategory, FundingSource, Language, Transaction } from '@/types/finance';
 import { translations, formatCurrency } from '@/lib/i18n';
 import { formatNumberWithCommas, parseRawNumber, convertCurrency, useExchangeRates } from '@/lib/currency';
 import { getTodayLocalDate } from '@/lib/dateUtils';
-import { EXPENSE_CATEGORY_ICONS, FUNDING_SOURCE_ICONS, getCategoryBadgeStyle, getFundingSourceBadgeStyle } from '@/lib/constants';
+import { EXPENSE_CATEGORY_ICONS, FUNDING_SOURCE_ICONS, getCategoryIconComponent, getCategoryBadgeStyle, getFundingSourceBadgeStyle } from '@/lib/constants';
 import { CustomDatePicker } from './CustomDatePicker';
 import { CustomSelect, CustomSelectOption } from './CustomSelect';
 import { prepareImageForAI, parseReceiptWithAI, ParsedReceiptResult, isNetworkError } from '@/lib/aiReceiptScanner';
@@ -30,6 +30,8 @@ interface ReceiptScannerModalProps {
   language: Language;
   currency: Currency;
   onAddTransaction: (tx: Omit<Transaction, 'id' | 'createdAt'>) => void;
+  hiddenCategories?: string[];
+  customCategories?: CustomCategory[];
 }
 
 export function ReceiptScannerModal({
@@ -38,6 +40,8 @@ export function ReceiptScannerModal({
   language,
   currency: activeCurrency,
   onAddTransaction,
+  hiddenCategories = [],
+  customCategories = [],
 }: ReceiptScannerModalProps) {
   useBodyScrollLock(isOpen);
   const t = translations[language];
@@ -78,7 +82,7 @@ export function ReceiptScannerModal({
   // Review form state
   const [amountStr, setAmountStr] = useState<string>('');
   const [txCurrency, setTxCurrency] = useState<Currency>(activeCurrency);
-  const [category, setCategory] = useState<ExpenseCategory>('food_drinks');
+  const [category, setCategory] = useState<string>('food_drinks');
   const [source, setSource] = useState<FundingSource>('cash');
   const [date, setDate] = useState<string>('');
   const [note, setNote] = useState<string>('');
@@ -87,17 +91,34 @@ export function ReceiptScannerModal({
 
   // Expense categories options for custom select
   const expenseCategories = Object.keys(EXPENSE_CATEGORY_ICONS) as ExpenseCategory[];
-  const categoryOptions = useMemo<CustomSelectOption<ExpenseCategory>[]>(() => {
-    return expenseCategories.map((cat) => {
-      const style = getCategoryBadgeStyle('expense', cat);
-      return {
-        value: cat,
-        label: t.expenseCategories[cat] || cat,
-        icon: EXPENSE_CATEGORY_ICONS[cat],
-        badgeClass: `${style.border} ${style.bg} ${style.text}`,
-      };
-    });
-  }, [expenseCategories, t]);
+  const categoryOptions = useMemo<CustomSelectOption<string>[]>(() => {
+    const defaults = expenseCategories
+      .filter((cat) => !hiddenCategories.includes(cat))
+      .map((cat) => {
+        const style = getCategoryBadgeStyle('expense', cat, customCategories);
+        return {
+          value: cat,
+          label: t.expenseCategories[cat] || cat,
+          icon: EXPENSE_CATEGORY_ICONS[cat],
+          badgeClass: `${style.border} ${style.bg} ${style.text}`,
+        };
+      });
+
+    const customs = (customCategories || [])
+      .filter((c) => !hiddenCategories.includes(c.id))
+      .map((c) => {
+        const style = getCategoryBadgeStyle('expense', c.id, customCategories);
+        const Icon = getCategoryIconComponent(c.id, customCategories);
+        return {
+          value: c.id,
+          label: c.name,
+          icon: Icon,
+          badgeClass: `${style.border} ${style.bg} ${style.text}`,
+        };
+      });
+
+    return [...defaults, ...customs];
+  }, [expenseCategories, t, hiddenCategories, customCategories]);
 
   const stopCameraStream = () => {
     if (streamRef.current) {

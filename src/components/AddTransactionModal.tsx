@@ -13,6 +13,7 @@ import {
   Language,
   Transaction,
   TransactionType,
+  CustomCategory,
 } from '@/types/finance';
 import { translations } from '@/lib/i18n';
 import { getTodayLocalDate } from '@/lib/dateUtils';
@@ -20,6 +21,7 @@ import {
   EXPENSE_CATEGORY_ICONS,
   INCOME_CATEGORY_ICONS,
   FUNDING_SOURCE_ICONS,
+  getCategoryIconComponent,
   getCategoryBadgeStyle,
   getFundingSourceBadgeStyle,
 } from '@/lib/constants';
@@ -50,6 +52,8 @@ interface AddTransactionModalProps {
   initialAmount?: number;
   initialNote?: string;
   title?: string;
+  hiddenCategories?: string[];
+  customCategories?: CustomCategory[];
 }
 
 export function AddTransactionModal({
@@ -64,6 +68,8 @@ export function AddTransactionModal({
   initialAmount,
   initialNote,
   title,
+  hiddenCategories = [],
+  customCategories = [],
 }: AddTransactionModalProps) {
   useBodyScrollLock(isOpen);
 
@@ -78,6 +84,48 @@ export function AddTransactionModal({
   const [date, setDate] = useState<string>(initialDate || todayStr);
   const [note, setNote] = useState<string>('');
 
+  const categoryOptions = useMemo<CustomSelectOption[]>(() => {
+    if (type === 'expense') {
+      const defaultOptions = expenseCategories
+        .filter((cat) => !hiddenCategories.includes(cat))
+        .map((cat) => {
+          const style = getCategoryBadgeStyle("expense", cat, customCategories);
+          return {
+            value: cat,
+            label: t.expenseCategories[cat] || cat,
+            icon: EXPENSE_CATEGORY_ICONS[cat],
+            badgeClass: `${style.border} ${style.bg} ${style.text}`,
+          };
+        });
+
+      const customOptions = (customCategories || [])
+        .filter((c) => !hiddenCategories.includes(c.id))
+        .map((c) => {
+          const style = getCategoryBadgeStyle("expense", c.id, customCategories);
+          const Icon = getCategoryIconComponent(c.id, customCategories);
+          return {
+            value: c.id,
+            label: c.name,
+            icon: Icon,
+            badgeClass: `${style.border} ${style.bg} ${style.text}`,
+          };
+        });
+
+      return [...defaultOptions, ...customOptions];
+    }
+    return incomeCategories
+      .filter((cat) => !hiddenCategories.includes(cat))
+      .map((cat) => {
+        const style = getCategoryBadgeStyle("income", cat);
+        return {
+          value: cat,
+          label: t.incomeCategories[cat] || cat,
+          icon: INCOME_CATEGORY_ICONS[cat],
+          badgeClass: `${style.border} ${style.bg} ${style.text}`,
+        };
+      });
+  }, [type, t, hiddenCategories, customCategories]);
+
   useEffect(() => {
     if (isOpen) {
       setType(initialType);
@@ -85,12 +133,13 @@ export function AddTransactionModal({
       if (initialCategory) {
         setCategory(initialCategory);
       } else {
-        setCategory(initialType === 'income' ? 'salary' : initialType === 'savings' ? 'savings' : 'food_drinks');
+        const firstExp = categoryOptions[0]?.value || 'food_drinks';
+        setCategory(initialType === 'income' ? 'salary' : initialType === 'savings' ? 'savings' : firstExp);
       }
       setAmountStr(initialAmount ? formatNumberWithCommas(initialAmount) : '');
       setNote(initialNote || '');
     }
-  }, [isOpen, initialType, initialDate, initialCategory, initialAmount, initialNote]);
+  }, [isOpen, initialType, initialDate, initialCategory, initialAmount, initialNote, categoryOptions]);
 
   const availableSources = useMemo<FundingSource[]>(() => {
     if (type === 'expense') {
@@ -105,28 +154,7 @@ export function AddTransactionModal({
     }
   }, [type, source]);
 
-  const categoryOptions = useMemo<CustomSelectOption[]>(() => {
-    if (type === 'expense') {
-      return expenseCategories.map((cat) => {
-        const style = getCategoryBadgeStyle("expense", cat);
-        return {
-          value: cat,
-          label: t.expenseCategories[cat] || cat,
-          icon: EXPENSE_CATEGORY_ICONS[cat],
-          badgeClass: `${style.border} ${style.bg} ${style.text}`,
-        };
-      });
-    }
-    return incomeCategories.map((cat) => {
-      const style = getCategoryBadgeStyle("income", cat);
-      return {
-        value: cat,
-        label: t.incomeCategories[cat] || cat,
-        icon: INCOME_CATEGORY_ICONS[cat],
-        badgeClass: `${style.border} ${style.bg} ${style.text}`,
-      };
-    });
-  }, [type, t]);
+
 
   if (!isOpen) return null;
 
@@ -138,7 +166,7 @@ export function AddTransactionModal({
     onAddTransaction({
       type,
       amount: parsedAmount,
-      category: type === 'savings' ? 'savings' : (category as ExpenseCategory),
+      category: type === 'savings' ? 'savings' : category,
       source,
       date: date || todayStr,
       note: note.trim() || undefined,

@@ -469,6 +469,8 @@ export default function Home() {
             currency={state.currency}
             rates={rates}
             transactions={state.transactions}
+            hiddenCategories={state.hiddenCategories || []}
+            customCategories={state.customCategories || []}
             dailySpendTarget={state.dailySpendTarget}
             dailySpendCurrency={state.dailySpendCurrency}
             onUpdateDailyTarget={setDailySpendTarget}
@@ -485,6 +487,7 @@ export default function Home() {
             rates={rates}
             transactions={state.transactions}
             hiddenCategories={state.hiddenCategories || []}
+            customCategories={state.customCategories || []}
             monthlyBudgets={state.monthlyBudgets || {}}
             monthStartDay={state.monthStartDay || 1}
             onUpdateMonthStartDay={updateMonthStartDay}
@@ -500,6 +503,7 @@ export default function Home() {
             rates={rates}
             transactions={state.transactions}
             hiddenCategories={state.hiddenCategories || []}
+            customCategories={state.customCategories || []}
           />
         )}
 
@@ -586,6 +590,8 @@ export default function Home() {
           refreshEmailSyncCount();
         }}
         language={state.language}
+        hiddenCategories={state.hiddenCategories || []}
+        customCategories={state.customCategories || []}
         onApproveTransactions={handleApproveBankTransactions}
         onPendingCountChange={setPendingEmailSyncCount}
         existingTransactions={state.transactions}
