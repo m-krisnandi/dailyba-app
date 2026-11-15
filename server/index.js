@@ -95,6 +95,10 @@ app.get('/api/health', (req, res) => {
 const emailSyncRouter = createEmailSyncRouter(db, authenticateToken, JWT_SECRET);
 app.use('/api/email-sync', emailSyncRouter);
 
+// Receipt AI Vision Scanner Route
+const receiptScanRouter = require('./receiptScanRouter');
+app.use('/api', receiptScanRouter);
+
 // 1. Register
 app.post('/api/auth/register', (req, res) => {
   try {
