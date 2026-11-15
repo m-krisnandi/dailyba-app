@@ -170,21 +170,59 @@ export function HomeBoard({
       .reduce((sum, tx) => sum + convertCurrency(tx.amount, tx.currency || 'JPY', currency, rates), 0);
   }, [transactions, currency, rates]);
 
-  // 5. User Avatar initial
+  // 5. Monthly Budget Pacing & Projection
+  const pacingMetrics = useMemo(() => {
+    const today = new Date();
+    const end = new Date(activeCycle.endDate);
+    const start = new Date(activeCycle.startDate);
+
+    const diffTime = end.getTime() - today.getTime();
+    const daysRemaining = Math.max(1, Math.ceil(diffTime / (1000 * 60 * 60 * 24)));
+    const totalDays = Math.max(1, Math.ceil((end.getTime() - start.getTime()) / (1000 * 60 * 60 * 24)) + 1);
+    const daysElapsed = Math.max(1, totalDays - daysRemaining);
+
+    const safeDailySpend = Math.max(0, Math.round(leftThisMonth / daysRemaining));
+    const avgDailySpent = daysElapsed > 0 ? totalSpentThisMonth / daysElapsed : 0;
+    const projectedMonthTotal = Math.round(totalSpentThisMonth + (avgDailySpent * daysRemaining));
+
+    const expectedSpendSoFar = (monthlyBudgetTarget / totalDays) * daysElapsed;
+    const pacingRatio = expectedSpendSoFar > 0 ? totalSpentThisMonth / expectedSpendSoFar : 1;
+
+    let pacingLabel = 'On Track';
+    let pacingColor = 'text-emerald-300 bg-emerald-500/20 border-emerald-500/30';
+
+    if (leftThisMonth <= 0) {
+      pacingLabel = 'Over Budget';
+      pacingColor = 'text-rose-300 bg-rose-500/20 border-rose-500/30';
+    } else if (pacingRatio > 1.15) {
+      pacingLabel = 'Pacing Fast';
+      pacingColor = 'text-amber-300 bg-amber-500/20 border-amber-500/30';
+    }
+
+    return {
+      daysRemaining,
+      safeDailySpend,
+      projectedMonthTotal,
+      pacingLabel,
+      pacingColor,
+    };
+  }, [activeCycle, leftThisMonth, totalSpentThisMonth, monthlyBudgetTarget]);
+
+  // 6. User Avatar initial
   const userInitial = useMemo(() => {
     if (user?.name) return user.name.charAt(0).toUpperCase();
     if (user?.email) return user.email.charAt(0).toUpperCase();
     return 'K';
   }, [user]);
 
-  // 6. Recent transactions grouped by day (Top 4 preview on Home for clean vertical fit)
+  // 7. Recent transactions grouped by day (Top 4 preview on Home)
   const recentGrouped = useMemo(() => {
     const sorted = [...transactions].sort((a, b) => {
       if (a.date !== b.date) return b.date.localeCompare(a.date);
       return (b.id || '').localeCompare(a.id || '');
     });
 
-    const recentItems = sorted.slice(0, 3);
+    const recentItems = sorted.slice(0, 4);
     const groups: { date: string; friendlyDate: string; items: Transaction[] }[] = [];
     const map = new Map<string, Transaction[]>();
 
@@ -356,10 +394,10 @@ export function HomeBoard({
               </span>
             </div>
             <div className="mt-1.5">
-              <b className="text-[15px] font-semibold tabular-nums block text-[var(--text-1)]">
+              <b className="text-[14.5px] font-semibold tabular-nums block text-[var(--text-1)]">
                 {formatCurrency(recurringMetrics.remainingCommitment, currency)}
               </b>
-              <span className="text-[11px] text-[var(--text-2)] block mt-0.5">
+              <span className="text-[10.5px] text-[var(--text-2)] block mt-0.5">
                 {recurringMetrics.remainingCommitment === 0 ? 'All settled this month' : 'Left to pay'}
               </span>
             </div>
@@ -380,10 +418,10 @@ export function HomeBoard({
               </span>
             </div>
             <div className="mt-1.5">
-              <b className="text-[15px] font-semibold tabular-nums block text-[var(--text-1)]">
+              <b className="text-[14.5px] font-semibold tabular-nums block text-[var(--text-1)]">
                 {formatCurrency(totalLiquidSavings, currency)}
               </b>
-              <span className="text-[11px] text-[var(--text-2)] block mt-0.5">
+              <span className="text-[10.5px] text-[var(--text-2)] block mt-0.5">
                 Total saved fund
               </span>
             </div>
@@ -420,7 +458,7 @@ export function HomeBoard({
         )}
 
         {/* Recent Transactions Panel (Glass) */}
-        <section className="panel glass mt-2.5 mb-3" aria-labelledby="recent">
+        <section className="panel glass mt-2.5 mb-2.5" aria-labelledby="recent">
           <div className="panel-h">
             <h2 id="recent">Recent transactions</h2>
             <button
@@ -473,8 +511,51 @@ export function HomeBoard({
           )}
         </section>
 
+        {/* Monthly Pacing & Projection Card */}
+        <section 
+          onClick={() => onNavigateTab('monthly')}
+          className="pane p-3 mt-2.5 cursor-pointer hover:border-white/20 active:scale-[0.99] transition-all"
+          aria-label="Monthly budget pacing insights"
+        >
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <div className="w-7 h-7 rounded-lg bg-teal-500/15 border border-teal-500/20 flex items-center justify-center text-[var(--brand)]">
+                <svg className="ic w-4 h-4"><use href="#i-bars"/></svg>
+              </div>
+              <div>
+                <h3 className="text-xs font-semibold text-[var(--text-1)]">Monthly Pacing</h3>
+                <p className="text-[11px] text-[var(--text-2)]">{pacingMetrics.daysRemaining} days remaining in cycle</p>
+              </div>
+            </div>
+            <span className={`text-[10px] px-2 py-0.5 rounded-full font-semibold border ${pacingMetrics.pacingColor}`}>
+              {pacingMetrics.pacingLabel}
+            </span>
+          </div>
+
+          <div className="grid grid-cols-2 gap-2 mt-2.5 pt-2 border-t border-white/[0.07]">
+            <div>
+              <span className="text-[10.5px] text-[var(--text-2)] block">Safe daily spend</span>
+              <b className="text-[13.5px] font-semibold tabular-nums text-[var(--text-1)] block mt-0.5">
+                {formatCurrency(pacingMetrics.safeDailySpend, currency)}
+                <span className="text-[10px] font-normal text-[var(--text-2)]">/day</span>
+              </b>
+            </div>
+            <div className="text-right">
+              <span className="text-[10.5px] text-[var(--text-2)] block">Projected month-end</span>
+              <b className="text-[13.5px] font-semibold tabular-nums text-[var(--text-1)] block mt-0.5">
+                {formatCurrency(pacingMetrics.projectedMonthTotal, currency)}
+              </b>
+            </div>
+          </div>
+        </section>
+
+        {/* Security & Offline Peace-of-Mind Footnote */}
+        <p className="text-center text-[11px] text-[var(--text-2)] opacity-50 mt-3 mb-1">
+          Stored locally &amp; encrypted on device • Dailyba
+        </p>
+
         {/* Bottom spacing spacer */}
-        <div className="h-6" aria-hidden="true" />
+        <div className="h-4" aria-hidden="true" />
       </main>
 
       {/* Floating Bottom Nav (Glass) */}
