@@ -347,7 +347,7 @@ export function HomeBoard({
         {/* Today's Spend vs Daily Limit Bar */}
         <div 
           onClick={() => onNavigateTab('daily')}
-          className="mt-2 flex items-center justify-between px-3 py-1.5 rounded-xl bg-white/[0.04] border border-white/[0.08] cursor-pointer hover:bg-white/[0.07] transition-colors"
+          className="mt-1.5 flex items-center justify-between px-2.5 py-1.5 rounded-xl bg-white/[0.04] border border-white/[0.08] cursor-pointer hover:bg-white/[0.07] transition-colors"
         >
           <span className="text-xs text-[var(--text-2)] flex items-center gap-1.5">
             <span className={`w-2 h-2 rounded-full ${todaySpent <= dailyTarget ? 'bg-emerald-400' : 'bg-rose-400'}`} />
@@ -360,11 +360,11 @@ export function HomeBoard({
         </div>
 
         {/* 2 Essential Cards: Recurring Bills & Reserves */}
-        <section className="grid grid-cols-2 gap-2 mt-2" aria-label="Key commitments and reserves">
+        <section className="grid grid-cols-2 gap-2 mt-1.5" aria-label="Key commitments and reserves">
           {/* Card 1: Recurring Bills */}
           <article 
             onClick={() => onNavigateTab('record')} 
-            className="pane p-2.5 flex flex-col justify-between min-h-[84px] cursor-pointer active:scale-[0.98] transition-transform"
+            className="pane p-2 flex flex-col justify-between min-h-[76px] cursor-pointer active:scale-[0.98] transition-transform"
           >
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-1.5">
@@ -390,7 +390,7 @@ export function HomeBoard({
           {/* Card 2: Total Reserves / Savings */}
           <article 
             onClick={() => onNavigateTab('savings')} 
-            className="pane p-2.5 flex flex-col justify-between min-h-[84px] cursor-pointer active:scale-[0.98] transition-transform"
+            className="pane p-2 flex flex-col justify-between min-h-[76px] cursor-pointer active:scale-[0.98] transition-transform"
           >
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-1.5">
@@ -413,7 +413,7 @@ export function HomeBoard({
         </section>
 
         {/* Quick Actions */}
-        <section className="actions mt-2.5" aria-label="Quick actions">
+        <section className="actions mt-2" aria-label="Quick actions">
           <button type="button" className="act" onClick={onOpenAddTransaction}>
             <span className="pane"><svg className="ic"><use href="#i-plus"/></svg></span>
             Add
@@ -442,7 +442,7 @@ export function HomeBoard({
         )}
 
         {/* Recent Transactions Panel (Glass) */}
-        <section className="panel glass mt-2.5 mb-2.5" aria-labelledby="recent">
+        <section className="panel glass mt-2 mb-2" aria-labelledby="recent">
           <div className="panel-h">
             <h2 id="recent">Recent transactions</h2>
             <button
@@ -498,7 +498,7 @@ export function HomeBoard({
         {/* Monthly Pacing & Projection Card */}
         <section 
           onClick={() => onNavigateTab('monthly')}
-          className="pane p-3 mt-2.5 cursor-pointer hover:border-white/20 active:scale-[0.99] transition-all"
+          className="pane p-2.5 mt-2 cursor-pointer hover:border-white/20 active:scale-[0.99] transition-all"
           aria-label="Monthly budget pacing insights"
         >
           <div className="flex items-center justify-between">
@@ -533,13 +533,7 @@ export function HomeBoard({
           </div>
         </section>
 
-        {/* Security & Offline Peace-of-Mind Footnote */}
-        <p className="text-center text-[11px] text-[var(--text-2)] opacity-50 mt-3 mb-1">
-          Stored locally &amp; encrypted on device • Dailyba
-        </p>
-
-        {/* Bottom spacing spacer */}
-        <div className="h-4" aria-hidden="true" />
+        
       </main>
 
       {/* Floating Bottom Nav (Glass) */}
