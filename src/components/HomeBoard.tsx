@@ -177,14 +177,14 @@ export function HomeBoard({
     return 'K';
   }, [user]);
 
-  // 6. Recent transactions grouped by day
+  // 6. Recent transactions grouped by day (Top 4 preview on Home for clean vertical fit)
   const recentGrouped = useMemo(() => {
     const sorted = [...transactions].sort((a, b) => {
       if (a.date !== b.date) return b.date.localeCompare(a.date);
       return (b.id || '').localeCompare(a.id || '');
     });
 
-    const recentItems = sorted.slice(0, 8);
+    const recentItems = sorted.slice(0, 3);
     const groups: { date: string; friendlyDate: string; items: Transaction[] }[] = [];
     const map = new Map<string, Transaction[]>();
 
@@ -325,7 +325,7 @@ export function HomeBoard({
         {/* Today's Spend vs Daily Limit Bar */}
         <div 
           onClick={() => onNavigateTab('daily')}
-          className="mt-3.5 flex items-center justify-between px-3.5 py-2.5 rounded-xl bg-white/[0.04] border border-white/[0.08] cursor-pointer hover:bg-white/[0.07] transition-colors"
+          className="mt-2 flex items-center justify-between px-3 py-1.5 rounded-xl bg-white/[0.04] border border-white/[0.08] cursor-pointer hover:bg-white/[0.07] transition-colors"
         >
           <span className="text-xs text-[var(--text-2)] flex items-center gap-1.5">
             <span className={`w-2 h-2 rounded-full ${todaySpent <= dailyTarget ? 'bg-emerald-400' : 'bg-rose-400'}`} />
@@ -338,11 +338,11 @@ export function HomeBoard({
         </div>
 
         {/* 2 Essential Cards: Recurring Bills & Reserves */}
-        <section className="grid grid-cols-2 gap-3 mt-4" aria-label="Key commitments and reserves">
+        <section className="grid grid-cols-2 gap-2 mt-2" aria-label="Key commitments and reserves">
           {/* Card 1: Recurring Bills */}
           <article 
             onClick={() => onNavigateTab('record')} 
-            className="pane p-3.5 flex flex-col justify-between min-h-[104px] cursor-pointer active:scale-[0.98] transition-transform"
+            className="pane p-2.5 flex flex-col justify-between min-h-[84px] cursor-pointer active:scale-[0.98] transition-transform"
           >
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-1.5">
@@ -355,7 +355,7 @@ export function HomeBoard({
                   : '0 Bills'}
               </span>
             </div>
-            <div className="mt-2">
+            <div className="mt-1.5">
               <b className="text-[15px] font-semibold tabular-nums block text-[var(--text-1)]">
                 {formatCurrency(recurringMetrics.remainingCommitment, currency)}
               </b>
@@ -368,7 +368,7 @@ export function HomeBoard({
           {/* Card 2: Total Reserves / Savings */}
           <article 
             onClick={() => onNavigateTab('savings')} 
-            className="pane p-3.5 flex flex-col justify-between min-h-[104px] cursor-pointer active:scale-[0.98] transition-transform"
+            className="pane p-2.5 flex flex-col justify-between min-h-[84px] cursor-pointer active:scale-[0.98] transition-transform"
           >
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-1.5">
@@ -379,7 +379,7 @@ export function HomeBoard({
                 Savings
               </span>
             </div>
-            <div className="mt-2">
+            <div className="mt-1.5">
               <b className="text-[15px] font-semibold tabular-nums block text-[var(--text-1)]">
                 {formatCurrency(totalLiquidSavings, currency)}
               </b>
@@ -391,7 +391,7 @@ export function HomeBoard({
         </section>
 
         {/* Quick Actions */}
-        <section className="actions" aria-label="Quick actions">
+        <section className="actions mt-2.5" aria-label="Quick actions">
           <button type="button" className="act" onClick={onOpenAddTransaction}>
             <span className="pane"><svg className="ic"><use href="#i-plus"/></svg></span>
             Add
@@ -408,7 +408,7 @@ export function HomeBoard({
 
         {/* Pending Email Imports Review Banner (Only shown when pending count > 0) */}
         {pendingEmailSyncCount > 0 && (
-          <section className="banner pane mt-4">
+          <section className="banner pane mt-3">
             <div>
               <b>{pendingEmailSyncCount} imports waiting for review</b>
               <p>Found in your bank and e-wallet emails</p>
@@ -420,7 +420,7 @@ export function HomeBoard({
         )}
 
         {/* Recent Transactions Panel (Glass) */}
-        <section className="panel glass mb-6" aria-labelledby="recent">
+        <section className="panel glass mt-2.5 mb-3" aria-labelledby="recent">
           <div className="panel-h">
             <h2 id="recent">Recent transactions</h2>
             <button
@@ -433,7 +433,7 @@ export function HomeBoard({
           </div>
 
           {recentGrouped.length === 0 ? (
-            <div className="py-8 text-center text-[var(--text-2)] text-xs">
+            <div className="py-6 text-center text-[var(--text-2)] text-xs">
               No transactions recorded yet. Tap &quot;Add&quot; to log your first spend.
             </div>
           ) : (
@@ -473,8 +473,8 @@ export function HomeBoard({
           )}
         </section>
 
-        {/* Generous bottom spacing spacer so the last transaction can scroll safely above the floating dock */}
-        <div className="h-16" aria-hidden="true" />
+        {/* Bottom spacing spacer */}
+        <div className="h-6" aria-hidden="true" />
       </main>
 
       {/* Floating Bottom Nav (Glass) */}
