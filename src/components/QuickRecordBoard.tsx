@@ -64,6 +64,7 @@ import {
   Search,
   ChevronLeft,
   ChevronRight,
+  ChevronDown,
 } from 'lucide-react';
 
 interface QuickRecordBoardProps {
@@ -317,12 +318,13 @@ export function QuickRecordBoard({
   const [billDay, setBillDay] = useState<string>('25');
   const [billDayEnd, setBillDayEnd] = useState<string>('');
 
-  // Transactions Feed Filters & Pagination
+  // Transactions Feed Filters & Infinite Scroll Limit
   const [txSearchQuery, setTxSearchQuery] = useState('');
   const [txFilterType, setTxFilterType] = useState<'all' | 'expense' | 'income' | 'savings'>('all');
   const [txFilterSource, setTxFilterSource] = useState<'all' | FundingSource>('all');
   const [txSortBy, setTxSortBy] = useState<TransactionSortOption>('date-desc');
-  const [txCurrentPage, setTxCurrentPage] = useState(1);
+  const [txVisibleLimit, setTxVisibleLimit] = useState(25);
+  const setTxCurrentPage = (_: any) => setTxVisibleLimit(25);
   const [isCsvImportOpen, setIsCsvImportOpen] = useState(false);
 
   const handleBatchImport = (items: Omit<Transaction, 'id'>[]) => {
@@ -883,13 +885,12 @@ export function QuickRecordBoard({
     return sortTransactions(list, txSortBy, currency, rates);
   }, [transactions, txFilterType, txFilterSource, txSearchQuery, txSortBy, currency, rates, t, txDateFrom, txDateTo, txCategoryFilter, txMinAmount, txMaxAmount]);
 
-  const totalPages = Math.max(1, Math.ceil(filteredTransactions.length / TX_PAGE_SIZE));
-  const currentPage = Math.min(txCurrentPage, totalPages);
+  const totalPages = Math.max(1, Math.ceil(filteredTransactions.length / 25));
+  const currentPage = 1;
 
   const paginatedTransactions = useMemo(() => {
-    const startIndex = (currentPage - 1) * TX_PAGE_SIZE;
-    return filteredTransactions.slice(startIndex, startIndex + TX_PAGE_SIZE);
-  }, [filteredTransactions, currentPage]);
+    return filteredTransactions.slice(0, txVisibleLimit);
+  }, [filteredTransactions, txVisibleLimit]);
 
   const groupedTransactions = useMemo(() => {
     const groups: { date: string; friendlyDate: string; items: Transaction[]; dayExpenseTotal: number }[] = [];
@@ -2066,40 +2067,21 @@ export function QuickRecordBoard({
           </div>
         )}
 
-        {/* Pagination Controls */}
-        {totalPages > 1 && (
-          <div className="pt-2 flex items-center justify-between border-t border-[var(--border-subtle)]">
+        {/* Infinite Scroll / Continuous Feed Controls */}
+        {txVisibleLimit < filteredTransactions.length && (
+          <div className="pt-3 pb-2 flex flex-col items-center justify-center space-y-2 border-t border-[var(--border-subtle)]">
             <span className="text-[11px] text-[var(--text-muted)] font-mono">
-              {(currentPage - 1) * TX_PAGE_SIZE + 1}–
-              {Math.min(currentPage * TX_PAGE_SIZE, filteredTransactions.length)}{' '}
-              {t.record.of} {filteredTransactions.length}
+              Showing {Math.min(txVisibleLimit, filteredTransactions.length)} of {filteredTransactions.length} transactions
             </span>
 
-            <div className="flex items-center space-x-1 sm:space-x-2">
-              <button
-                type="button"
-                onClick={() => setTxCurrentPage((p) => Math.max(1, p - 1))}
-                disabled={currentPage <= 1}
-                className="px-2.5 py-1 rounded-lg text-xs font-medium border border-[var(--border-subtle)] bg-[var(--bg-subtle)] text-[var(--text-main)] hover:bg-[var(--bg-surface)] disabled:opacity-40 disabled:cursor-not-allowed transition-all flex items-center space-x-1 cursor-pointer"
-              >
-                <ChevronLeft className="w-3.5 h-3.5" />
-                <span className="hidden sm:inline">{t.record.prev}</span>
-              </button>
-
-              <span className="px-2 py-1 text-xs font-mono text-[var(--text-muted)]">
-                {currentPage} / {totalPages}
-              </span>
-
-              <button
-                type="button"
-                onClick={() => setTxCurrentPage((p) => Math.min(totalPages, p + 1))}
-                disabled={currentPage >= totalPages}
-                className="px-2.5 py-1 rounded-lg text-xs font-medium border border-[var(--border-subtle)] bg-[var(--bg-subtle)] text-[var(--text-main)] hover:bg-[var(--bg-surface)] disabled:opacity-40 disabled:cursor-not-allowed transition-all flex items-center space-x-1 cursor-pointer"
-              >
-                <span className="hidden sm:inline">{t.record.next}</span>
-                <ChevronRight className="w-3.5 h-3.5" />
-              </button>
-            </div>
+            <button
+              type="button"
+              onClick={() => setTxVisibleLimit((limit) => limit + 25)}
+              className="px-4 py-2 rounded-xl text-xs font-bold border border-[var(--border-subtle)] bg-[var(--bg-surface-solid)] hover:bg-[var(--bg-subtle)] text-[var(--text-main)] transition-all flex items-center space-x-1.5 cursor-pointer shadow-xs active:scale-95"
+            >
+              <span>Load more transactions</span>
+              <ChevronDown className="w-3.5 h-3.5" />
+            </button>
           </div>
         )}
       </div>

@@ -15,6 +15,7 @@ import { InvestmentBoard } from '@/components/InvestmentBoard';
 import { SavingsBoard } from '@/components/SavingsBoard';
 import { BackupModal } from '@/components/BackupModal';
 import { ChangelogModal } from '@/components/ChangelogModal';
+import { CsvImportModal } from '@/components/CsvImportModal';
 import { APP_VERSION } from '@/lib/version';
 import { AuthModal } from '@/components/AuthModal';
 import { BankEmailSyncModal } from '@/components/BankEmailSyncModal';
@@ -90,6 +91,7 @@ export default function Home() {
   const [isBackupModalOpen, setIsBackupModalOpen] = useState(false);
   const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
   const [isChangelogModalOpen, setIsChangelogModalOpen] = useState(false);
+  const [isCsvImportOpen, setIsCsvImportOpen] = useState(false);
   const [isEmailSyncModalOpen, setIsEmailSyncModalOpen] = useState(false);
   const [pendingEmailSyncCount, setPendingEmailSyncCount] = useState(0);
   const [isOnboardingOpen, setIsOnboardingOpen] = useState(false);
@@ -198,27 +200,12 @@ export default function Home() {
       }
       localStorage.setItem('dailyba_last_seen_version', APP_VERSION);
     } catch {}
-  }, [state.recurringBills, state.language]);
 
-  // Sync email pending count on mount & every 5 minutes if authenticated
-  useEffect(() => {
-    if (!isAuthenticated) return;
+    // Polling for new verified transactions from email sync
     refreshEmailSyncCount();
-    const interval = setInterval(refreshEmailSyncCount, 5 * 60 * 1000);
-    return () => clearInterval(interval);
-  }, [isAuthenticated, refreshEmailSyncCount]);
-
-  // Handle URL hash changes
-  useEffect(() => {
-    const handleHashChange = () => {
-      const hash = window.location.hash.replace('#', '') as TabKey;
-      if (VALID_TABS.includes(hash)) {
-        setActiveTab(hash);
-      }
-    };
-    window.addEventListener('hashchange', handleHashChange);
-    return () => window.removeEventListener('hashchange', handleHashChange);
-  }, []);
+    const syncInterval = setInterval(refreshEmailSyncCount, 60000);
+    return () => clearInterval(syncInterval);
+  }, [refreshEmailSyncCount, state.recurringBills, state.language]);
 
   const handleTabChange = (tab: TabKey) => {
     setActiveTab(tab);
@@ -227,26 +214,34 @@ export default function Home() {
         localStorage.setItem('kakeibo_active_tab', tab);
         window.location.hash = tab;
       } catch {
-        // Ignore storage access errors
+        // Ignore
       }
     }
   };
 
-  // Auto-backup handler (debounced on cloud sync)
-  const handleManualSync = async (): Promise<void> => {
+  // Perform manual bidirectional encrypted cloud sync
+  const handleManualSync = async () => {
     if (!isAuthenticated) return;
-    const ok = await pushStateToCloud(state);
-    if (ok) {
+    try {
+      const cloudState = await pullStateFromCloud();
+      if (cloudState) {
+        importData(cloudState);
+      }
+      await pushStateToCloud(state);
       updateLastAutoBackupAt(new Date().toISOString());
+      refreshEmailSyncCount();
+    } catch (err) {
+      console.error('Manual sync failed:', err);
+      throw err;
     }
   };
 
-  // Add savings directly into transactions
+  // Handle adding savings transaction
   const handleAddSavings = (amount: number, note?: string) => {
     handleAddTransactionWithReview({
       type: 'savings',
-      amount,
       category: 'savings',
+      amount,
       source: 'bank',
       currency: state.currency,
       date: getTodayLocalDate(),
@@ -266,6 +261,16 @@ export default function Home() {
     if (isAuthenticated) {
       setTimeout(handleManualSync, 1000);
     }
+  };
+
+  // Handle imported transactions from CSV
+  const handleImportCsvTransactions = (imported: Omit<Transaction, 'id'>[]) => {
+    imported.forEach((tx) => {
+      handleAddTransactionWithReview({
+        ...tx,
+        currency: tx.currency || state.currency,
+      });
+    });
   };
 
   // Calculate liquid savings for investments
@@ -313,11 +318,7 @@ export default function Home() {
           onOpenScanner={() => setIsReceiptScannerOpen(true)}
           onOpenAddTransaction={() => setIsAddTxModalOpen(true)}
           onOpenMenu={() => {
-            if (isAuthenticated) {
-              setIsBackupModalOpen(true);
-            } else {
-              setIsAuthModalOpen(true);
-            }
+            setIsBackupModalOpen(true);
           }}
           onAddTransaction={handleAddTransactionWithReview}
           onDeleteTransaction={deleteTransaction}
@@ -341,6 +342,77 @@ export default function Home() {
           </div>
         ) : (
           <>
+            {/* Stats Period Segmented Switcher (Point 6 Migration Guarantee) */}
+            {['daily', 'monthly', 'yearly'].includes(activeTab) && (
+              <div className="flex items-center justify-center mb-6">
+                <div className="inline-flex rounded-2xl p-1 bg-[var(--bg-surface-solid)] border border-[var(--border-subtle)] shadow-xs">
+                  <button
+                    type="button"
+                    onClick={() => handleTabChange('daily')}
+                    className={`px-4 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer ${
+                      activeTab === 'daily'
+                        ? 'bg-[var(--brand)] text-slate-950 shadow-xs'
+                        : 'text-[var(--text-muted)] hover:text-[var(--text-main)]'
+                    }`}
+                  >
+                    Day (Daily)
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => handleTabChange('monthly')}
+                    className={`px-4 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer ${
+                      activeTab === 'monthly'
+                        ? 'bg-[var(--brand)] text-slate-950 shadow-xs'
+                        : 'text-[var(--text-muted)] hover:text-[var(--text-main)]'
+                    }`}
+                  >
+                    Month (Monthly)
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => handleTabChange('yearly')}
+                    className={`px-4 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer ${
+                      activeTab === 'yearly'
+                        ? 'bg-[var(--brand)] text-slate-950 shadow-xs'
+                        : 'text-[var(--text-muted)] hover:text-[var(--text-main)]'
+                    }`}
+                  >
+                    Year (Yearly)
+                  </button>
+                </div>
+              </div>
+            )}
+
+            {/* Wallet Sub-View Segmented Switcher (Point 6 Migration Guarantee) */}
+            {['savings', 'investments'].includes(activeTab) && (
+              <div className="flex items-center justify-center mb-6">
+                <div className="inline-flex rounded-2xl p-1 bg-[var(--bg-surface-solid)] border border-[var(--border-subtle)] shadow-xs">
+                  <button
+                    type="button"
+                    onClick={() => handleTabChange('savings')}
+                    className={`px-5 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer ${
+                      activeTab === 'savings'
+                        ? 'bg-[var(--brand)] text-slate-950 shadow-xs'
+                        : 'text-[var(--text-muted)] hover:text-[var(--text-main)]'
+                    }`}
+                  >
+                    Savings
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => handleTabChange('investments')}
+                    className={`px-5 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer ${
+                      activeTab === 'investments'
+                        ? 'bg-[var(--brand)] text-slate-950 shadow-xs'
+                        : 'text-[var(--text-muted)] hover:text-[var(--text-main)]'
+                    }`}
+                  >
+                    Investments
+                  </button>
+                </div>
+              </div>
+            )}
+
             {activeTab === 'record' && (
           <QuickRecordBoard
             initialScanOpen={autoOpenScanner}
@@ -468,12 +540,31 @@ export default function Home() {
         isOpen={isBackupModalOpen}
         onClose={() => setIsBackupModalOpen(false)}
         language={state.language}
+        currency={state.currency}
         state={state}
         onImportData={importData}
         onClearAll={clearAllData}
         onToggleReminder={setDailyReminder}
         onSetAutoBackupFrequency={setAutoBackupFrequency}
         onManualSync={handleManualSync}
+        onLanguageChange={setLanguage}
+        onCurrencyChange={setCurrency}
+        onUpdateDailyTarget={setDailySpendTarget}
+        onOpenChangelog={() => setIsChangelogModalOpen(true)}
+        onOpenAuth={() => setIsAuthModalOpen(true)}
+        onOpenCsvImport={() => setIsCsvImportOpen(true)}
+        onManageCategories={() => {
+          handleTabChange('record');
+        }}
+      />
+
+      {/* Direct CSV Import Modal from Settings */}
+      <CsvImportModal
+        isOpen={isCsvImportOpen}
+        onClose={() => setIsCsvImportOpen(false)}
+        language={state.language}
+        currency={state.currency}
+        onImportTransactions={handleImportCsvTransactions}
       />
 
       {/* Cloud Authentication & Sync Modal */}

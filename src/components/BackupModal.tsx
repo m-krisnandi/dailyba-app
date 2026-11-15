@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useRef, useState } from 'react';
-import { FinanceState, Language } from '@/types/finance';
+import { Currency, FinanceState, Language } from '@/types/finance';
 import { translations } from '@/lib/i18n';
 import { getTodayLocalDate } from '@/lib/dateUtils';
 import { useBodyScrollLock } from '@/lib/useBodyScrollLock';
@@ -9,6 +9,7 @@ import { ConfirmDeleteModal } from './ConfirmDeleteModal';
 import { LegalModal } from './LegalModal';
 import { CustomTimePicker } from './CustomTimePicker';
 import { useAuth } from '@/lib/authContext';
+import { APP_VERSION } from '@/lib/version';
 import {
   Upload,
   Trash2,
@@ -24,16 +25,34 @@ import {
   Sliders,
   User as UserIcon,
   LogOut,
+  Globe,
+  Coins,
+  Tag,
+  History,
+  Target,
 } from 'lucide-react';
 import { scheduleDailyReminder } from '@/lib/localNotifications';
 import { backupToGoogleDrive, getLastGoogleDriveBackupTime } from '@/lib/googleDriveBackup';
 import { isAppLockEnabled, setAppLockEnabled, getAppLockPin } from '@/lib/biometricAuth';
 import { SecuritySettingsModal, SecurityModalMode } from './SecuritySettingsModal';
 
+const CURRENCIES: { code: Currency; label: string; symbol: string }[] = [
+  { code: 'JPY', label: '¥ JPY', symbol: '¥' },
+  { code: 'IDR', label: 'Rp IDR', symbol: 'Rp' },
+  { code: 'USD', label: '$ USD', symbol: '$' },
+  { code: 'MMK', label: 'K MMK', symbol: 'K' },
+];
+
+const LANGUAGES: { code: Language; label: string }[] = [
+  { code: 'en', label: 'English' },
+  { code: 'ja', label: '日本語' },
+];
+
 interface BackupModalProps {
   isOpen: boolean;
   onClose: () => void;
   language: Language;
+  currency?: Currency;
   state: FinanceState;
   onImportData: (data: Partial<FinanceState>) => void;
   onResetSample?: () => void;
@@ -42,12 +61,19 @@ interface BackupModalProps {
   onSetAutoBackupFrequency?: (freq: 'off' | 'daily' | 'weekly') => void;
   onManualSync?: () => Promise<void>;
   onOpenAuth?: () => void;
+  onLanguageChange?: (lang: Language) => void;
+  onCurrencyChange?: (curr: Currency) => void;
+  onUpdateDailyTarget?: (target: number) => void;
+  onOpenChangelog?: () => void;
+  onOpenCsvImport?: () => void;
+  onManageCategories?: () => void;
 }
 
 export function BackupModal({
   isOpen,
   onClose,
   language,
+  currency = 'JPY',
   state,
   onImportData,
   onClearAll,
@@ -55,6 +81,12 @@ export function BackupModal({
   onSetAutoBackupFrequency,
   onManualSync,
   onOpenAuth,
+  onLanguageChange,
+  onCurrencyChange,
+  onUpdateDailyTarget,
+  onOpenChangelog,
+  onOpenCsvImport,
+  onManageCategories,
 }: BackupModalProps) {
   useBodyScrollLock(isOpen);
 
@@ -74,6 +106,9 @@ export function BackupModal({
   const [isAppLockOn, setIsAppLockOn] = useState(() => isAppLockEnabled());
   const [isSecurityModalOpen, setIsSecurityModalOpen] = useState(false);
   const [securityModalMode, setSecurityModalMode] = useState<SecurityModalMode>('setting_new_pin');
+  const [targetInputVal, setTargetInputVal] = useState<string>(
+    state.dailySpendTarget ? String(state.dailySpendTarget) : ''
+  );
 
   const handleToggleAppLock = (enable: boolean) => {
     if (enable) {
@@ -138,7 +173,7 @@ export function BackupModal({
     document.body.appendChild(downloadAnchor);
     downloadAnchor.click();
     downloadAnchor.remove();
-    setFeedback(language === "ja" ? "JSONバックアップを出力しました！" : "Backup JSON exported successfully!");
+    setFeedback(language === 'ja' ? 'JSONバックアップを出力しました！' : 'Backup JSON exported successfully!');
     setTimeout(() => setFeedback(null), 2500);
   };
 
@@ -167,7 +202,7 @@ export function BackupModal({
     document.body.appendChild(downloadAnchor);
     downloadAnchor.click();
     downloadAnchor.remove();
-    setFeedback(language === "ja" ? "CSVレポートを出力しました！" : "Transactions CSV exported successfully!");
+    setFeedback(language === 'ja' ? 'CSVレポートを出力しました！' : 'Transactions CSV exported successfully!');
     setTimeout(() => setFeedback(null), 2500);
   };
 
@@ -183,12 +218,12 @@ export function BackupModal({
         const parsed = JSON.parse(content);
         if (parsed && (Array.isArray(parsed.transactions) || Array.isArray(parsed.investments))) {
           onImportData(parsed);
-          setFeedback(language === "ja" ? "データを正常に復元しました！" : "Data restored successfully!");
+          setFeedback(language === 'ja' ? 'データを正常に復元しました！' : 'Data restored successfully!');
         } else {
-          setFeedback(language === "ja" ? "無効なバックアップファイルです" : "Invalid backup file structure");
+          setFeedback(language === 'ja' ? '無効なバックアップファイルです' : 'Invalid backup file structure');
         }
       } catch {
-        setFeedback(language === "ja" ? "JSONの解析に失敗しました" : "Failed to parse JSON file");
+        setFeedback(language === 'ja' ? 'JSONの解析に失敗しました' : 'Failed to parse JSON file');
       }
       setTimeout(() => setFeedback(null), 2500);
     };
@@ -213,10 +248,10 @@ export function BackupModal({
             </div>
             <div>
               <h3 className="text-base font-bold text-[var(--text-main)]">
-                {language === "ja" ? "設定 & バックアップ管理" : "Settings & Data Backup"}
+                {language === 'ja' ? '設定 & プリファレンス' : 'Settings & Preferences'}
               </h3>
               <p className="text-[10px] text-[var(--text-muted)]">
-                {language === "ja" ? "アカウント・同期・バックアップ・セキュリティ" : "Account, sync, backups & security"}
+                {language === 'ja' ? '通貨・言語・同期・カテゴリ・バックアップ' : 'Currency, language, sync, categories & backup'}
               </p>
             </div>
           </div>
@@ -305,10 +340,159 @@ export function BackupModal({
             </div>
           )}
 
+          {/* Preferences: Currency & Language (Point 6 Migration Guarantee) */}
+          <div className="p-3.5 rounded-2xl border border-[var(--border-subtle)] bg-[var(--bg-subtle)] space-y-3">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center space-x-2">
+                <Coins className="w-3.5 h-3.5 text-amber-400" />
+                <span className="text-xs font-bold text-[var(--text-main)]">
+                  {language === 'ja' ? '基準通貨' : 'Primary Currency'}
+                </span>
+              </div>
+              <div className="grid grid-cols-4 gap-1">
+                {CURRENCIES.map((c) => {
+                  const isSelected = currency === c.code;
+                  return (
+                    <button
+                      key={c.code}
+                      type="button"
+                      onClick={() => {
+                        onCurrencyChange?.(c.code);
+                        setFeedback(`${c.code} selected`);
+                        setTimeout(() => setFeedback(null), 2000);
+                      }}
+                      className={`px-2 py-1 rounded-lg text-[11px] font-semibold transition-all cursor-pointer ${
+                        isSelected
+                          ? 'bg-[var(--brand)] text-slate-950 font-bold shadow-xs'
+                          : 'bg-[var(--bg-surface-solid)] border border-[var(--border-subtle)] text-[var(--text-muted)] hover:text-[var(--text-main)]'
+                      }`}
+                    >
+                      {c.symbol}
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+
+            <div className="pt-2 border-t border-[var(--border-subtle)] flex items-center justify-between">
+              <div className="flex items-center space-x-2">
+                <Globe className="w-3.5 h-3.5 text-indigo-400" />
+                <span className="text-xs font-bold text-[var(--text-main)]">
+                  {language === 'ja' ? '表示言語' : 'Display Language'}
+                </span>
+              </div>
+              <div className="grid grid-cols-4 gap-1">
+                {LANGUAGES.map((l) => {
+                  const isSelected = language === l.code;
+                  return (
+                    <button
+                      key={l.code}
+                      type="button"
+                      onClick={() => {
+                        onLanguageChange?.(l.code);
+                        setFeedback(`${l.label} set`);
+                        setTimeout(() => setFeedback(null), 2000);
+                      }}
+                      className={`px-1.5 py-1 rounded-lg text-[10.5px] font-semibold transition-all cursor-pointer ${
+                        isSelected
+                          ? 'bg-indigo-500 text-white font-bold shadow-xs'
+                          : 'bg-[var(--bg-surface-solid)] border border-[var(--border-subtle)] text-[var(--text-muted)] hover:text-[var(--text-main)]'
+                      }`}
+                    >
+                      {l.code.toUpperCase()}
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+
+            {/* Daily Discipline Target (Point 4) */}
+            <div className="pt-2 border-t border-[var(--border-subtle)] flex items-center justify-between">
+              <div className="flex items-center space-x-2">
+                <Target className="w-3.5 h-3.5 text-emerald-400" />
+                <div>
+                  <span className="text-xs font-bold text-[var(--text-main)] block">
+                    {language === 'ja' ? '1日の目標支出' : 'Daily Spend Target'}
+                  </span>
+                  <span className="text-[10px] text-[var(--text-muted)]">
+                    {language === 'ja' ? '自己管理の目安枠' : 'Personal discipline target'}
+                  </span>
+                </div>
+              </div>
+              <div className="flex items-center gap-1.5">
+                <input
+                  type="number"
+                  value={targetInputVal}
+                  onChange={(e) => setTargetInputVal(e.target.value)}
+                  placeholder="e.g. 3000"
+                  className="w-24 px-2 py-1 text-xs text-right rounded-lg bg-[var(--bg-surface-solid)] border border-[var(--border-subtle)] text-[var(--text-main)] font-mono"
+                />
+                <button
+                  type="button"
+                  onClick={() => {
+                    const parsed = Number(targetInputVal);
+                    if (!isNaN(parsed) && parsed >= 0) {
+                      onUpdateDailyTarget?.(parsed);
+                      setFeedback(language === 'ja' ? '目標値を保存しました' : 'Target saved');
+                      setTimeout(() => setFeedback(null), 2000);
+                    }
+                  }}
+                  className="px-2 py-1 rounded-lg bg-[var(--bg-surface-solid)] border border-[var(--border-subtle)] hover:border-emerald-500/50 text-[11px] font-bold text-emerald-400 cursor-pointer"
+                >
+                  Save
+                </button>
+              </div>
+            </div>
+          </div>
+
+          {/* Quick Management Shortcuts (Categories, CSV Import, Changelog) */}
+          <div className="space-y-2">
+            <p className="text-xs font-bold text-[var(--text-muted)] uppercase tracking-wider">
+              {language === 'ja' ? 'ツール & カテゴリ管理' : 'Tools & Categories'}
+            </p>
+            <div className="grid grid-cols-3 gap-2">
+              <button
+                type="button"
+                onClick={() => {
+                  onClose();
+                  onManageCategories?.();
+                }}
+                className="p-2.5 rounded-2xl border border-[var(--border-subtle)] bg-[var(--bg-subtle)] hover:border-indigo-500/50 flex flex-col items-center justify-center space-y-1 text-center transition-all cursor-pointer shadow-xs active:scale-[0.98]"
+              >
+                <Tag className="w-4 h-4 text-indigo-400" />
+                <span className="text-[11px] font-semibold text-[var(--text-main)]">Categories</span>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => {
+                  onClose();
+                  onOpenCsvImport?.();
+                }}
+                className="p-2.5 rounded-2xl border border-[var(--border-subtle)] bg-[var(--bg-subtle)] hover:border-emerald-500/50 flex flex-col items-center justify-center space-y-1 text-center transition-all cursor-pointer shadow-xs active:scale-[0.98]"
+              >
+                <FileSpreadsheet className="w-4 h-4 text-emerald-400" />
+                <span className="text-[11px] font-semibold text-[var(--text-main)]">Import CSV</span>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => {
+                  onClose();
+                  onOpenChangelog?.();
+                }}
+                className="p-2.5 rounded-2xl border border-[var(--border-subtle)] bg-[var(--bg-subtle)] hover:border-amber-500/50 flex flex-col items-center justify-center space-y-1 text-center transition-all cursor-pointer shadow-xs active:scale-[0.98]"
+              >
+                <History className="w-4 h-4 text-amber-400" />
+                <span className="text-[11px] font-semibold text-[var(--text-main)]">v{APP_VERSION}</span>
+              </button>
+            </div>
+          </div>
+
           {/* Export Files Section */}
           <div className="space-y-2">
             <p className="text-xs font-bold text-[var(--text-muted)] uppercase tracking-wider">
-              {language === "ja" ? "ファイル出力" : "Export Files"}
+              {language === 'ja' ? 'ファイル出力' : 'Export Files'}
             </p>
             <div className="grid grid-cols-2 gap-2">
               <button
@@ -519,7 +703,7 @@ export function BackupModal({
             )}
           </div>
 
-          {/* Biometric & App Lock Setting: Streamlined 1-Click Toggle */}
+          {/* Biometric & App Lock Setting */}
           <div className="p-3.5 rounded-2xl border border-[var(--border-subtle)] bg-[var(--bg-subtle)] space-y-2">
             <div className="flex items-center justify-between">
               <div className="flex items-center space-x-2.5 min-w-0 pr-2">
@@ -565,7 +749,7 @@ export function BackupModal({
           {/* Import JSON */}
           <div className="space-y-2 pt-1">
             <p className="text-xs font-bold text-[var(--text-muted)] uppercase tracking-wider">
-              {language === "ja" ? "データ復元" : "Restore Data"}
+              {language === 'ja' ? 'データ復元' : 'Restore Data'}
             </p>
             <input
               type="file"
@@ -580,14 +764,14 @@ export function BackupModal({
               className="w-full p-3 rounded-2xl border border-[var(--border-subtle)] bg-[var(--bg-subtle)] hover:border-emerald-500/50 flex items-center justify-center space-x-2 text-xs font-semibold text-[var(--text-main)] transition-all cursor-pointer shadow-xs active:scale-[0.98]"
             >
               <Upload className="w-4 h-4 text-emerald-500" />
-              <span>{language === "ja" ? "JSONバックアップを復元" : "Import JSON Backup"}</span>
+              <span>{language === 'ja' ? 'JSONバックアップを復元' : 'Import JSON Backup'}</span>
             </button>
           </div>
 
           {/* Danger Zone */}
           <div className="pt-2 border-t border-[var(--border-subtle)] space-y-2">
             <p className="text-xs font-bold text-[var(--text-muted)] uppercase tracking-wider">
-              {language === "ja" ? "データ初期化・危険ゾーン" : "Management & Danger Zone"}
+              {language === 'ja' ? 'データ初期化・危険ゾーン' : 'Management & Danger Zone'}
             </p>
             <button
               type="button"
@@ -595,7 +779,7 @@ export function BackupModal({
               className="w-full p-2.5 rounded-xl border border-rose-500/20 bg-rose-500/10 hover:bg-rose-500/20 text-rose-500 flex items-center justify-center space-x-1.5 text-xs font-semibold transition-all cursor-pointer active:scale-[0.98]"
             >
               <Trash2 className="w-3.5 h-3.5" />
-              <span>{language === "ja" ? "すべてのローカルデータを初期化" : "Reset All Local Data"}</span>
+              <span>{language === 'ja' ? 'すべてのローカルデータを初期化' : 'Reset All Local Data'}</span>
             </button>
 
             {isAuthenticated && (
@@ -605,7 +789,7 @@ export function BackupModal({
                 className="w-full p-2.5 rounded-xl border border-rose-500/30 bg-rose-500/15 hover:bg-rose-500/25 text-rose-400 flex items-center justify-center space-x-1.5 text-xs font-semibold transition-all cursor-pointer active:scale-[0.98]"
               >
                 <Trash2 className="w-3.5 h-3.5" />
-                <span>{language === "ja" ? "アカウントとクラウドデータを完全削除" : "Delete Account & Cloud Data"}</span>
+                <span>{language === 'ja' ? 'アカウントとクラウドデータを完全削除' : 'Delete Account & Cloud Data'}</span>
               </button>
             )}
 
@@ -615,7 +799,7 @@ export function BackupModal({
                 onClick={() => setIsLegalModalOpen(true)}
                 className="text-[11px] text-[var(--text-faint)] hover:text-[var(--text-muted)] hover:underline cursor-pointer"
               >
-                {language === "ja" ? "プライバシーポリシー & 利用規約" : "Privacy Policy & Terms of Service"}
+                {language === 'ja' ? 'プライバシーポリシー & 利用規約' : 'Privacy Policy & Terms of Service'}
               </button>
             </div>
           </div>
@@ -624,14 +808,14 @@ export function BackupModal({
 
       <ConfirmDeleteModal
         isOpen={isConfirmClearOpen}
-        title={language === "ja" ? "全データの初期化" : "Clear All Data"}
-        description={language === "ja" ? "本当にすべての家計簿・資産データを削除しますか？この操作は元に戻せません。" : "Are you sure you want to delete ALL transactions, investments, and settings? This action cannot be undone."}
-        itemName={language === "ja" ? "全データ初期化" : "Factory Reset All Data"}
-        confirmLabel={language === "ja" ? "全データを削除" : "Delete All Data"}
+        title={language === 'ja' ? '全データの初期化' : 'Clear All Data'}
+        description={language === 'ja' ? '本当にすべての家計簿・資産データを削除しますか？この操作は元に戻せません。' : 'Are you sure you want to delete ALL transactions, investments, and settings? This action cannot be undone.'}
+        itemName={language === 'ja' ? '全データ初期化' : 'Factory Reset All Data'}
+        confirmLabel={language === 'ja' ? '全データを削除' : 'Delete All Data'}
         language={language}
         onConfirm={() => {
           onClearAll();
-          setFeedback(language === "ja" ? "すべてのローカルデータを削除しました。" : "All local data cleared.");
+          setFeedback(language === 'ja' ? 'すべてのローカルデータを削除しました。' : 'All local data cleared.');
           setTimeout(() => setFeedback(null), 2500);
         }}
         onClose={() => setIsConfirmClearOpen(false)}
@@ -639,15 +823,15 @@ export function BackupModal({
 
       <ConfirmDeleteModal
         isOpen={isConfirmDeleteAccountOpen}
-        title={language === "ja" ? "アカウントの完全削除" : "Delete Account & Cloud Data"}
-        description={language === "ja" ? "アカウントおよびクラウド上のすべての同期データが永久に削除されます。この操作は取り消せません。" : "Permanently deletes your account credentials and wipes all cloud backups from the server. This cannot be undone."}
-        itemName={language === "ja" ? "アカウント削除" : "Permanent Account Deletion"}
-        confirmLabel={language === "ja" ? "アカウントを完全に削除" : "Delete Account"}
+        title={language === 'ja' ? 'アカウントの完全削除' : 'Delete Account & Cloud Data'}
+        description={language === 'ja' ? 'アカウントおよびクラウド上のすべての同期データが永久に削除されます。この操作は取り消せません。' : 'Permanently deletes your account credentials and wipes all cloud backups from the server. This cannot be undone.'}
+        itemName={language === 'ja' ? 'アカウント削除' : 'Permanent Account Deletion'}
+        confirmLabel={language === 'ja' ? 'アカウントを完全に削除' : 'Delete Account'}
         language={language}
         onConfirm={async () => {
           await deleteAccount();
           setIsConfirmDeleteAccountOpen(false);
-          setFeedback(language === "ja" ? "アカウントを削除しました。" : "Account deleted successfully.");
+          setFeedback(language === 'ja' ? 'アカウントを削除しました。' : 'Account deleted successfully.');
           setTimeout(() => setFeedback(null), 2500);
         }}
         onClose={() => setIsConfirmDeleteAccountOpen(false)}
@@ -661,15 +845,14 @@ export function BackupModal({
 
       <SecuritySettingsModal
         isOpen={isSecurityModalOpen}
+        onClose={() => setIsSecurityModalOpen(false)}
+        language={language}
         initialMode={securityModalMode}
         onSuccess={() => {
-          setIsAppLockOn(isAppLockEnabled());
+          setIsAppLockOn(true);
+          setFeedback(language === 'ja' ? 'PINを設定しました' : 'PIN saved successfully');
+          setTimeout(() => setFeedback(null), 2500);
         }}
-        onClose={() => {
-          setIsSecurityModalOpen(false);
-          setIsAppLockOn(isAppLockEnabled());
-        }}
-        language={language}
       />
     </div>
   );

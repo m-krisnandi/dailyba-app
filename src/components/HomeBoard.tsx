@@ -80,71 +80,87 @@ export function HomeBoard({
     return transactions.filter((tx) => isDateInMonthCycle(tx.date, currentMonthKey, monthStartDay));
   }, [transactions, currentMonthKey, monthStartDay]);
 
-  // 2. Recurring Bills status & nearest unpaid bill
-  const recurringMetrics = useMemo(() => {
+  // 2. UNIFIED Fixed vs Variable spend & Recurring Bills metrics
+  // Ensures Hero, Bills Card, and Breakdown Modal share 100% identical data sources
+  const {
+    totalFixedCommitment,
+    fixedSpent,
+    variableSpent,
+    totalSpentThisMonth,
+    fixedUnpaid,
+    paidCount,
+    totalCount,
+    nearestUnpaidBill,
+    hasSufficientVariableData,
+  } = useMemo(() => {
     const activeBills = Array.isArray(state.recurringBills) ? state.recurringBills : [];
-    if (activeBills.length === 0) {
-      return {
-        totalCommitment: 0,
-        paidCommitment: 0,
-        remainingCommitment: 0,
-        paidCount: 0,
-        totalCount: 0,
-        paidPercent: 0,
-        nearestUnpaidBill: null,
-      };
-    }
 
-    const [yStr, mStr] = currentMonthKey.split('-');
-    const curY = parseInt(yStr || '2026', 10);
-    const curM = parseInt(mStr || '11', 10);
-    const prevY = curM === 1 ? curY - 1 : curY;
-    const prevM = curM === 1 ? 12 : curM - 1;
-    const prevMonthPrefix = `${prevY}-${String(prevM).padStart(2, '0')}`;
-
-    let totalCommitment = 0;
-    let paidCommitment = 0;
-    let paidCount = 0;
+    let billCommitmentSum = 0;
+    let billPaidSum = 0;
+    let billPaidCount = 0;
     const unpaidList: { bill: RecurringBill; convertedAmount: number; dueDay: number }[] = [];
 
+    // Track which transactions are matched to registered recurring bills
+    const matchedTxIds = new Set<string>();
+
     activeBills.forEach((bill) => {
-      const billAmountInCurr = convertCurrency(bill.defaultAmount, bill.currency || 'JPY', currency, rates);
-      totalCommitment += billAmountInCurr;
-
+      const plannedInCurr = convertCurrency(bill.defaultAmount, bill.currency || 'JPY', currency, rates);
       const billLabel = (bill.name || bill.category).toLowerCase();
-      const currentMonthTx = transactions.find(
+
+      const matchedTx = monthTransactions.find(
         (tx) =>
           tx.type === 'expense' &&
           (tx.recurringBillId === bill.id ||
-            tx.category === bill.category ||
-            (tx.note && tx.note.toLowerCase().includes(billLabel))) &&
-          tx.date.startsWith(currentMonthKey)
+            (bill.name && tx.note && tx.note.toLowerCase().includes(billLabel)) ||
+            (tx.category === bill.category && (tx.isRecurring || tx.note?.toLowerCase().includes('fixed'))))
       );
 
-      const prevMonthTx = !currentMonthTx && transactions.find(
-        (tx) =>
-          tx.type === 'expense' &&
-          (tx.recurringBillId === bill.id ||
-            tx.category === bill.category ||
-            (tx.note && tx.note.toLowerCase().includes(billLabel))) &&
-          tx.date.startsWith(prevMonthPrefix) &&
-          parseInt(tx.date.slice(8, 10), 10) >= 20
-      );
-
-      if (currentMonthTx || prevMonthTx) {
-        paidCommitment += billAmountInCurr;
-        paidCount++;
+      if (matchedTx) {
+        matchedTxIds.add(matchedTx.id);
+        const actualPaid = convertCurrency(matchedTx.amount, matchedTx.currency || 'JPY', currency, rates);
+        billCommitmentSum += Math.max(plannedInCurr, actualPaid);
+        billPaidSum += actualPaid;
+        billPaidCount++;
       } else {
+        billCommitmentSum += plannedInCurr;
         unpaidList.push({
           bill,
-          convertedAmount: billAmountInCurr,
+          convertedAmount: plannedInCurr,
           dueDay: bill.dayOfMonth || 1,
         });
       }
     });
 
-    const remainingCommitment = Math.max(0, totalCommitment - paidCommitment);
-    const paidPercent = totalCommitment > 0 ? Math.min(100, Math.round((paidCommitment / totalCommitment) * 100)) : 0;
+    // Unlinked recurring / fixed transactions (e.g. user recorded a transaction with isRecurring: true)
+    let unlinkedFixedSpent = 0;
+    let unlinkedFixedCount = 0;
+    let varSpent = 0;
+    const variableDaysSet = new Set<string>();
+
+    monthTransactions.forEach((tx) => {
+      if (tx.type === 'expense') {
+        const converted = convertCurrency(tx.amount, tx.currency || 'JPY', currency, rates);
+        const isMatched = matchedTxIds.has(tx.id);
+        const isFixedUnlinked =
+          !isMatched &&
+          (tx.isRecurring ||
+            Boolean(tx.recurringBillId) ||
+            (tx.note && tx.note.toLowerCase().includes('monthly fixed')) ||
+            (tx.note && tx.note.toLowerCase().includes('毎月の固定費')));
+
+        if (isFixedUnlinked) {
+          unlinkedFixedSpent += converted;
+          unlinkedFixedCount++;
+        } else if (!isMatched) {
+          varSpent += converted;
+          variableDaysSet.add(tx.date);
+        }
+      }
+    });
+
+    const totalFixed = billCommitmentSum + unlinkedFixedSpent;
+    const totalFixedSpent = billPaidSum + unlinkedFixedSpent;
+    const remainingFixed = Math.max(0, totalFixed - totalFixedSpent);
 
     // Sort unpaid bills to find the nearest due bill
     unpaidList.sort((a, b) => {
@@ -154,49 +170,19 @@ export function HomeBoard({
     });
 
     return {
-      totalCommitment,
-      paidCommitment,
-      remainingCommitment,
-      paidCount,
-      totalCount: activeBills.length,
-      paidPercent,
+      totalFixedCommitment: totalFixed,
+      fixedSpent: totalFixedSpent,
+      variableSpent: varSpent,
+      totalSpentThisMonth: totalFixedSpent + varSpent,
+      fixedUnpaid: remainingFixed,
+      paidCount: billPaidCount + unlinkedFixedCount,
+      totalCount: activeBills.length + unlinkedFixedCount,
       nearestUnpaidBill: unpaidList[0] || null,
+      hasSufficientVariableData: variableDaysSet.size >= 3,
     };
-  }, [state.recurringBills, currentMonthKey, currentDayOfMonth, transactions, currency, rates]);
+  }, [state.recurringBills, monthTransactions, currentDayOfMonth, currency, rates]);
 
-  // 3. Fixed vs Variable spend breakdown
-  const { fixedSpent, variableSpent, totalSpentThisMonth } = useMemo(() => {
-    let fixed = 0;
-    let variable = 0;
-
-    monthTransactions.forEach((tx) => {
-      if (tx.type === 'expense') {
-        const converted = convertCurrency(tx.amount, tx.currency || 'JPY', currency, rates);
-        const isFixed =
-          tx.isRecurring ||
-          Boolean(tx.recurringBillId) ||
-          state.recurringBills?.some(
-            (b) =>
-              (b.name && tx.note && tx.note.toLowerCase().includes(b.name.toLowerCase())) ||
-              b.category === tx.category
-          );
-
-        if (isFixed) {
-          fixed += converted;
-        } else {
-          variable += converted;
-        }
-      }
-    });
-
-    return {
-      fixedSpent: fixed,
-      variableSpent: variable,
-      totalSpentThisMonth: fixed + variable,
-    };
-  }, [monthTransactions, state.recurringBills, currency, rates]);
-
-  // 4. Monthly Budget Target
+  // 3. Monthly Budget Target
   const monthlyBudgetTarget = useMemo(() => {
     const plan = monthlyBudgets[currentMonthKey];
     if (plan && plan.totalTarget && plan.totalTarget > 0) {
@@ -230,14 +216,20 @@ export function HomeBoard({
     ? Math.min(100 - fixedPercent, Math.round((variableSpent / monthlyBudgetTarget) * 100))
     : 0;
 
-  // 5. Today's Spend
+  // 4. Today's Spend
   const todaySpent = useMemo(() => {
     return transactions
       .filter((tx) => tx.type === 'expense' && tx.date === todayStr)
       .reduce((sum, tx) => sum + convertCurrency(tx.amount, tx.currency || 'JPY', currency, rates), 0);
   }, [transactions, todayStr, currency, rates]);
 
-  // 6. Unified Pacing Metrics (Single Consistent Daily Guide)
+  // User manual target from settings (Discipline budget target)
+  const userManualTarget = useMemo(() => {
+    if (!state.dailySpendTarget || state.dailySpendTarget <= 0) return 0;
+    return convertCurrency(state.dailySpendTarget, state.dailySpendCurrency || 'JPY', currency, rates);
+  }, [state.dailySpendTarget, state.dailySpendCurrency, currency, rates]);
+
+  // 5. Unified Pacing Metrics (Single Consistent Daily Guide)
   const pacingMetrics = useMemo(() => {
     const today = new Date();
     const end = new Date(activeCycle.endDate);
@@ -250,12 +242,14 @@ export function HomeBoard({
 
     // Formula from User Master Brief:
     // Safe daily spend = (Left - fixed belum dibayar) / sisa hari cycle
-    const fixedUnpaid = recurringMetrics.remainingCommitment;
     const safeDailySpend = Math.max(0, Math.round((leftThisMonth - fixedUnpaid) / daysRemaining));
 
-    // Projected month-end = Left - fixed belum dibayar - (avg daily variable * sisa hari)
+    // Projected month-end:
+    // If variable spend data is not yet sufficient (< 3 active days), avoid false 1:1 projection with Left
     const avgDailyVariable = daysElapsed > 0 ? variableSpent / daysElapsed : 0;
-    const projectedMonthEndLeft = Math.max(0, Math.round(leftThisMonth - fixedUnpaid - (avgDailyVariable * daysRemaining)));
+    const projectedMonthEndLeft = hasSufficientVariableData
+      ? Math.max(0, Math.round(leftThisMonth - fixedUnpaid - (avgDailyVariable * daysRemaining)))
+      : null;
 
     const expectedSpendSoFar = (monthlyBudgetTarget / totalDays) * daysElapsed;
     const pacingRatio = expectedSpendSoFar > 0 ? totalSpentThisMonth / expectedSpendSoFar : 1;
@@ -278,23 +272,23 @@ export function HomeBoard({
       pacingLabel,
       pacingColor,
     };
-  }, [activeCycle, leftThisMonth, recurringMetrics.remainingCommitment, variableSpent, totalSpentThisMonth, monthlyBudgetTarget]);
+  }, [activeCycle, leftThisMonth, fixedUnpaid, hasSufficientVariableData, variableSpent, totalSpentThisMonth, monthlyBudgetTarget]);
 
-  // 7. Total Reserves / Liquid Savings
+  // 6. Total Reserves / Liquid Savings
   const totalLiquidSavings = useMemo(() => {
     return transactions
       .filter((tx) => tx.type === 'savings')
       .reduce((sum, tx) => sum + convertCurrency(tx.amount, tx.currency || 'JPY', currency, rates), 0);
   }, [transactions, currency, rates]);
 
-  // 8. User Avatar initial
+  // 7. User Avatar initial
   const userInitial = useMemo(() => {
     if (user?.name) return user.name.charAt(0).toUpperCase();
     if (user?.email) return user.email.charAt(0).toUpperCase();
     return 'K';
   }, [user]);
 
-  // 9. Recent transactions grouped by day (Top 4 preview)
+  // 8. Recent transactions grouped by day (Top 4 preview)
   const recentGrouped = useMemo(() => {
     const sorted = [...transactions].sort((a, b) => {
       if (a.date !== b.date) return b.date.localeCompare(a.date);
@@ -327,13 +321,13 @@ export function HomeBoard({
     if (type === 'income') {
       return {
         iconHref: '#i-plus',
-        tileClass: 'bg-emerald-500/15 text-emerald-400 border border-emerald-500/20',
+        tileClass: 'tile-income',
       };
     }
     if (type === 'savings') {
       return {
         iconHref: '#i-wallet',
-        tileClass: 'bg-amber-500/15 text-amber-400 border border-amber-500/20',
+        tileClass: 'tile-savings',
       };
     }
     switch (category) {
@@ -341,23 +335,23 @@ export function HomeBoard({
       case 'food_drinks':
         return {
           iconHref: '#i-food',
-          tileClass: 'bg-orange-500/15 text-orange-400 border border-orange-500/20',
+          tileClass: 'tile-food',
         };
       case 'transport':
       case 'train':
         return {
           iconHref: '#i-car',
-          tileClass: 'bg-sky-500/15 text-sky-400 border border-sky-500/20',
+          tileClass: 'tile-transport',
         };
       case 'shopping':
         return {
           iconHref: '#i-bag',
-          tileClass: 'bg-purple-500/15 text-purple-400 border border-purple-500/20',
+          tileClass: 'tile-shopping',
         };
       case 'laundry':
         return {
           iconHref: '#i-shirt',
-          tileClass: 'bg-cyan-500/15 text-cyan-400 border border-cyan-500/20',
+          tileClass: 'tile-laundry',
         };
       case 'bills':
       case 'rent':
@@ -365,12 +359,12 @@ export function HomeBoard({
       case 'mobile':
         return {
           iconHref: '#i-bank',
-          tileClass: 'bg-teal-500/15 text-teal-300 border border-teal-500/20',
+          tileClass: 'tile-bills',
         };
       default:
         return {
           iconHref: '#i-wallet',
-          tileClass: 'bg-slate-500/15 text-slate-300 border border-slate-500/20',
+          tileClass: 'tile-default',
         };
     }
   };
@@ -404,8 +398,8 @@ export function HomeBoard({
   // Direct "Mark Paid" on the nearest unpaid bill from Home
   const handleMarkNearestPaid = (e: React.MouseEvent) => {
     e.stopPropagation();
-    if (!recurringMetrics.nearestUnpaidBill) return;
-    const { bill, convertedAmount } = recurringMetrics.nearestUnpaidBill;
+    if (!nearestUnpaidBill) return;
+    const { bill, convertedAmount } = nearestUnpaidBill;
     const billLabel = bill.name || bill.category;
 
     onAddTransaction({
@@ -473,7 +467,7 @@ export function HomeBoard({
           </button>
         </header>
 
-        {/* Hero: Left this month (Tap opens Breakdown Modal) */}
+        {/* Hero: Left this month (Clean: Removed duplicate chevron) */}
         <button
           type="button"
           className="hero w-full text-left cursor-pointer active:scale-[0.99] transition-transform"
@@ -482,13 +476,12 @@ export function HomeBoard({
         >
           <span className="hero-label flex items-center justify-between">
             <span>Left this month</span>
-            <span className="text-[10px] text-[var(--brand)] font-normal flex items-center gap-0.5">
-              Breakdown <svg className="w-3 h-3"><use href="#i-chev"/></svg>
+            <span className="text-[11px] text-[var(--brand)] font-semibold flex items-center gap-0.5 hover:underline">
+              Breakdown ▸
             </span>
           </span>
           <span className="hero-amt tabular-nums">
             {formatCurrency(leftThisMonth, currency)}
-            <svg className="ic"><use href="#i-chev"/></svg>
           </span>
         </button>
 
@@ -518,11 +511,11 @@ export function HomeBoard({
           </span>
         </p>
 
-        {/* Today's Spend Bar: Single Unified Safe Daily Benchmark */}
+        {/* Today's Spend Bar: Harmonized with Safe Daily Spend & Discipline Target */}
         <div
           onClick={() => onNavigateTab('daily')}
           className="mt-1.5 flex items-center justify-between px-2.5 py-1.5 rounded-xl bg-white/[0.04] border border-white/[0.08] cursor-pointer hover:bg-white/[0.07] transition-colors"
-          title={`Safe daily pace: ${formatCurrency(pacingMetrics.safeDailySpend, currency)}/day`}
+          title={`Safe daily spend ceiling: ${formatCurrency(pacingMetrics.safeDailySpend, currency)}/day`}
         >
           <span className="text-xs text-[var(--text-2)] flex items-center gap-1.5">
             <span
@@ -534,9 +527,18 @@ export function HomeBoard({
           </span>
           <span className="tabular-nums font-semibold text-xs text-[var(--text-1)]">
             {formatCurrency(todaySpent, currency)}{' '}
-            <span className="text-[var(--text-2)] font-normal text-[11px]">
-              / {formatCurrency(pacingMetrics.safeDailySpend, currency)} safe pace
-            </span>
+            {userManualTarget > 0 ? (
+              <span className="text-[var(--text-2)] font-normal text-[11px]">
+                / {formatCurrency(userManualTarget, currency)} target{' '}
+                <span className="text-[10px] text-[var(--brand)] font-medium">
+                  (Safe: {formatCurrency(pacingMetrics.safeDailySpend, currency)})
+                </span>
+              </span>
+            ) : (
+              <span className="text-[var(--text-2)] font-normal text-[11px]">
+                / {formatCurrency(pacingMetrics.safeDailySpend, currency)} safe daily spend
+              </span>
+            )}
           </span>
         </div>
 
@@ -554,35 +556,35 @@ export function HomeBoard({
               </div>
               <span
                 className={`text-[10px] px-2 py-0.5 rounded-full font-semibold ${
-                  recurringMetrics.totalCount > 0 && recurringMetrics.remainingCommitment === 0
+                  totalCount > 0 && fixedUnpaid === 0
                     ? 'bg-emerald-500/20 text-emerald-300'
                     : 'bg-amber-500/20 text-amber-300'
                 }`}
               >
-                {recurringMetrics.totalCount > 0
-                  ? `${recurringMetrics.paidCount}/${recurringMetrics.totalCount} paid`
+                {totalCount > 0
+                  ? `${paidCount}/${totalCount} paid`
                   : '0 Bills'}
               </span>
             </div>
 
-            {recurringMetrics.remainingCommitment === 0 ? (
+            {fixedUnpaid === 0 ? (
               <div className="mt-1">
                 <b className="text-[14px] font-semibold tabular-nums block text-[var(--text-1)]">
-                  {formatCurrency(recurringMetrics.totalCommitment, currency)}
+                  {formatCurrency(totalFixedCommitment, currency)}
                 </b>
-                <span className="text-[10px] text-emerald-400 block mt-0.5">
-                  All settled this month ✓
+                <span className="text-[10px] text-emerald-400 block mt-0.5 font-medium">
+                  Total commitments (All settled ✓)
                 </span>
               </div>
-            ) : recurringMetrics.nearestUnpaidBill ? (
+            ) : nearestUnpaidBill ? (
               <div className="mt-1">
                 <div className="flex items-center justify-between gap-1">
                   <div className="min-w-0">
-                    <b className="text-[12.5px] font-bold truncate block text-[var(--text-1)]">
-                      {recurringMetrics.nearestUnpaidBill.bill.name || recurringMetrics.nearestUnpaidBill.bill.category}
+                    <b className="text-[12px] font-bold truncate block text-[var(--text-1)]">
+                      {nearestUnpaidBill.bill.name || nearestUnpaidBill.bill.category}
                     </b>
                     <span className="text-[10px] text-amber-300 tabular-nums block">
-                      {formatCurrency(recurringMetrics.nearestUnpaidBill.convertedAmount, currency)} • Due day {recurringMetrics.nearestUnpaidBill.dueDay}
+                      {formatCurrency(nearestUnpaidBill.convertedAmount, currency)} • Due day {nearestUnpaidBill.dueDay}
                     </span>
                   </div>
                   <button
@@ -597,10 +599,10 @@ export function HomeBoard({
             ) : (
               <div className="mt-1">
                 <b className="text-[14px] font-semibold tabular-nums block text-[var(--text-1)]">
-                  {formatCurrency(recurringMetrics.totalCommitment, currency)}
+                  {formatCurrency(fixedUnpaid, currency)}
                 </b>
-                <span className="text-[10.5px] text-[var(--text-2)] block mt-0.5">
-                  Manage commitments
+                <span className="text-[10px] text-[var(--text-2)] block mt-0.5">
+                  Remaining left to pay
                 </span>
               </div>
             )}
@@ -675,7 +677,7 @@ export function HomeBoard({
           )}
         </section>
 
-        {/* Recent Transactions Feed (P1: Differentiated Scan-Friendly Rows) */}
+        {/* Recent Transactions Feed (P1: Differentiated Scan-Friendly Rows with Bulletproof CSS Colors) */}
         <section className="panel glass mt-2 mb-2" aria-labelledby="recent">
           <div className="panel-h">
             <h2 id="recent">Recent transactions</h2>
@@ -704,6 +706,7 @@ export function HomeBoard({
                   const cleanTitle = cleanTransactionNote(tx.note) || tx.category;
                   const catLabel = tx.category.charAt(0).toUpperCase() + tx.category.slice(1);
                   const theme = getCategoryTheme(tx.category, tx.type);
+                  const amtClass = isIncome ? 'amt amt-income' : isSavings ? 'amt amt-savings' : 'amt amt-expense';
 
                   return (
                     <div
@@ -724,11 +727,7 @@ export function HomeBoard({
                             : catLabel}
                         </small>
                       </div>
-                      <span
-                        className={`amt tabular-nums font-semibold ${
-                          isIncome ? 'text-emerald-400' : isSavings ? 'text-amber-400' : 'text-[var(--text-1)]'
-                        }`}
-                      >
+                      <span className={`${amtClass} tabular-nums font-semibold`}>
                         {isExpense ? '−' : isIncome ? '+' : '→ '}
                         {formatCurrency(converted, currency)}
                       </span>
@@ -772,8 +771,16 @@ export function HomeBoard({
             <div className="text-right">
               <span className="text-[10px] text-[var(--text-2)] block">Projected month-end</span>
               <b className="text-[13.5px] font-semibold tabular-nums text-[var(--brand)] block mt-0.5">
-                {formatCurrency(pacingMetrics.projectedMonthEndLeft, currency)}
-                <span className="text-[10px] font-normal text-[var(--text-2)]"> left</span>
+                {pacingMetrics.projectedMonthEndLeft !== null ? (
+                  <>
+                    {formatCurrency(pacingMetrics.projectedMonthEndLeft, currency)}
+                    <span className="text-[10px] font-normal text-[var(--text-2)]"> left</span>
+                  </>
+                ) : (
+                  <span className="text-[var(--text-2)] font-normal text-xs" title="Requires at least 3 days of variable spending to project accurately">
+                    — <span className="text-[10px]">(Est. on track)</span>
+                  </span>
+                )}
               </b>
             </div>
           </div>
@@ -861,7 +868,7 @@ export function HomeBoard({
           totalSpentThisMonth={totalSpentThisMonth}
           fixedSpent={fixedSpent}
           variableSpent={variableSpent}
-          fixedUnpaid={recurringMetrics.remainingCommitment}
+          fixedUnpaid={fixedUnpaid}
           leftThisMonth={leftThisMonth}
           safeDailySpend={pacingMetrics.safeDailySpend}
           daysRemaining={pacingMetrics.daysRemaining}

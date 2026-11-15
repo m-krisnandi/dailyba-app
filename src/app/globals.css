@@ -304,11 +304,6 @@ input, select, textarea {
   align-items: center;
   gap: 6px;
 }
-.hero-amt .ic {
-  width: 20px;
-  height: 20px;
-  color: var(--text-3);
-}
 .hero-sub {
   font-size: 11.5px;
   color: var(--text-2);
@@ -459,17 +454,59 @@ input, select, textarea {
 .row:last-child {
   border-bottom: 0;
 }
+
+/* Bulletproof Scan-Friendly Transaction Colors */
 .tile {
   width: 34px;
   height: 34px;
   border-radius: 12px;
-  background: rgba(255, 255, 255, 0.06);
-  border: 1px solid rgba(255, 255, 255, 0.08);
   display: grid;
   place-items: center;
-  color: var(--text-1);
   flex: none;
+  transition: all 150ms ease;
 }
+
+.tile-income {
+  background: rgba(16, 185, 129, 0.16) !important;
+  border: 1px solid rgba(16, 185, 129, 0.35) !important;
+  color: #34d399 !important;
+}
+.tile-savings {
+  background: rgba(245, 158, 11, 0.16) !important;
+  border: 1px solid rgba(245, 158, 11, 0.35) !important;
+  color: #fbbf24 !important;
+}
+.tile-transport {
+  background: rgba(56, 189, 248, 0.16) !important;
+  border: 1px solid rgba(56, 189, 248, 0.35) !important;
+  color: #38bdf8 !important;
+}
+.tile-food {
+  background: rgba(251, 146, 60, 0.16) !important;
+  border: 1px solid rgba(251, 146, 60, 0.35) !important;
+  color: #fb923c !important;
+}
+.tile-shopping {
+  background: rgba(192, 132, 252, 0.16) !important;
+  border: 1px solid rgba(192, 132, 252, 0.35) !important;
+  color: #c084fc !important;
+}
+.tile-laundry {
+  background: rgba(45, 212, 191, 0.16) !important;
+  border: 1px solid rgba(45, 212, 191, 0.35) !important;
+  color: #2dd4bf !important;
+}
+.tile-bills {
+  background: rgba(45, 212, 191, 0.16) !important;
+  border: 1px solid rgba(45, 212, 191, 0.35) !important;
+  color: #2dd4bf !important;
+}
+.tile-default {
+  background: rgba(148, 163, 184, 0.12) !important;
+  border: 1px solid rgba(148, 163, 184, 0.25) !important;
+  color: #94a3b8 !important;
+}
+
 .t {
   flex: 1;
   min-width: 0;
@@ -487,14 +524,20 @@ input, select, textarea {
   font-size: 10.5px;
   color: var(--text-2);
 }
+
 .amt {
   font-size: 13.5px;
   font-weight: 600;
   white-space: nowrap;
-  color: var(--text-1);
 }
-.amt.in {
-  color: var(--income);
+.amt-income {
+  color: #34d399 !important;
+}
+.amt-savings {
+  color: #fbbf24 !important;
+}
+.amt-expense {
+  color: var(--text-1) !important;
 }
 
 /* Floating Bottom Navigation Bar (Glass) */
