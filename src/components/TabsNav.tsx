@@ -4,6 +4,7 @@ import React from 'react';
 import { Language } from '@/types/finance';
 import { translations } from '@/lib/i18n';
 import {
+  Home as HomeIcon,
   Zap,
   CalendarDays,
   Calendar,
@@ -12,7 +13,7 @@ import {
   TrendingUp,
 } from 'lucide-react';
 
-export type TabKey = 'record' | 'daily' | 'monthly' | 'yearly' | 'savings' | 'investments';
+export type TabKey = 'home' | 'record' | 'daily' | 'monthly' | 'yearly' | 'savings' | 'investments';
 
 interface TabsNavProps {
   activeTab: TabKey;
@@ -26,6 +27,7 @@ export function TabsNav({ activeTab, onTabChange, language, isMounted = true }: 
 
   // Swapped: savings is placed before investments (more frequently used)
   const tabs: { key: TabKey; label: string; icon: React.ElementType }[] = [
+    { key: 'home', label: language === 'ja' ? 'ホーム' : 'Home', icon: HomeIcon },
     { key: 'record', label: t.nav.record, icon: Zap },
     { key: 'daily', label: t.nav.daily, icon: CalendarDays },
     { key: 'monthly', label: t.nav.monthly, icon: Calendar },

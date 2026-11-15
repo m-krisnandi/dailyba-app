@@ -6,6 +6,7 @@ import { useExchangeRates, convertCurrency } from '@/lib/currency';
 import { useAuth } from '@/lib/authContext';
 import { Header } from '@/components/Header';
 import { TabKey, TabsNav } from '@/components/TabsNav';
+import { HomeBoard } from '@/components/HomeBoard';
 import { QuickRecordBoard } from '@/components/QuickRecordBoard';
 import { DailySpendBoard } from '@/components/DailySpendBoard';
 import { MonthlySummaryBoard } from '@/components/MonthlySummaryBoard';
@@ -27,7 +28,7 @@ import { dailybaApi } from '@/lib/api';
 import { Transaction } from '@/types/finance';
 import { getTodayLocalDate } from '@/lib/dateUtils';
 
-const VALID_TABS: TabKey[] = ['record', 'daily', 'monthly', 'yearly', 'investments', 'savings'];
+const VALID_TABS: TabKey[] = ['home', 'record', 'daily', 'monthly', 'yearly', 'investments', 'savings'];
 
 function getInitialTab(): TabKey {
   if (typeof window !== 'undefined') {
@@ -40,7 +41,7 @@ function getInitialTab(): TabKey {
       // Ignore storage access errors
     }
   }
-  return 'record';
+  return 'home';
 }
 
 export default function Home() {
@@ -399,32 +400,56 @@ export default function Home() {
   };
 
   return (
-    <div className="min-h-screen flex flex-col bg-[var(--bg-primary)] text-[var(--text-main)] selection:bg-emerald-500/30 transition-colors duration-200">
-      {/* Top Header */}
-      <Header
-        language={state.language}
-        currency={state.currency}
-        rates={rates}
-        onLanguageChange={setLanguage}
-        onCurrencyChange={setCurrency}
-        onOpenBackup={() => setIsBackupModalOpen(true)}
-        onOpenAuth={() => setIsAuthModalOpen(true)}
-        onOpenEmailSync={() => setIsEmailSyncModalOpen(true)}
-        pendingEmailSyncCount={pendingEmailSyncCount}
-        onManualSync={handleManualSync}
-      />
+    <div className={`min-h-screen flex flex-col ${activeTab === 'home' ? 'bg-[#0B1417]' : 'bg-[var(--bg-primary)]'} text-[var(--text-main)] selection:bg-emerald-500/30 transition-colors duration-200`}>
+      {/* Top Header & TabsNav when not on Home */}
+      {activeTab !== 'home' && (
+        <>
+          <Header
+            language={state.language}
+            currency={state.currency}
+            rates={rates}
+            onLanguageChange={setLanguage}
+            onCurrencyChange={setCurrency}
+            onOpenBackup={() => setIsBackupModalOpen(true)}
+            onOpenAuth={() => setIsAuthModalOpen(true)}
+            onOpenEmailSync={() => setIsEmailSyncModalOpen(true)}
+            pendingEmailSyncCount={pendingEmailSyncCount}
+            onManualSync={handleManualSync}
+          />
+          <TabsNav
+            activeTab={activeTab}
+            onTabChange={handleTabChange}
+            language={state.language}
+            isMounted={isMounted}
+          />
+        </>
+      )}
 
-      {/* Tabs Navigation (Floating iOS Liquid Glass Dock) */}
-      <TabsNav
-        activeTab={activeTab}
-        onTabChange={handleTabChange}
-        language={state.language}
-        isMounted={isMounted}
-      />
-
-      {/* Main Container without stacking context trap */}
-      <main className="flex-1 max-w-5xl w-full mx-auto px-4 sm:px-6 py-6 sm:py-8 relative">
-        {!isMounted ? (
+      {/* Main Content */}
+      {activeTab === 'home' ? (
+        <HomeBoard
+          state={state}
+          rates={rates}
+          user={user}
+          pendingEmailSyncCount={pendingEmailSyncCount}
+          onNavigateTab={handleTabChange}
+          onOpenEmailSync={() => setIsEmailSyncModalOpen(true)}
+          onOpenScanner={() => {
+            setAutoOpenScanner(true);
+            handleTabChange('record');
+          }}
+          onOpenAddTransaction={() => handleTabChange('record')}
+          onOpenMenu={() => {
+            if (isAuthenticated) {
+              setIsBackupModalOpen(true);
+            } else {
+              setIsAuthModalOpen(true);
+            }
+          }}
+        />
+      ) : (
+        <main className="flex-1 max-w-5xl w-full mx-auto px-4 sm:px-6 py-6 sm:py-8 relative">
+          {!isMounted ? (
           <div className="space-y-6 animate-pulse">
             <div className="h-44 rounded-3xl border border-[var(--border-subtle)] bg-[var(--bg-surface)]/60 backdrop-blur-xl p-6 flex flex-col justify-between">
               <div className="h-4 w-32 rounded-lg bg-[var(--bg-subtle)]" />
@@ -535,23 +560,26 @@ export default function Home() {
         )}
           </>
         )}
-      </main>
+        </main>
+      )}
 
       {/* Bottom Footer with Version & Changelog Trigger */}
-      <footer className="border-t border-[var(--border-subtle)] py-6 text-center text-xs text-[var(--text-muted)] font-mono transition-colors duration-200 space-y-1.5">
-        <p className="font-medium">Dailyba • Daily Balance & Wealth Tracker</p>
-        <div className="flex items-center justify-center space-x-2 text-[11px]">
-          <span className="font-bold text-[var(--text-main)]">v{APP_VERSION}</span>
-          <span>•</span>
-          <button
-            type="button"
-            onClick={() => setIsChangelogModalOpen(true)}
-            className="text-[var(--accent-emerald)] hover:underline underline-offset-2 transition-all cursor-pointer font-bold"
-          >
-            What&apos;s New (Changelog)
-          </button>
-        </div>
-      </footer>
+      {activeTab !== 'home' && (
+        <footer className="border-t border-[var(--border-subtle)] py-6 text-center text-xs text-[var(--text-muted)] font-mono transition-colors duration-200 space-y-1.5">
+          <p className="font-medium">Dailyba • Daily Balance & Wealth Tracker</p>
+          <div className="flex items-center justify-center space-x-2 text-[11px]">
+            <span className="font-bold text-[var(--text-main)]">v{APP_VERSION}</span>
+            <span>•</span>
+            <button
+              type="button"
+              onClick={() => setIsChangelogModalOpen(true)}
+              className="text-[var(--accent-emerald)] hover:underline underline-offset-2 transition-all cursor-pointer font-bold"
+            >
+              What&apos;s New (Changelog)
+            </button>
+          </div>
+        </footer>
+      )}
 
       {/* Backup, Settings & Daily Reminder Modal */}
       <BackupModal
