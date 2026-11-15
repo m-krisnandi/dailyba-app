@@ -171,7 +171,7 @@ export function Header({
               Dailyba
             </span>
             <span className="text-[9px] sm:text-[10px] text-[var(--text-muted)] tracking-wider font-medium truncate hidden min-[360px]:inline">
-              Smart Kakeibo
+              Daily Balance & Wealth Tracker
             </span>
           </div>
         </div>
